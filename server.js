@@ -1,5 +1,5 @@
 // ==========================================
-// FARMIOT BACKEND: Accepts Data from Mac Gateway
+// FARMIOT BACKEND: Receives POST from Mac Gateway
 // ==========================================
 
 const express = require('express');
@@ -32,7 +32,7 @@ app.get('/api/dashboard/1', async (req, res) => {
   res.json(data);
 });
 
-// --- NEW ENDPOINT: Receives data from your Mac ---
+// --- NEW ENDPOINT: Receives data from your Mac Gateway ---
 app.post('/api/sensor', async (req, res) => {
   try {
     const data = req.body;
