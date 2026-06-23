@@ -1,5 +1,5 @@
 // ==========================================
-// FARMIOT BACKEND: Pull Server (NGROK FIXED)
+// FARMIOT BACKEND: Accepts Data from Mac Gateway
 // ==========================================
 
 const express = require('express');
@@ -7,6 +7,9 @@ const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 
 const app = express();
+
+// Allow JSON POST requests
+app.use(express.json());
 
 const supabaseUrl = 'https://adxaifphothopomwutcg.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkeGFpZnBob3Rob3BvbXd1dGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxOTM4NTEsImV4cCI6MjA5Nzc2OTg1MX0.uMbkFZP4kPnjJamcaVwgMhcgDbJkkDg1JYbz0HVDfYk';
@@ -29,47 +32,29 @@ app.get('/api/dashboard/1', async (req, res) => {
   res.json(data);
 });
 
-// ==========================================
-// POLLING ENGINE (NGROK URL USED HERE)
-// ==========================================
+// --- NEW ENDPOINT: Receives data from your Mac ---
+app.post('/api/sensor', async (req, res) => {
+  try {
+    const data = req.body;
+    console.log("📡 Data received from Mac Gateway:", data);
 
-// --- THE EXACT NGROK URL FROM YOUR TERMINAL ---
-const ESP32_URL = 'https://snippet-dork-overlay.ngrok-free.dev/api/data'; 
-
-async function fetchFromESP32() {
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      console.log(`[Attempt ${attempt}] Fetching from: ${ESP32_URL}`);
-      
-      const response = await fetch(ESP32_URL, { timeout: 3000 });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
-      const data = await response.json();
-      console.log("✅ Data received from ESP32:", data);
-
-      const { error } = await supabase
-        .from('sensor_data')
-        .insert([{ farmer_id: 1, payload: data }]);
-      
-      if (error) {
-        console.error('❌ Supabase insert error:', error.message);
-      } else {
-        console.log('💾 Saved to Supabase:', data);
-      }
-      return;
-      
-    } catch (err) {
-      console.log(`❌ Attempt ${attempt} failed: ${err.message}`);
-      if (attempt === 3) console.error('⚠️ ESP32 unreachable after 3 attempts');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    const { error } = await supabase
+      .from('sensor_data')
+      .insert([{ farmer_id: 1, payload: data }]);
+    
+    if (error) {
+      console.error('❌ Supabase insert error:', error.message);
+    } else {
+      console.log('💾 Saved to Supabase:', data);
     }
+    res.json({ status: "ok" });
+  } catch (err) {
+    console.error("❌ Gateway error:", err);
+    res.status(500).json({ error: "Server Error" });
   }
-}
-
-// Run the fetcher every 5 seconds
-setInterval(fetchFromESP32, 5000);
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ FarmIOT Pull-Server running on port ${PORT}`);
+  console.log(`✅ FarmIOT Server running on port ${PORT}`);
 });
