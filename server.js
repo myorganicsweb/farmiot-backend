@@ -32,15 +32,20 @@ app.get('/api/dashboard/1', async (req, res) => {
   res.json(data);
 });
 
-// --- NEW ENDPOINT: Receives data from your Mac Gateway ---
+// --- RECEIVES DATA FROM MAC GATEWAY ---
 app.post('/api/sensor', async (req, res) => {
   try {
     const data = req.body;
     console.log("📡 Data received from Mac Gateway:", data);
 
+    // ✅ FIX: Explicitly add device_id to the insert
     const { error } = await supabase
       .from('sensor_data')
-      .insert([{ farmer_id: 1, payload: data }]);
+      .insert([{ 
+        farmer_id: 1, 
+        device_id: data.device_id || "unknown",  // Fallback if missing
+        payload: data 
+      }]);
     
     if (error) {
       console.error('❌ Supabase insert error:', error.message);
