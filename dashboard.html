@@ -352,10 +352,6 @@
   let historySoil = [];
   let historyWater = [];
 
-  // --- GET THE LOCAL ESP32 IP ADDRESS ---
-  // This is the IP of the ESP32 running the control server on your local network
-  const ESP32_LOCAL_IP = "http://192.168.1.217:8080";
-
   function toggleUnit() {
     isCelsius = !isCelsius;
     const btn = document.getElementById('unitBtn');
@@ -377,16 +373,9 @@
     document.getElementById(type + 'Card').classList.toggle('disabled');
   }
   
-  // --- THIS IS THE FIX: SEND COMMANDS DIRECTLY TO ESP32 ---
   function sendCmd(device, state) {
-    // Build the URL to the ESP32's local control endpoint
-    const url = `${ESP32_LOCAL_IP}/${device}/${state}`;
-    
-    // Log for debugging
-    console.log("Sending command to ESP32:", url);
-    
-    // Send the request
-    fetch(url)
+    // Send command to local ESP32
+    fetch(`http://192.168.1.217:8080/${device}/${state}`)
       .then(res => res.text())
       .then(data => console.log("ESP32 response:", data))
       .catch(err => console.error("Failed to reach ESP32:", err));
@@ -456,9 +445,8 @@
     let results = [];
     for (let i = 0; i < payload.length; i++) {
       const cmd = payload[i];
-      // Send to ESP32 instead of cloud
       try {
-        const res = await fetch(`${ESP32_LOCAL_IP}/${cmd.device}/${cmd.state}`);
+        const res = await fetch(`http://192.168.1.217:8080/${cmd.device}/${cmd.state}`);
         const data = await res.text();
         results.push(`[${i+1}] ${cmd.device} -> ${data}`);
       } catch (err) {
@@ -493,27 +481,31 @@
   }
 
   setInterval(() => {
-    fetch('/api/dashboard/1').then(r=>r.json()).then(data => {
-      if (data.length === 0) return;
-      const latest = data[0].payload;
-      let t = parseFloat(latest.temperature || 0);
-      let h = parseFloat(latest.humidity || 0);
-      let s = parseFloat(latest.soil_moisture || 0);
-      let w = parseFloat(latest.water_level || 0);
-      if (!isCelsius) t = (t * 9/5) + 32;
-      document.getElementById('tempText').innerText = t.toFixed(1);
-      document.getElementById('humText').innerText = h.toFixed(0);
-      document.getElementById('soilText').innerText = s.toFixed(0);
-      document.getElementById('waterText').innerText = w.toFixed(0);
-      historyTemp.push(t); if (historyTemp.length > MAX_HISTORY) historyTemp.shift();
-      historyHum.push(h); if (historyHum.length > MAX_HISTORY) historyHum.shift();
-      historySoil.push(s); if (historySoil.length > MAX_HISTORY) historySoil.shift();
-      historyWater.push(w); if (historyWater.length > MAX_HISTORY) historyWater.shift();
-      drawClientChart('tempChart', historyTemp, '#e74c3c');
-      drawClientChart('humChart', historyHum, '#2980b9');
-      drawClientChart('soilChart', historySoil, '#27ae60');
-      drawClientChart('waterChart', historyWater, '#16a085');
-    });
+    // Fetch from the Render Cloud API instead of local
+    fetch('/api/dashboard/1')
+      .then(r=>r.json())
+      .then(data => {
+        if (data.length === 0) return;
+        const latest = data[0].payload;
+        let t = parseFloat(latest.temperature || 0);
+        let h = parseFloat(latest.humidity || 0);
+        let s = parseFloat(latest.soil_moisture || 0);
+        let w = parseFloat(latest.water_level || 0);
+        if (!isCelsius) t = (t * 9/5) + 32;
+        document.getElementById('tempText').innerText = t.toFixed(1);
+        document.getElementById('humText').innerText = h.toFixed(0);
+        document.getElementById('soilText').innerText = s.toFixed(0);
+        document.getElementById('waterText').innerText = w.toFixed(0);
+        historyTemp.push(t); if (historyTemp.length > MAX_HISTORY) historyTemp.shift();
+        historyHum.push(h); if (historyHum.length > MAX_HISTORY) historyHum.shift();
+        historySoil.push(s); if (historySoil.length > MAX_HISTORY) historySoil.shift();
+        historyWater.push(w); if (historyWater.length > MAX_HISTORY) historyWater.shift();
+        drawClientChart('tempChart', historyTemp, '#e74c3c');
+        drawClientChart('humChart', historyHum, '#2980b9');
+        drawClientChart('soilChart', historySoil, '#27ae60');
+        drawClientChart('waterChart', historyWater, '#16a085');
+      })
+      .catch(err => console.error("Cloud fetch error:", err));
   }, 5000);
 </script>
 </body>
