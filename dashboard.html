@@ -189,7 +189,7 @@
       height: auto;
     }
 
-    /* --- CLEAN REST API TESTER (SERVER) --- */
+    /* --- CLEAN REST API TESTER --- */
     #view-api .api-card {
       background: rgba(255, 255, 255, 0.45); 
       backdrop-filter: blur(12px); 
@@ -518,15 +518,16 @@
   }
 
   setInterval(() => {
+    // Fetch from the Render Cloud API
     fetch('/api/dashboard/1')
       .then(r=>r.json())
       .then(data => {
         if (data.length === 0) return;
         const latest = data[0].payload;
-        let t = parseFloat(latest.temperature || 0);
-        let h = parseFloat(latest.humidity || 0);
-        let s = parseFloat(latest.soil_moisture || 0);
-        let w = parseFloat(latest.water_level || 0);
+        let t = parseFloat(latest.temp || 0);
+        let h = parseFloat(latest.hum || 0);
+        let s = parseFloat(latest.soil || 0);
+        let w = parseFloat(latest.water || 0);
         if (!isCelsius) t = (t * 9/5) + 32;
         document.getElementById('tempText').innerText = t.toFixed(1);
         document.getElementById('humText').innerText = h.toFixed(0);
