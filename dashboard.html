@@ -188,6 +188,25 @@
       position: relative;
       height: auto;
     }
+
+    /* --- CLEAN REST API TESTER (SERVER) --- */
+    #view-api .api-card {
+      background: rgba(255, 255, 255, 0.45); 
+      backdrop-filter: blur(12px); 
+      border-radius: 24px; padding: 20px; 
+      border: 1px solid rgba(255,255,255,0.8); 
+      box-shadow: 0 8px 32px rgba(0,0,0,0.04);
+    }
+    #view-api .api-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
+    #view-api .api-select { padding: 8px 16px; border: 1px solid rgba(255,255,255,0.4); border-radius: 20px; background: rgba(255,255,255,0.4); font-size: 14px; font-weight: 500; color: #333; outline: none; }
+    #view-api .split-container { display: flex; flex-direction: column; gap: 12px; }
+    #view-api .split-row { display: flex; flex-direction: row; gap: 15px; height: 400px; }
+    #view-api .split-half { flex: 1; display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.3); backdrop-filter: blur(10px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.6); padding: 15px; overflow: hidden; }
+    #view-api .split-half-title { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 10px; display: flex; justify-content: space-between; }
+    #view-api .split-half textarea { flex: 1; width: 100%; border: none; resize: none; font-family: 'Courier New', monospace; font-size: 14px; color: #333; background: transparent; outline: none; padding: 0; }
+    #view-api .split-half pre { flex: 1; width: 100%; margin: 0; padding: 0; overflow-y: auto; background: transparent; font-family: 'Courier New', monospace; font-size: 14px; color: #1a1a1a; white-space: pre-wrap; word-wrap: break-word; }
+    #view-api .api-test-btn { padding: 12px 30px; background: #007aff; color: white; border: none; border-radius: 30px; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 10px; align-self: flex-end; box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3); transition: 0.2s; }
+    #view-api .api-test-btn:active { transform: scale(0.95); }
   </style>
 </head>
 <body>
@@ -257,10 +276,10 @@
             </div>
           </div>
           <div class="bottom-bar">
-            <button class="action-btn green" onclick="sendCmd('led', 'on')">💡 LED</button>
-            <button class="action-btn red" onclick="sendCmd('buzzer', 'on')">🔊 Buzzer</button>
-            <button class="action-btn blue" onclick="sendCmd('fan', 'on')">🌀 Fan</button>
-            <button class="action-btn teal" onclick="sendCmd('pump', 'on')">💧 Pump</button>
+            <button id="btn-led" class="action-btn green" onclick="toggleDevice('led', 'btn-led')">💡 LED</button>
+            <button id="btn-buzzer" class="action-btn red" onclick="toggleDevice('buzzer', 'btn-buzzer')">🔊 Buzzer</button>
+            <button id="btn-fan" class="action-btn blue" onclick="toggleDevice('fan', 'btn-fan')">🌀 Fan</button>
+            <button id="btn-pump" class="action-btn teal" onclick="toggleDevice('pump', 'btn-pump')">💧 Pump</button>
           </div>
         </div>
 
@@ -352,6 +371,32 @@
   let historySoil = [];
   let historyWater = [];
 
+  // Track ON/OFF states for toggle buttons
+  let deviceStates = {
+    led: false,
+    buzzer: false,
+    fan: false,
+    pump: false
+  };
+
+  // --- TOGGLE BUTTON: Sends command to local ESP32 ---
+  function toggleDevice(device, btnId) {
+    deviceStates[device] = !deviceStates[device];
+    const newState = deviceStates[device] ? 'on' : 'off';
+    
+    const btn = document.getElementById(btnId);
+    if (deviceStates[device]) {
+      btn.classList.add('on-state');
+    } else {
+      btn.classList.remove('on-state');
+    }
+
+    fetch(`http://192.168.1.217:8080/${device}/${newState}`)
+      .then(res => res.text())
+      .then(data => console.log(`ESP32 ${device} -> ${newState}`))
+      .catch(err => console.error("Failed to reach ESP32:", err));
+  }
+
   function toggleUnit() {
     isCelsius = !isCelsius;
     const btn = document.getElementById('unitBtn');
@@ -371,14 +416,6 @@
     const isOn = btn.classList.contains('on');
     if (isOn) btn.classList.remove('on'); else btn.classList.add('on');
     document.getElementById(type + 'Card').classList.toggle('disabled');
-  }
-  
-  function sendCmd(device, state) {
-    // Send command to local ESP32
-    fetch(`http://192.168.1.217:8080/${device}/${state}`)
-      .then(res => res.text())
-      .then(data => console.log("ESP32 response:", data))
-      .catch(err => console.error("Failed to reach ESP32:", err));
   }
 
   function switchView(viewName) {
@@ -481,7 +518,6 @@
   }
 
   setInterval(() => {
-    // Fetch from the Render Cloud API instead of local
     fetch('/api/dashboard/1')
       .then(r=>r.json())
       .then(data => {
