@@ -1,5 +1,5 @@
 // ==========================================
-// FARMIOT BACKEND: Pull Server (ngrok URL Active)
+// FARMIOT BACKEND: Pull Server (NGROK FIXED)
 // ==========================================
 
 const express = require('express');
@@ -30,10 +30,10 @@ app.get('/api/dashboard/1', async (req, res) => {
 });
 
 // ==========================================
-// POLLING ENGINE (ngrok URL Active)
+// POLLING ENGINE (NGROK URL USED HERE)
 // ==========================================
 
-// --- THIS IS YOUR EXACT NGROK URL FROM TERMINAL ---
+// --- THE EXACT NGROK URL FROM YOUR TERMINAL ---
 const ESP32_URL = 'https://snippet-dork-overlay.ngrok-free.dev/api/data'; 
 
 async function fetchFromESP32() {
