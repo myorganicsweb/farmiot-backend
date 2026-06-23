@@ -1,22 +1,28 @@
 // ==========================================
-// FARMIOT BACKEND
+// FARMIOT BACKEND: Serving the Full UI
 // ==========================================
 
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Supabase Credentials (Your exact ones)
+// Supabase Credentials
 const supabaseUrl = 'https://adxaifphothopomwutcg.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkeGFpZnBob3Rob3BvbXd1dGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxOTM4NTEsImV4cCI6MjA5Nzc2OTg1MX0.uMbkFZP4kPnjJamcaVwgMhcgDbJkkDg1JYbz0HVDfYk';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// 1. Receive data from ESP32 Hub
+// --- 1. SERVE THE FULL DASHBOARD ---
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
+
+// --- 2. API: Receive data from ESP32 ---
 app.post('/api/sensor', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -37,7 +43,7 @@ app.post('/api/sensor', async (req, res) => {
   }
 });
 
-// 2. Dashboard fetches data
+// --- 3. API: Dashboard fetches data ---
 app.get('/api/dashboard/:farmerId', async (req, res) => {
   const { data, error } = await supabase
     .from('sensor_data')
@@ -50,12 +56,13 @@ app.get('/api/dashboard/:farmerId', async (req, res) => {
   res.json(data);
 });
 
-// 3. Health Check
-app.get('/', (req, res) => {
-  res.send('🌱 FarmIOT Cloud is LIVE!');
+// --- 4. API: Control endpoints (dummy for now) ---
+app.post('/api/control', (req, res) => {
+  console.log('Control command received:', req.body);
+  res.json({ status: "ok" });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ FarmIOT Backend running on port ${PORT}`);
+  console.log(`✅ FarmIOT running on port ${PORT}`);
 });
