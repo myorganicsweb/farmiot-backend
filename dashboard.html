@@ -197,16 +197,27 @@
       border: 1px solid rgba(255,255,255,0.8); 
       box-shadow: 0 8px 32px rgba(0,0,0,0.04);
     }
-    #view-api .api-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
-    #view-api .api-select { padding: 8px 16px; border: 1px solid rgba(255,255,255,0.4); border-radius: 20px; background: rgba(255,255,255,0.4); font-size: 14px; font-weight: 500; color: #333; outline: none; }
-    #view-api .split-container { display: flex; flex-direction: column; gap: 12px; }
-    #view-api .split-row { display: flex; flex-direction: row; gap: 15px; height: 400px; }
-    #view-api .split-half { flex: 1; display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.3); backdrop-filter: blur(10px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.6); padding: 15px; overflow: hidden; }
-    #view-api .split-half-title { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 10px; display: flex; justify-content: space-between; }
-    #view-api .split-half textarea { flex: 1; width: 100%; border: none; resize: none; font-family: 'Courier New', monospace; font-size: 14px; color: #333; background: transparent; outline: none; padding: 0; }
-    #view-api .split-half pre { flex: 1; width: 100%; margin: 0; padding: 0; overflow-y: auto; background: transparent; font-family: 'Courier New', monospace; font-size: 14px; color: #1a1a1a; white-space: pre-wrap; word-wrap: break-word; }
-    #view-api .api-test-btn { padding: 12px 30px; background: #007aff; color: white; border: none; border-radius: 30px; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 10px; align-self: flex-end; box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3); transition: 0.2s; }
-    #view-api .api-test-btn:active { transform: scale(0.95); }
+    #view-api .api-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 15px; position: relative; z-index: 10; }
+    
+    .custom-dropdown { position: relative; display: inline-block; min-width: 150px; }
+    .dropdown-btn { padding: 10px 16px; background: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.4); border-radius: 20px; font-size: 14px; font-weight: 500; color: #333; cursor: pointer; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(4px); }
+    .dropdown-btn::after { content: '▼'; font-size: 10px; margin-left: 10px; color: #888; }
+    .dropdown-content { display: none; position: absolute; top: 110%; left: 0; min-width: 200px; background: rgba(255,255,255,0.95); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.8); border-radius: 16px; padding: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); z-index: 100; }
+    .custom-dropdown.open .dropdown-content { display: block; }
+    .dropdown-content label { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px; cursor: pointer; font-size: 14px; color: #333; transition: background 0.2s; }
+    .dropdown-content label:hover { background: rgba(0,0,0,0.05); }
+    .dropdown-content input[type="checkbox"] { width: 18px; height: 18px; accent-color: #007aff; cursor: pointer; }
+
+    .state-select { padding: 10px 16px; background: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.4); border-radius: 20px; font-size: 14px; font-weight: 500; color: #333; outline: none; cursor: pointer; }
+
+    .split-container { display: flex; flex-direction: column; gap: 12px; }
+    .split-row { display: flex; flex-direction: row; gap: 15px; height: 400px; }
+    .split-half { flex: 1; display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.3); backdrop-filter: blur(10px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.6); padding: 15px; overflow: hidden; }
+    .split-half-title { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 10px; display: flex; justify-content: space-between; }
+    .split-half textarea { flex: 1; width: 100%; border: none; resize: none; font-family: 'Courier New', monospace; font-size: 14px; color: #333; background: transparent; outline: none; padding: 0; }
+    .split-half pre { flex: 1; width: 100%; margin: 0; padding: 0; overflow-y: auto; background: transparent; font-family: 'Courier New', monospace; font-size: 14px; color: #1a1a1a; white-space: pre-wrap; word-wrap: break-word; }
+    .api-test-btn { padding: 12px 30px; background: #007aff; color: white; border: none; border-radius: 30px; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 10px; align-self: flex-end; box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3); transition: 0.2s; }
+    .api-test-btn:active { transform: scale(0.95); }
   </style>
 </head>
 <body>
@@ -295,21 +306,38 @@
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px;">
               <span style="font-size:18px;">🛠️</span>
               <h3 style="font-size:16px; font-weight:600; color:#1a1a1a; margin:0;">REST API Tester</h3>
-              <span style="font-size:11px; background:rgba(0,122,255,0.15); padding:4px 10px; border-radius:12px; color:#007aff; font-weight:500;">Select devices to test</span>
             </div>
+            
             <div class="api-toolbar">
-              <select id="apiDevice" class="api-select" multiple size="4" onchange="updateJsonFromDropdowns()" style="min-height: 120px;">
-                <option value="led" selected>LED</option>
-                <option value="buzzer">Buzzer</option>
-                <option value="fan">Fan</option>
-                <option value="pump">Pump</option>
-                <option value="servo">Servo</option>
-              </select>
-              <select id="apiState" class="api-select" onchange="updateJsonFromDropdowns()">
+              <div class="custom-dropdown" id="deviceDropdown">
+                <div class="dropdown-btn" onclick="toggleDeviceDropdown()">
+                  <span id="dropdownLabel">Select Devices</span>
+                </div>
+                <div class="dropdown-content">
+                  <label>
+                    <input type="checkbox" value="led" checked onchange="updateDeviceSelection()"> LED
+                  </label>
+                  <label>
+                    <input type="checkbox" value="buzzer" onchange="updateDeviceSelection()"> Buzzer
+                  </label>
+                  <label>
+                    <input type="checkbox" value="fan" onchange="updateDeviceSelection()"> Fan
+                  </label>
+                  <label>
+                    <input type="checkbox" value="pump" onchange="updateDeviceSelection()"> Pump
+                  </label>
+                  <label>
+                    <input type="checkbox" value="servo" onchange="updateDeviceSelection()"> Servo
+                  </label>
+                </div>
+              </div>
+
+              <select id="apiState" class="state-select" onchange="updateDeviceSelection()">
                 <option value="on">ON</option>
                 <option value="off">OFF</option>
               </select>
             </div>
+
             <div class="split-container">
               <div class="split-row">
                 <div class="split-half">
@@ -379,7 +407,6 @@
     pump: false
   };
 
-  // --- TOGGLE BUTTON: Sends command to local ESP32 ---
   function toggleDevice(device, btnId) {
     deviceStates[device] = !deviceStates[device];
     const newState = deviceStates[device] ? 'on' : 'off';
@@ -449,19 +476,39 @@
     }
   }
 
-  function updateJsonFromDropdowns() {
-    const deviceSelect = document.getElementById('apiDevice');
+  // --- CUSTOM DROPDOWN LOGIC ---
+  function toggleDeviceDropdown() {
+    document.getElementById('deviceDropdown').classList.toggle('open');
+  }
+  
+  function updateDeviceSelection() {
+    const checkboxes = document.querySelectorAll('#deviceDropdown input[type="checkbox"]');
     const state = document.getElementById('apiState').value;
     const editor = document.getElementById('requestEditor');
     
-    const selectedDevices = Array.from(deviceSelect.selectedOptions).map(opt => opt.value);
-    if (selectedDevices.length === 0) {
-      editor.value = '[]';
-      return;
+    const selected = [];
+    checkboxes.forEach(cb => {
+      if (cb.checked) selected.push(cb.value);
+    });
+    
+    const label = document.getElementById('dropdownLabel');
+    if (selected.length === 0) {
+      label.innerText = 'None selected';
+    } else {
+      label.innerText = selected.join(', ');
     }
-    const batch = selectedDevices.map(dev => ({ device: dev, state: state }));
+    
+    const batch = selected.map(dev => ({ device: dev, state: state }));
     editor.value = JSON.stringify(batch, null, 2);
   }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    const container = document.getElementById('deviceDropdown');
+    if (container && !container.contains(e.target)) {
+      container.classList.remove('open');
+    }
+  });
 
   async function sendCustomApiRequest() {
     const editor = document.getElementById('requestEditor');
@@ -518,25 +565,33 @@
   }
 
   setInterval(() => {
-    // Fetch from the Render Cloud API
     fetch('/api/dashboard/1')
       .then(r=>r.json())
       .then(data => {
         if (data.length === 0) return;
         const latest = data[0].payload;
-        let t = parseFloat(latest.temp || 0);
-        let h = parseFloat(latest.hum || 0);
-        let s = parseFloat(latest.soil || 0);
-        let w = parseFloat(latest.water || 0);
-        if (!isCelsius) t = (t * 9/5) + 32;
-        document.getElementById('tempText').innerText = t.toFixed(1);
-        document.getElementById('humText').innerText = h.toFixed(0);
-        document.getElementById('soilText').innerText = s.toFixed(0);
-        document.getElementById('waterText').innerText = w.toFixed(0);
-        historyTemp.push(t); if (historyTemp.length > MAX_HISTORY) historyTemp.shift();
-        historyHum.push(h); if (historyHum.length > MAX_HISTORY) historyHum.shift();
-        historySoil.push(s); if (historySoil.length > MAX_HISTORY) historySoil.shift();
-        historyWater.push(w); if (historyWater.length > MAX_HISTORY) historyWater.shift();
+        const devices = latest.devices || [];
+        devices.forEach(d => {
+          if (d.id === "sim_temp_01") {
+            let t = parseFloat(d.value || 0);
+            if (!isCelsius) t = (t * 9/5) + 32;
+            document.getElementById('tempText').innerText = t.toFixed(1);
+          }
+          if (d.id === "sim_hum_01") {
+            document.getElementById('humText').innerText = parseFloat(d.value || 0).toFixed(0);
+          }
+          if (d.id === "sim_soil_01") {
+            document.getElementById('soilText').innerText = parseFloat(d.value || 0).toFixed(0);
+          }
+          if (d.id === "sim_water_01") {
+            document.getElementById('waterText').innerText = parseFloat(d.value || 0).toFixed(0);
+          }
+        });
+        // Just push dummy values to charts
+        historyTemp.push(25); if (historyTemp.length > MAX_HISTORY) historyTemp.shift();
+        historyHum.push(50); if (historyHum.length > MAX_HISTORY) historyHum.shift();
+        historySoil.push(45); if (historySoil.length > MAX_HISTORY) historySoil.shift();
+        historyWater.push(30); if (historyWater.length > MAX_HISTORY) historyWater.shift();
         drawClientChart('tempChart', historyTemp, '#e74c3c');
         drawClientChart('humChart', historyHum, '#2980b9');
         drawClientChart('soilChart', historySoil, '#27ae60');

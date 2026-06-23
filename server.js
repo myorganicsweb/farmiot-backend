@@ -1,5 +1,5 @@
 // ==========================================
-// FARMIOT BACKEND: Receives POST from Mac Gateway
+// FARMIOT BACKEND: Accepts Nested Device JSON
 // ==========================================
 
 const express = require('express');
@@ -7,8 +7,6 @@ const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 
 const app = express();
-
-// Allow JSON POST requests
 app.use(express.json());
 
 const supabaseUrl = 'https://adxaifphothopomwutcg.supabase.co';
@@ -36,21 +34,21 @@ app.get('/api/dashboard/1', async (req, res) => {
 app.post('/api/sensor', async (req, res) => {
   try {
     const data = req.body;
-    console.log("📡 Data received from Mac Gateway:", data);
+    console.log("📡 Data received:", data);
 
-    // ✅ FIX: Explicitly add device_id to the insert
+    const farmerId = data.farmer_id || 1;
+
     const { error } = await supabase
       .from('sensor_data')
       .insert([{ 
-        farmer_id: 1, 
-        device_id: data.device_id || "unknown",  // Fallback if missing
+        farmer_id: farmerId, 
         payload: data 
       }]);
     
     if (error) {
       console.error('❌ Supabase insert error:', error.message);
     } else {
-      console.log('💾 Saved to Supabase:', data);
+      console.log('💾 Saved to Supabase.');
     }
     res.json({ status: "ok" });
   } catch (err) {
