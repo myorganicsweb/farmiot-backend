@@ -160,6 +160,34 @@
       .sidebar { display: none; } 
       .right-col { display: none; } 
     }
+
+    /* --- SPA CONTENT STACKING FIX --- */
+    #content-area {
+      position: relative;
+      width: 100%;
+      min-height: 540px;
+    }
+    
+    .view-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease-in-out;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    
+    .view-container.active {
+      opacity: 1;
+      pointer-events: auto;
+      position: relative;
+      height: auto;
+    }
   </style>
 </head>
 <body>
@@ -324,16 +352,15 @@
   let historySoil = [];
   let historyWater = [];
 
+  // --- GET THE LOCAL ESP32 IP ADDRESS ---
+  // This is the IP of the ESP32 running the control server on your local network
+  const ESP32_LOCAL_IP = "http://192.168.1.217:8080";
+
   function toggleUnit() {
     isCelsius = !isCelsius;
     const btn = document.getElementById('unitBtn');
     btn.innerText = isCelsius ? '°C' : '°F';
     document.getElementById('tempUnit').innerText = isCelsius ? '°C' : '°F';
-    fetch('/api/control', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ device: 'unit', state: isCelsius ? 'c' : 'f' })
-    });
   }
   
   function toggleMaster() {
@@ -341,11 +368,6 @@
     const isOn = btn.innerText === 'ON';
     btn.innerText = isOn ? 'OFF' : 'ON';
     btn.style.background = btn.innerText === 'OFF' ? '#ff3b30' : '#1a1a1a';
-    fetch('/api/control', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ device: 'master', state: isOn ? 'off' : 'on' })
-    });
   }
   
   function toggleSensor(type) {
@@ -353,19 +375,21 @@
     const isOn = btn.classList.contains('on');
     if (isOn) btn.classList.remove('on'); else btn.classList.add('on');
     document.getElementById(type + 'Card').classList.toggle('disabled');
-    fetch('/api/control', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ device: type, state: isOn ? 'off' : 'on' })
-    });
   }
   
+  // --- THIS IS THE FIX: SEND COMMANDS DIRECTLY TO ESP32 ---
   function sendCmd(device, state) {
-    fetch('/api/control', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ device: device, state: state })
-    });
+    // Build the URL to the ESP32's local control endpoint
+    const url = `${ESP32_LOCAL_IP}/${device}/${state}`;
+    
+    // Log for debugging
+    console.log("Sending command to ESP32:", url);
+    
+    // Send the request
+    fetch(url)
+      .then(res => res.text())
+      .then(data => console.log("ESP32 response:", data))
+      .catch(err => console.error("Failed to reach ESP32:", err));
   }
 
   function switchView(viewName) {
@@ -432,14 +456,11 @@
     let results = [];
     for (let i = 0; i < payload.length; i++) {
       const cmd = payload[i];
+      // Send to ESP32 instead of cloud
       try {
-        const res = await fetch('/api/control', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cmd)
-        });
-        const data = await res.json();
-        results.push(`[${i+1}] ${cmd.device} -> ${JSON.stringify(data)}`);
+        const res = await fetch(`${ESP32_LOCAL_IP}/${cmd.device}/${cmd.state}`);
+        const data = await res.text();
+        results.push(`[${i+1}] ${cmd.device} -> ${data}`);
       } catch (err) {
         results.push(`[${i+1}] ${cmd.device} -> ❌ Error: ${err}`);
       }
