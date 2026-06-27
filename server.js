@@ -20,7 +20,6 @@ app.get('/api/dashboard/1', async (req, res) => {
 });
 
 // --- WEB SOCKET SERVER ---
-// IMPORTANT: Render uses PORT 8080 for WebSockets
 const wss = new WebSocket.Server({ port: 8080 }); 
 const connectedDevices = {};
 
@@ -39,7 +38,7 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-// --- API: Trigger OTA Update ---
+// --- API: Trigger OTA Update (ADD THIS SECTION) ---
 app.post('/api/ota/update', async (req, res) => {
   const { deviceId, firmwareUrl } = req.body;
   
@@ -47,6 +46,7 @@ app.post('/api/ota/update', async (req, res) => {
     return res.status(404).json({ error: "Device not currently connected." });
   }
 
+  // Send the firmware URL to the ESP32 via the open WebSocket
   connectedDevices[deviceId].send(JSON.stringify({
     action: "ota_update",
     url: firmwareUrl
@@ -54,6 +54,25 @@ app.post('/api/ota/update', async (req, res) => {
 
   console.log(`📡 Sending OTA update command to ${deviceId}`);
   res.json({ status: "ok", message: "OTA command sent to device." });
+});
+
+// --- API: Control Device (ADD THIS SECTION for your Dashboard buttons) ---
+app.get('/api/device/:device/:state', (req, res) => {
+  const { device, state } = req.params;
+  const deviceId = "esp32_01"; // Hardcoded for your single hub
+  
+  if (!connectedDevices[deviceId]) {
+    return res.status(404).send("Device not connected");
+  }
+  
+  // Forward the command to the ESP32 via WebSocket
+  connectedDevices[deviceId].send(JSON.stringify({
+    action: "control",
+    device: device,
+    state: state
+  }));
+  
+  res.send(`Command sent to ${device}: ${state}`);
 });
 
 // For Render's standard web port

@@ -361,6 +361,13 @@
       </div>
     </div>
     
+    <!-- Add this right before the closing </div> of center-col -->
+    <div class="bottom-bar" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.4); padding-top: 20px;">
+      <button class="action-btn blue" onclick="triggerOTAUpdate()">
+        📡 Remote OTA Update
+      </button>
+    </div>
+
     <div class="right-col">
       <div class="stat-card">
         <div class="stat-icon blue">⚡</div>
@@ -602,6 +609,41 @@
       })
       .catch(err => console.error("Cloud fetch error:", err));
   }, 5000);
+
+  // --- REMOTE OTA UPDATE BUTTON ---
+async function triggerOTAUpdate() {
+  const viewer = document.getElementById('responseViewer');
+  if (!viewer) {
+    alert("No viewer found!");
+    return;
+  }
+
+  viewer.innerText = "⏳ Sending OTA request to ESP32...";
+
+  // STEP 1: You must host your compiled .bin file somewhere public
+  // For now, we use a placeholder. Replace this with a real URL!
+  const firmwareUrl = "https://your-server.com/firmware.bin"; 
+
+  try {
+    const response = await fetch('/api/ota/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: "esp32_01",
+        firmwareUrl: firmwareUrl
+      })
+    });
+    
+    const data = await response.json();
+    if (response.ok) {
+      viewer.innerText = "✅ " + data.message;
+    } else {
+      viewer.innerText = "❌ Error: " + data.error;
+    }
+  } catch (err) {
+    viewer.innerText = "❌ Error: " + err.message;
+  }
+}
 </script>
 </body>
 </html>
