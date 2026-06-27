@@ -1,130 +1,46 @@
-// ==========================================
-// FARMIOT ESP32-C3: Remote OTA Client (MIGRATED)
-// ==========================================
-
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
-#include <WebSocketsClient.h> // Install "WebSockets" by Markus Sattler
-#include <ArduinoOTA.h>
-#include <ESP32httpUpdate.h>  // Required for ESP32-C3 HTTPS updates
 
-// --- WIFI CREDENTIALS ---
-const char* ssid = "scoobydoo gateway";
-const char* pwd = "scoobydoo";
+const char* ssid     = "scoobydoo gateway";
+const char* password = "scoobydoo";
 
-// --- YOUR RENDER BACKEND URL ---
-const char* wsServer = "wss://farmiot-backend.onrender.com"; 
-const char* deviceId = "esp32_01";
-
-// --- ESP32-C3 LED PIN ---
-int ledPin = 8;
-
-// WebSocket client instance
-WebSocketsClient webSocket;
+int ledPin = 8; 
 
 void setup() {
-  // NOTE: Serial is only here for debugging if you ever get a USB adapter.
-  Serial.begin(115200);
-  
-  // --- LED SETUP ---
+  // Set up the LED
   ledcAttach(ledPin, 5000, 8);
-  ledcWrite(ledPin, 0); // Start OFF
+  ledcWrite(ledPin, 0);
 
-  // --- CONNECT TO WIFI ---
-  WiFi.begin(ssid, pwd);
-  Serial.print("Connecting to Wi-Fi");
-  
+  // --- THE FIX: FORCE A PHYSICAL RADIO RESET ---
+  esp_restart(); // This reboots the Wi-Fi radio hardware
+  delay(1000);
+
+  // Start the connection
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  // Wait for connection
   int attempts = 0;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
     attempts++;
-    if (attempts > 40) {
-      Serial.println("\nWi-Fi Failed!");
-      while(1) { 
-        ledcWrite(ledPin, 255); delay(100); 
-        ledcWrite(ledPin, 0);   delay(100); 
-      }
+    // Fast blink while trying
+    ledcWrite(ledPin, 255);
+    delay(100);
+    ledcWrite(ledPin, 0);
+    delay(400);
+    
+    if (attempts > 60) { 
+      // If it fails after 30 seconds, just turn the light red (solid) and freeze
+      ledcWrite(ledPin, 255);
+      while(1); 
     }
   }
-  
-  Serial.println("\n✅ WiFi Connected!");
-  ledcWrite(ledPin, 255); // Solid blue = Wifi connected
 
-  // --- CONNECT TO REMOTE OTA SERVER (WebSocket) ---
-  // Note: We connect to port 8080 which is defined in your server.js
-  webSocket.begin(wsServer, 8080, "/" + String(deviceId));
-  webSocket.onEvent(webSocketEvent);
-  webSocket.enableHeartbeat(30000, 5000, 2);
-
-  Serial.println("✅ ESP32 connected to Remote OTA Server.");
+  // SUCCESS: Solid Blue!
+  ledcWrite(ledPin, 255); 
 }
 
 void loop() {
-  webSocket.loop();
-  delay(10);
-}
-
-// --- WEB SOCKET EVENT HANDLER ---
-void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
-  switch(type) {
-    case WStype_DISCONNECTED:
-      Serial.println("❌ Disconnected from Remote OTA Server.");
-      ledcWrite(ledPin, 0); // Turn off light if disconnected
-      break;
-    case WStype_CONNECTED:
-      Serial.println("✅ Connected to Remote OTA Server.");
-      ledcWrite(ledPin, 255); // Solid blue again
-      break;
-    case WStype_TEXT:
-      Serial.printf("📡 Received command: %s\n", payload);
-      
-      String command = String((char*)payload);
-      if (command.indexOf("ota_update") > 0) {
-        Serial.println("⬇️ Starting Remote OTA Update...");
-        performOTAUpdate(command);
-      }
-      break;
-  }
-}
-
-// --- PERFORM THE OTA UPDATE OVER HTTPS ---
-void performOTAUpdate(String command) {
-  // Extract the firmware URL from the JSON command
-  int start = command.indexOf("url\":\"") + 6;
-  int end = command.indexOf("\"", start);
-  String firmwareUrl = command.substring(start, end);
-  
-  Serial.println("Downloading firmware from: " + firmwareUrl);
-  
-  // --- LED FLASH PATTERN: 3 fast blinks to show update is starting ---
-  for(int i=0; i<3; i++) { 
-    ledcWrite(ledPin, 255); delay(100);
-    ledcWrite(ledPin, 0); delay(100); 
-  }
-
-  // Use WiFiClientSecure for HTTPS connections
-  WiFiClientSecure client;
-  client.setInsecure(); // Bypass SSL certificate verification for Render
-
-  // Run the update
-  t_httpUpdate_return ret = ESPhttpUpdate.update(client, firmwareUrl);
-  
-  switch(ret) {
-    case HTTP_UPDATE_FAILED:
-      Serial.printf("❌ Update failed: %s\n", ESPhttpUpdate.getLastErrorString().c_str());
-      // FLASH FAST FOREVER TO SHOW ERROR
-      while(1) { ledcWrite(ledPin, 255); delay(50); ledcWrite(ledPin, 0); delay(50); }
-      break;
-      
-    case HTTP_UPDATE_NO_UPDATES:
-      Serial.println("No updates available.");
-      break;
-      
-    case HTTP_UPDATE_OK:
-      Serial.println("✅ Update successful! Rebooting...");
-      delay(1000);
-      ESP.restart();
-      break;
-  }
+  // Keep the light solid blue forever
+  ledcWrite(ledPin, 255);
 }
