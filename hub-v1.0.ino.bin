@@ -6,14 +6,14 @@
 #include <WiFiClientSecure.h>
 #include <WebSocketsClient.h> // Install "WebSockets" by Markus Sattler
 #include <ArduinoOTA.h>
-#include <ESP32httpUpdate.h>  
+#include <HTTPUpdate.h>  
 
 // --- WIFI CREDENTIALS ---
 const char* ssid = "scoobydoo gateway";
 const char* pwd  = "scoobydoo";
 
 // --- YOUR RENDER BACKEND URL ---
-const char* wsServer = "wss://farmiot-backend.onrender.com"; 
+const char* wsServer = "farmiot-backend.onrender.com"; // Removed wss://, just hostname
 const char* deviceId = "esp32_01";
 
 // --- ESP32-C3 PIN ---
@@ -46,9 +46,9 @@ void setup() {
     }
   }
   
-  // 3. CONNECT TO REMOTE OTA SERVER (Universal - no port number)
-  // This automatically uses port 443 via wss://
-  webSocket.begin(wsServer, "/" + String(deviceId));
+  // 3. CONNECT TO REMOTE OTA SERVER 
+  // We explicitly use port 443 (Standard HTTPS port - never blocked by ISPs)
+  webSocket.begin(wsServer, 443, "/" + String(deviceId));
   webSocket.onEvent(webSocketEvent);
   webSocket.enableHeartbeat(30000, 5000, 2);
 
@@ -91,7 +91,7 @@ void performOTAUpdate(String command) {
   WiFiClientSecure client;
   client.setInsecure(); 
 
-  t_httpUpdate_return ret = ESPhttpUpdate.update(client, firmwareUrl);
+  t_httpUpdate_return ret = httpUpdate.update(client, firmwareUrl);
   
   switch(ret) {
     case HTTP_UPDATE_FAILED:
