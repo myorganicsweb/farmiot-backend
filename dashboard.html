@@ -127,7 +127,7 @@
     .view-container { display: none; flex-direction: column; justify-content: flex-start; }
     .view-container.active { display: flex; }
     
-    /* FIRMWARE TAB STYLES */
+    /* FIRMWARE & SETUP TAB STYLES */
     #view-firmware .firmware-card {
       background: rgba(255, 255, 255, 0.45); 
       backdrop-filter: blur(12px); 
@@ -292,8 +292,22 @@
           </div>
         </div>
 
-        <!-- FIRMWARE VIEW -->
+        <!-- FIRMWARE & SETUP VIEW -->
         <div id="view-firmware" class="view-container">
+          
+          <!-- WI-FI SETUP FORM -->
+          <div class="firmware-card" style="border: 2px solid #007aff;">
+            <h3 style="font-size:16px; font-weight:600; color:#007aff; margin-bottom:15px;">📶 Wi-Fi Setup (First Time)</h3>
+            <p style="font-size:13px; color:#666; margin-bottom:15px;">Make sure your ESP32 is in Setup Mode (onboard LED solid blue), then send it your Wi-Fi credentials.</p>
+            
+            <input id="setupDeviceId" class="fw-input" value="esp32_01" placeholder="Device ID (e.g., esp32_01)">
+            <input id="setupSSID" class="fw-input" placeholder="Wi-Fi SSID (e.g., scoobydoo gateway)">
+            <input id="setupPassword" class="fw-input" type="password" placeholder="Wi-Fi Password">
+            
+            <button class="api-test-btn" style="background:#007aff;" onclick="sendWiFiCredentials()">📤 Send Wi-Fi to Device</button>
+          </div>
+
+          <!-- FIRMWARE UPLOAD -->
           <div class="firmware-card">
             <h3 style="font-size:16px; font-weight:600; color:#1a1a1a; margin-bottom:15px;">📦 Upload New Firmware</h3>
             <input id="fwVersion" class="fw-input" placeholder="Version (e.g., v1.0.1)">
@@ -301,6 +315,8 @@
             <input id="fwDesc" class="fw-input" placeholder="Description (e.g., Fixed LED bug)">
             <button class="api-test-btn" onclick="uploadFirmware()">📤 Save to Database</button>
           </div>
+
+          <!-- RELEASE HISTORY -->
           <div class="firmware-card">
             <h3 style="font-size:16px; font-weight:600; color:#1a1a1a; margin-bottom:15px;">📋 Release History</h3>
             <div id="fwList">Loading...</div>
@@ -471,6 +487,27 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deviceId: "esp32_01" })
     });
+    const data = await res.json();
+    alert(data.message || data.error);
+  }
+
+  // --- NEW: SEND WI-FI CREDENTIALS ---
+  async function sendWiFiCredentials() {
+    const deviceId = document.getElementById('setupDeviceId').value;
+    const ssid = document.getElementById('setupSSID').value;
+    const password = document.getElementById('setupPassword').value;
+    
+    if(!ssid || !password) {
+      alert("Please enter both SSID and Password");
+      return;
+    }
+    
+    const res = await fetch('/api/wifi/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId, ssid, password })
+    });
+    
     const data = await res.json();
     alert(data.message || data.error);
   }

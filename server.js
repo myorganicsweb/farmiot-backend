@@ -19,11 +19,10 @@ app.get('/api/dashboard/1', async (req, res) => {
   res.json(data);
 });
 
-// --- UNIVERSAL WEB SOCKET SERVER (No specific port) ---
+// --- UNIVERSAL WEB SOCKET SERVER ---
 const wss = new WebSocket.Server({ noServer: true });
 const connectedDevices = {};
 
-// Handle WebSocket upgrade events
 app.on('upgrade', (request, socket, head) => {
   wss.handleUpgrade(request, socket, head, (ws) => {
     wss.emit('connection', ws, request);
@@ -71,7 +70,6 @@ app.post('/api/firmware/upload', async (req, res) => {
 app.post('/api/ota/update', async (req, res) => {
   const { deviceId } = req.body;
   
-  // Fetch the latest firmware from Supabase
   const { data, error } = await supabase
     .from('firmware_releases')
     .select('file_url')
@@ -88,7 +86,6 @@ app.post('/api/ota/update', async (req, res) => {
 
   const firmwareUrl = data.file_url;
 
-  // Send the firmware URL to the ESP32 via WebSocket
   connectedDevices[deviceId].send(JSON.stringify({
     action: "ota_update",
     url: firmwareUrl
@@ -96,6 +93,24 @@ app.post('/api/ota/update', async (req, res) => {
 
   console.log(`📡 Sending OTA update command to ${deviceId} with URL: ${firmwareUrl}`);
   res.json({ status: "ok", message: "OTA command sent to device." });
+});
+
+// --- [NEW] DASHBOARD Wi-Fi PROVISIONING ---
+app.post('/api/wifi/setup', async (req, res) => {
+  const { deviceId, ssid, password } = req.body;
+
+  if (!connectedDevices[deviceId]) {
+    return res.status(404).json({ error: "Device not currently connected. Make sure the ESP32 is in Setup Mode (LED solid blue)." });
+  }
+
+  connectedDevices[deviceId].send(JSON.stringify({
+    action: "wifi_setup",
+    ssid: ssid,
+    password: password
+  }));
+
+  console.log(`📡 Sending Wi-Fi credentials to ${deviceId}`);
+  res.json({ status: "ok", message: "Wi-Fi credentials sent to device. It will reboot and connect." });
 });
 
 // --- CONTROL DEVICE ---
@@ -116,7 +131,7 @@ app.get('/api/device/:device/:state', (req, res) => {
   res.send(`Command sent to ${device}: ${state}`);
 });
 
-// --- CRITICAL: Force Render to listen on Port 443 ---
+// --- LISTEN ON PORT 443 ---
 const PORT = process.env.PORT || 443;
 app.listen(PORT, () => {
   console.log(`✅ FarmIOT Universal Server running on port ${PORT}`);
