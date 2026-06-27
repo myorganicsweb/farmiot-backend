@@ -116,8 +116,8 @@ app.get('/api/device/:device/:state', (req, res) => {
   res.send(`Command sent to ${device}: ${state}`);
 });
 
-// For Render's standard web port
-const PORT = process.env.PORT || 3000;
+// --- CRITICAL: Force Render to listen on Port 443 ---
+const PORT = process.env.PORT || 443;
 app.listen(PORT, () => {
   console.log(`✅ FarmIOT Universal Server running on port ${PORT}`);
 });

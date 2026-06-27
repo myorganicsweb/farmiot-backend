@@ -1,5 +1,5 @@
 // ==========================================
-// FARMIOT ESP32-C3: UNIVERSAL FAILOVER CLIENT
+// FARMIOT ESP32-C3: UNIVERSAL OTA CLIENT
 // ==========================================
 
 #include <WiFi.h>
@@ -13,7 +13,7 @@ const char* ssid = "scoobydoo gateway";
 const char* pwd  = "scoobydoo";
 
 // --- YOUR RENDER BACKEND URL ---
-const char* wsServer = "farmiot-backend.onrender.com"; 
+const char* wsServer = "farm-iot.onrender.com"; 
 const char* deviceId = "esp32_01";
 
 // --- ESP32-C3 PIN ---
@@ -44,20 +44,8 @@ void setup() {
     }
   }
 
-  // --- UNIVERSAL DNS FAILOVER (FIXED SYNTAX) ---
-  // 1. Try Google DNS (8.8.8.8)
-  IPAddress googleDNS(8, 8, 8, 8);
-  WiFi.setDNS(googleDNS);
-  delay(500);
-  
-  // 2. If Google fails, fallback to Cloudflare DNS (1.1.1.1)
-  if (WiFi.status() != WL_CONNECTED) {
-    IPAddress cloudflareDNS(1, 1, 1, 1);
-    WiFi.setDNS(cloudflareDNS);
-    delay(500);
-  }
-
   // 3. CONNECT TO REMOTE OTA SERVER
+  // Using port 443 (standard, unblockable HTTPS port)
   webSocket.begin(wsServer, 443, "/" + String(deviceId));
   webSocket.onEvent(webSocketEvent);
   webSocket.enableHeartbeat(30000, 5000, 2);
