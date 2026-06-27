@@ -1,10 +1,10 @@
 // ==========================================
-// FARMIOT ESP32-C3: UNIVERSAL OTA CLIENT
+// FARMIOT ESP32-C3: UNIVERSAL FAILOVER CLIENT
 // ==========================================
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
-#include <WebSocketsClient.h> // Install "WebSockets" by Markus Sattler
+#include <WebSocketsClient.h>
 #include <ArduinoOTA.h>
 #include <HTTPUpdate.h>  
 
@@ -13,7 +13,7 @@ const char* ssid = "scoobydoo gateway";
 const char* pwd  = "scoobydoo";
 
 // --- YOUR RENDER BACKEND URL ---
-const char* wsServer = "farmiot-backend.onrender.com"; // Removed wss://, just hostname
+const char* wsServer = "farmiot-backend.onrender.com"; 
 const char* deviceId = "esp32_01";
 
 // --- ESP32-C3 PIN ---
@@ -34,20 +34,30 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     attempts++;
-    // Blink while connecting
     ledcWrite(ledPin, 255);
     delay(100);
     ledcWrite(ledPin, 0);
     delay(400);
     
     if (attempts > 40) {
-      // Fast blink error if Wi-Fi fails
       while(1) { ledcWrite(ledPin, 255); delay(100); ledcWrite(ledPin, 0); delay(100); }
     }
   }
+
+  // --- UNIVERSAL DNS FAILOVER (FIXED SYNTAX) ---
+  // 1. Try Google DNS (8.8.8.8)
+  IPAddress googleDNS(8, 8, 8, 8);
+  WiFi.setDNS(googleDNS);
+  delay(500);
   
-  // 3. CONNECT TO REMOTE OTA SERVER 
-  // We explicitly use port 443 (Standard HTTPS port - never blocked by ISPs)
+  // 2. If Google fails, fallback to Cloudflare DNS (1.1.1.1)
+  if (WiFi.status() != WL_CONNECTED) {
+    IPAddress cloudflareDNS(1, 1, 1, 1);
+    WiFi.setDNS(cloudflareDNS);
+    delay(500);
+  }
+
+  // 3. CONNECT TO REMOTE OTA SERVER
   webSocket.begin(wsServer, 443, "/" + String(deviceId));
   webSocket.onEvent(webSocketEvent);
   webSocket.enableHeartbeat(30000, 5000, 2);
@@ -61,7 +71,6 @@ void loop() {
   delay(10);
 }
 
-// --- WEB SOCKET EVENT HANDLER ---
 void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
   switch(type) {
     case WStype_DISCONNECTED:
@@ -79,13 +88,11 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
   }
 }
 
-// --- PERFORM OTA UPDATE OVER INTERNET ---
 void performOTAUpdate(String command) {
   int start = command.indexOf("url\":\"") + 6;
   int end = command.indexOf("\"", start);
   String firmwareUrl = command.substring(start, end);
   
-  // 3 quick flashes = Starting OTA update
   for(int i=0; i<3; i++) { ledcWrite(ledPin, 255); delay(100); ledcWrite(ledPin, 0); delay(100); }
 
   WiFiClientSecure client;
