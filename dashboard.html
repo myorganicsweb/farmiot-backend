@@ -123,7 +123,6 @@
 
     @media (max-width: 900px) { .main-layout { grid-template-columns: 1fr; } .sidebar { display: none; } .right-col { display: none; } }
 
-    /* SPA VIEW LOGIC */
     #content-area { width: 100%; }
     .view-container { display: none; flex-direction: column; justify-content: flex-start; }
     .view-container.active { display: flex; }
@@ -374,32 +373,21 @@
     document.getElementById(type + 'Card').classList.toggle('disabled');
   }
 
-  // ==========================================
-  // THE FIXED SWITCH VIEW LOGIC (NO ERROR!)
-  // ==========================================
   function switchView(viewName) {
-    // 1. Hide all views
     document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
-    
-    // 2. Deactivate all icons
     document.querySelectorAll('.icon-btn').forEach(el => el.classList.remove('active'));
     
-    // 3. Show the specific view
     const targetView = document.getElementById('view-' + viewName);
     const targetBtn = document.getElementById('btn-' + viewName);
     
     if(targetView) targetView.classList.add('active');
     if(targetBtn) targetBtn.classList.add('active');
     
-    // 4. Load data if switching to firmware
     if(viewName === 'firmware') {
       loadFirmwareList();
     }
   }
 
-  // ==========================================
-  // API TESTER LOGIC
-  // ==========================================
   function toggleDeviceDropdown() {
     document.getElementById('deviceDropdown').classList.toggle('open');
   }
@@ -442,9 +430,6 @@
     viewer.innerText = '✅ Batch Complete:\n' + results.join('\n');
   }
 
-  // ==========================================
-  // FIRMWARE LOGIC
-  // ==========================================
   async function uploadFirmware() {
     const version = document.getElementById('fwVersion').value;
     const file_url = document.getElementById('fwUrl').value;
@@ -490,7 +475,6 @@
     alert(data.message || data.error);
   }
 
-  // Start dashboard loop (dummy for now)
   setInterval(() => {
     document.getElementById('tempText').innerText = (20 + Math.random()*5).toFixed(1);
     document.getElementById('humText').innerText = (40 + Math.random()*10).toFixed(0);

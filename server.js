@@ -19,9 +19,16 @@ app.get('/api/dashboard/1', async (req, res) => {
   res.json(data);
 });
 
-// --- WEB SOCKET SERVER ---
-const wss = new WebSocket.Server({ port: 8080 }); 
+// --- UNIVERSAL WEB SOCKET SERVER (No specific port) ---
+const wss = new WebSocket.Server({ noServer: true });
 const connectedDevices = {};
+
+// Handle WebSocket upgrade events
+app.on('upgrade', (request, socket, head) => {
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit('connection', ws, request);
+  });
+});
 
 wss.on('connection', (ws, req) => {
   const deviceId = req.url.split('/').pop();
@@ -109,7 +116,8 @@ app.get('/api/device/:device/:state', (req, res) => {
   res.send(`Command sent to ${device}: ${state}`);
 });
 
+// For Render's standard web port
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ FarmIOT Server running on port ${PORT}`);
+  console.log(`✅ FarmIOT Universal Server running on port ${PORT}`);
 });
