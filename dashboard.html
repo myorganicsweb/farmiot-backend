@@ -9,101 +9,39 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-    body { 
-      background: linear-gradient(145deg, #f2f4fa 0%, #dce1eb 100%); 
-      min-height: 100vh; 
-      display: flex; 
-      justify-content: center; 
-      align-items: center; 
-      padding: 20px; 
-    }
-    
-    .app-container { 
-      width: 100%; 
-      max-width: 1100px; 
-      background: rgba(255, 255, 255, 0.25); 
-      backdrop-filter: blur(25px); 
-      -webkit-backdrop-filter: blur(25px); 
-      border-radius: 40px; 
-      padding: 20px; 
-      box-shadow: 0 25px 80px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.6); 
-      position: relative; 
-      overflow: hidden;
-    }
-
+    body { background: linear-gradient(145deg, #f2f4fa 0%, #dce1eb 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+    .app-container { width: 100%; max-width: 1100px; background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(25px); border-radius: 40px; padding: 20px; box-shadow: 0 25px 80px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.6); position: relative; overflow: hidden; }
     .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px 20px 20px; flex-wrap: wrap; gap: 15px; }
     .user-welcome { display: flex; align-items: center; gap: 15px; }
-    .avatar-circle { 
-      width: 52px; height: 52px; border-radius: 50%; 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-      display: flex; justify-content: center; align-items: center; 
-      color: white; font-size: 22px; font-weight: 600; 
-      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); 
-    }
+    .avatar-circle { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; justify-content: center; align-items: center; color: white; font-size: 22px; font-weight: 600; box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); }
     .user-text h1 { font-size: 22px; font-weight: 600; color: #1a1a1a; letter-spacing: -0.5px; }
     .user-text p { font-size: 13px; color: #888; font-weight: 400; }
-    
     .top-right-actions { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
-    .search-box { 
-      background: rgba(255,255,255,0.6); 
-      border-radius: 30px; padding: 8px 20px; 
-      display: flex; align-items: center; gap: 10px; 
-      backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.5);
-    }
+    .search-box { background: rgba(255,255,255,0.6); border-radius: 30px; padding: 8px 20px; display: flex; align-items: center; gap: 10px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.5); }
     .search-box input { border: none; background: transparent; outline: none; font-size: 14px; color: #555; width: 150px; }
-    .mode-toggle { 
-      background: rgba(255,255,255,0.6); 
-      border-radius: 30px; display: flex; gap: 5px; padding: 4px; 
-      backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.5);
-    }
-    .mode-btn { 
-      border: none; background: transparent; padding: 6px 16px; border-radius: 20px; 
-      font-size: 13px; font-weight: 500; color: #888; cursor: pointer; transition: 0.3s; 
-    }
+    .mode-toggle { background: rgba(255,255,255,0.6); border-radius: 30px; display: flex; gap: 5px; padding: 4px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.5); }
+    .mode-btn { border: none; background: transparent; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; color: #888; cursor: pointer; transition: 0.3s; }
     .mode-btn.active { background: #fff; color: #1a1a1a; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-
     .main-layout { display: grid; grid-template-columns: 70px 1fr 280px; gap: 20px; padding: 0 10px; }
-    .sidebar { 
-      background: rgba(255,255,255,0.2); 
-      backdrop-filter: blur(10px); 
-      border-radius: 30px; padding: 20px 0; 
-      display: flex; flex-direction: column; align-items: center; gap: 25px; 
-      border: 1px solid rgba(255,255,255,0.5); 
-    }
-    .icon-btn { 
-      width: 44px; height: 44px; border-radius: 14px; 
-      display: flex; align-items: center; justify-content: center; 
-      color: #999; cursor: pointer; transition: 0.3s; 
-    }
+    .sidebar { background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border-radius: 30px; padding: 20px 0; display: flex; flex-direction: column; align-items: center; gap: 25px; border: 1px solid rgba(255,255,255,0.5); }
+    .icon-btn { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #999; cursor: pointer; transition: 0.3s; }
     .icon-btn.active { background: #1a1a1a; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
     .icon-btn svg { width: 22px; height: 22px; fill: currentColor; }
-    
     .center-col { display: flex; flex-direction: column; gap: 20px; }
-
     .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .glass-card { 
-      background: rgba(255, 255, 255, 0.45); 
-      backdrop-filter: blur(12px); 
-      border-radius: 24px; padding: 20px; 
-      box-shadow: 0 8px 32px rgba(0,0,0,0.04); 
-      border: 1px solid rgba(255,255,255,0.8); 
-      position: relative; transition: all 0.3s ease; 
-    }
+    .glass-card { background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(12px); border-radius: 24px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.04); border: 1px solid rgba(255,255,255,0.8); position: relative; transition: all 0.3s ease; }
     .glass-card.disabled { opacity: 0.5; filter: grayscale(0.8); }
     .glass-card .title { font-size: 14px; font-weight: 500; color: #555; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
     .glass-card .title .icon { font-size: 18px; }
     .glass-card .value { font-size: 32px; font-weight: 600; color: #1a1a1a; display: flex; align-items: baseline; gap: 4px; transition: opacity 0.3s; }
     .glass-card .unit { font-size: 16px; font-weight: 400; color: #999; }
-    
     .toggle-switch { position: absolute; top: 20px; right: 20px; width: 44px; height: 24px; border-radius: 12px; background: rgba(200, 200, 200, 0.5); cursor: pointer; transition: 0.3s; border: none; }
     .toggle-switch.on { background: #1a1a1a; }
     .toggle-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: white; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .toggle-switch.on::after { left: 22px; }
-    
     .chart-area { height: 100px; width: 100%; margin-top: 5px; }
     .chart-area svg { width: 100%; height: 100%; border-radius: 12px; background: rgba(255,255,255,0.2); }
     .chart-line { fill: none; stroke-width: 3; stroke-linecap: round; }
-    
     .right-col { display: flex; flex-direction: column; gap: 20px; }
     .stat-card { background: rgba(255,255,255,0.45); backdrop-filter: blur(12px); border-radius: 24px; padding: 20px; display: flex; align-items: center; gap: 15px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 8px 32px rgba(0,0,0,0.04); }
     .stat-icon { width: 48px; height: 48px; border-radius: 16px; display: flex; justify-content: center; align-items: center; font-size: 20px; }
@@ -112,7 +50,6 @@
     .stat-text { flex: 1; }
     .stat-text .label { font-size: 12px; color: #888; }
     .stat-text .value { font-size: 22px; font-weight: 600; color: #1a1a1a; }
-    
     .bottom-bar { display: flex; gap: 15px; padding-top: 10px; flex-wrap: wrap; }
     .action-btn { padding: 12px 24px; border: none; border-radius: 30px; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .action-btn:active { transform: scale(0.95); }
@@ -120,29 +57,16 @@
     .action-btn.red { background: #ff3b30; }
     .action-btn.blue { background: #007aff; }
     .action-btn.teal { background: #00c7be; }
-
     @media (max-width: 900px) { .main-layout { grid-template-columns: 1fr; } .sidebar { display: none; } .right-col { display: none; } }
-
     #content-area { width: 100%; }
     .view-container { display: none; flex-direction: column; justify-content: flex-start; }
     .view-container.active { display: flex; }
-    
-    /* FIRMWARE & SETUP TAB STYLES */
-    #view-firmware .firmware-card {
-      background: rgba(255, 255, 255, 0.45); 
-      backdrop-filter: blur(12px); 
-      border-radius: 24px; padding: 20px; 
-      border: 1px solid rgba(255,255,255,0.8); 
-      box-shadow: 0 8px 32px rgba(0,0,0,0.04);
-      margin-bottom: 20px;
-    }
+    #view-setup .setup-card { background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(12px); border-radius: 24px; padding: 20px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 8px 32px rgba(0,0,0,0.04); margin-bottom: 20px; }
     .fw-input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.5); border-radius: 12px; background: rgba(255,255,255,0.3); font-size: 14px; outline: none; }
     .fw-list-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid rgba(0,0,0,0.05); }
     .fw-list-item:last-child { border-bottom: none; }
     .fw-version { font-weight: 600; color: #1a1a1a; }
     .fw-date { font-size: 12px; color: #888; }
-
-    /* API TESTER STYLES */
     #view-api .api-card { background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(12px); border-radius: 24px; padding: 20px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 8px 32px rgba(0,0,0,0.04); }
     #view-api .api-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 15px; position: relative; z-index: 10; }
     .custom-dropdown { position: relative; display: inline-block; min-width: 150px; }
@@ -190,8 +114,8 @@
       <div class="icon-btn active" id="btn-home" onclick="switchView('home')">
         <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
       </div>
-      <div class="icon-btn" id="btn-history" onclick="switchView('history')">
-        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-7.5-5-2.5-5 2.5z"/></svg>
+      <div class="icon-btn" id="btn-setup" onclick="switchView('setup')">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
       </div>
       <div class="icon-btn" id="btn-api" onclick="switchView('api')">
         <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
@@ -200,37 +124,14 @@
         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59-.24-1.13-.57-1.62-.94l-2.39-.96c-.22-.08-.47 0-.59.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
       </div>
     </div>
-    
     <div class="center-col">
       <div id="content-area">
-        
-        <!-- HOME VIEW -->
         <div id="view-home" class="view-container active">
           <div class="cards-grid">
-            <div class="glass-card" id="tempCard">
-              <div class="title"><span class="icon">🌡️</span> Temperature</div>
-              <div class="value"><span id="tempText">--</span><span class="unit" id="tempUnit">°C</span></div>
-              <button id="tempBtn" class="toggle-switch on" onclick="toggleSensor('temp')"></button>
-              <div class="chart-area"><svg viewBox="0 0 200 100" id="tempChart"></svg></div>
-            </div>
-            <div class="glass-card" id="humCard">
-              <div class="title"><span class="icon">💧</span> Humidity</div>
-              <div class="value"><span id="humText">--</span><span class="unit">%</span></div>
-              <button id="humBtn" class="toggle-switch on" onclick="toggleSensor('hum')"></button>
-              <div class="chart-area"><svg viewBox="0 0 200 100" id="humChart"></svg></div>
-            </div>
-            <div class="glass-card" id="soilCard">
-              <div class="title"><span class="icon">🌱</span> Soil Moisture</div>
-              <div class="value"><span id="soilText">--</span><span class="unit">%</span></div>
-              <button id="soilBtn" class="toggle-switch on" onclick="toggleSensor('soil')"></button>
-              <div class="chart-area"><svg viewBox="0 0 200 100" id="soilChart"></svg></div>
-            </div>
-            <div class="glass-card" id="waterCard">
-              <div class="title"><span class="icon">🌊</span> Water Level</div>
-              <div class="value"><span id="waterText">--</span><span class="unit">%</span></div>
-              <button id="waterBtn" class="toggle-switch on" onclick="toggleSensor('water')"></button>
-              <div class="chart-area"><svg viewBox="0 0 200 100" id="waterChart"></svg></div>
-            </div>
+            <div class="glass-card" id="tempCard"><div class="title"><span class="icon">🌡️</span> Temperature</div><div class="value"><span id="tempText">--</span><span class="unit" id="tempUnit">°C</span></div><button id="tempBtn" class="toggle-switch on" onclick="toggleSensor('temp')"></button><div class="chart-area"><svg viewBox="0 0 200 100" id="tempChart"></svg></div></div>
+            <div class="glass-card" id="humCard"><div class="title"><span class="icon">💧</span> Humidity</div><div class="value"><span id="humText">--</span><span class="unit">%</span></div><button id="humBtn" class="toggle-switch on" onclick="toggleSensor('hum')"></button><div class="chart-area"><svg viewBox="0 0 200 100" id="humChart"></svg></div></div>
+            <div class="glass-card" id="soilCard"><div class="title"><span class="icon">🌱</span> Soil Moisture</div><div class="value"><span id="soilText">--</span><span class="unit">%</span></div><button id="soilBtn" class="toggle-switch on" onclick="toggleSensor('soil')"></button><div class="chart-area"><svg viewBox="0 0 200 100" id="soilChart"></svg></div></div>
+            <div class="glass-card" id="waterCard"><div class="title"><span class="icon">🌊</span> Water Level</div><div class="value"><span id="waterText">--</span><span class="unit">%</span></div><button id="waterBtn" class="toggle-switch on" onclick="toggleSensor('water')"></button><div class="chart-area"><svg viewBox="0 0 200 100" id="waterChart"></svg></div></div>
           </div>
           <div class="bottom-bar">
             <button id="btn-led" class="action-btn green" onclick="toggleDevice('led', 'btn-led')">💡 LED</button>
@@ -239,75 +140,30 @@
             <button id="btn-pump" class="action-btn teal" onclick="toggleDevice('pump', 'btn-pump')">💧 Pump</button>
           </div>
         </div>
-
-        <!-- HISTORY VIEW -->
-        <div id="view-history" class="view-container">
-          <div class="glass-card" style="padding: 40px; text-align: center;">
-            <h3 style="font-size: 18px; color: #888;">📊 History View</h3>
-            <p style="font-size: 14px; color: #aaa; margin-top: 10px;">Charts are drawn dynamically in the Home view.</p>
-          </div>
-        </div>
-
-        <!-- API VIEW -->
-        <div id="view-api" class="view-container">
-          <div class="api-card">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px;">
-              <span style="font-size:18px;">🛠️</span>
-              <h3 style="font-size:16px; font-weight:600; color:#1a1a1a; margin:0;">REST API Tester</h3>
-            </div>
-            <div class="api-toolbar">
-              <div class="custom-dropdown" id="deviceDropdown">
-                <div class="dropdown-btn" onclick="toggleDeviceDropdown()">
-                  <span id="dropdownLabel">Select Devices</span>
-                </div>
-                <div class="dropdown-content">
-                  <label><input type="checkbox" value="led" checked onchange="updateDeviceSelection()"> LED</label>
-                  <label><input type="checkbox" value="buzzer" onchange="updateDeviceSelection()"> Buzzer</label>
-                  <label><input type="checkbox" value="fan" onchange="updateDeviceSelection()"> Fan</label>
-                  <label><input type="checkbox" value="pump" onchange="updateDeviceSelection()"> Pump</label>
-                  <label><input type="checkbox" value="servo" onchange="updateDeviceSelection()"> Servo</label>
-                </div>
-              </div>
-              <select id="apiState" class="state-select" onchange="updateDeviceSelection()">
-                <option value="on">ON</option>
-                <option value="off">OFF</option>
-              </select>
-            </div>
-            <div class="split-container">
-              <div class="split-row">
-                <div class="split-half">
-                  <div class="split-half-title">
-                    <span>📤 Request</span>
-                    <span style="font-weight:400; font-size:11px; color:#999;">Auto-updates</span>
-                  </div>
-                  <textarea id="requestEditor" spellcheck="false">[{"device":"led","state":"on"}]</textarea>
-                </div>
-                <div class="split-half">
-                  <div class="split-half-title">📥 Responses</div>
-                  <pre id="responseViewer">Select devices & click "Test"</pre>
-                </div>
-              </div>
-              <button class="api-test-btn" onclick="sendCustomApiRequest()">🧪 Test Batch</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- FIRMWARE & SETUP VIEW -->
-        <div id="view-firmware" class="view-container">
-          
-          <!-- WI-FI SETUP FORM -->
-          <div class="firmware-card" style="border: 2px solid #007aff;">
-            <h3 style="font-size:16px; font-weight:600; color:#007aff; margin-bottom:15px;">📶 Wi-Fi Setup (First Time)</h3>
-            <p style="font-size:13px; color:#666; margin-bottom:15px;">Make sure your ESP32 is in Setup Mode (onboard LED solid blue), then send it your Wi-Fi credentials.</p>
-            
+        <div id="view-setup" class="view-container">
+          <div class="setup-card" style="border: 2px solid #007aff;">
+            <h3 style="font-size:16px; font-weight:600; color:#007aff; margin-bottom:15px;">📶 Wi-Fi Setup (AP Mode)</h3>
+            <p style="font-size:13px; color:#666; margin-bottom:15px;">Power on your ESP32. It will broadcast a Wi-Fi network named "FarmIOT-Setup". Connect to it and go to 192.168.4.1 in your browser to enter credentials.</p>
+            <p style="font-size:12px; color:#999; margin-bottom:10px;">Alternatively, enter credentials below to send them via Bluetooth.</p>
             <input id="setupDeviceId" class="fw-input" value="esp32_01" placeholder="Device ID (e.g., esp32_01)">
             <input id="setupSSID" class="fw-input" placeholder="Wi-Fi SSID (e.g., scoobydoo gateway)">
             <input id="setupPassword" class="fw-input" type="password" placeholder="Wi-Fi Password">
-            
             <button class="api-test-btn" style="background:#007aff;" onclick="sendWiFiCredentials()">📤 Send Wi-Fi to Device</button>
+            <div id="provisionStatus" style="margin-top:10px; font-size:14px; color:#888;"></div>
           </div>
-
-          <!-- FIRMWARE UPLOAD -->
+        </div>
+        <div id="view-api" class="view-container">
+          <div class="api-card">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px;"><span style="font-size:18px;">🛠️</span><h3 style="font-size:16px; font-weight:600; color:#1a1a1a; margin:0;">REST API Tester</h3></div>
+            <div class="api-toolbar">
+              <div class="custom-dropdown" id="deviceDropdown"><div class="dropdown-btn" onclick="toggleDeviceDropdown()"><span id="dropdownLabel">Select Devices</span></div><div class="dropdown-content"><label><input type="checkbox" value="led" checked onchange="updateDeviceSelection()"> LED</label><label><input type="checkbox" value="buzzer" onchange="updateDeviceSelection()"> Buzzer</label><label><input type="checkbox" value="fan" onchange="updateDeviceSelection()"> Fan</label><label><input type="checkbox" value="pump" onchange="updateDeviceSelection()"> Pump</label><label><input type="checkbox" value="servo" onchange="updateDeviceSelection()"> Servo</label></div></div>
+              <select id="apiState" class="state-select" onchange="updateDeviceSelection()"><option value="on">ON</option><option value="off">OFF</option></select>
+            </div>
+            <div class="split-container"><div class="split-row"><div class="split-half"><div class="split-half-title"><span>📤 Request</span><span style="font-weight:400; font-size:11px; color:#999;">Auto-updates</span></div><textarea id="requestEditor" spellcheck="false">[{"device":"led","state":"on"}]</textarea></div><div class="split-half"><div class="split-half-title">📥 Responses</div><pre id="responseViewer">Select devices & click "Test"</pre></div></div><button class="api-test-btn" onclick="sendCustomApiRequest()">🧪 Test Batch</button>
+            </div>
+          </div>
+        </div>
+        <div id="view-firmware" class="view-container">
           <div class="firmware-card">
             <h3 style="font-size:16px; font-weight:600; color:#1a1a1a; margin-bottom:15px;">📦 Upload New Firmware</h3>
             <input id="fwVersion" class="fw-input" placeholder="Version (e.g., v1.0.1)">
@@ -315,43 +171,18 @@
             <input id="fwDesc" class="fw-input" placeholder="Description (e.g., Fixed LED bug)">
             <button class="api-test-btn" onclick="uploadFirmware()">📤 Save to Database</button>
           </div>
-
-          <!-- RELEASE HISTORY -->
           <div class="firmware-card">
             <h3 style="font-size:16px; font-weight:600; color:#1a1a1a; margin-bottom:15px;">📋 Release History</h3>
             <div id="fwList">Loading...</div>
             <button class="api-test-btn" style="margin-top:15px; background:#34c759;" onclick="triggerRemoteUpdate()">📡 Deploy Latest to ESP32</button>
           </div>
         </div>
-        
       </div>
     </div>
-    
-    <!-- RIGHT COLUMN -->
     <div class="right-col">
-      <div class="stat-card">
-        <div class="stat-icon blue">⚡</div>
-        <div class="stat-text">
-          <div class="label">Master Toggle</div>
-          <button id="masterBtn" class="mode-btn" style="margin-top:4px; background:#1a1a1a; color:#fff; border:none; padding:6px 16px; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.15);" onclick="toggleMaster()">ON</button>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon green">🌡️</div>
-        <div class="stat-text">
-          <div class="label">Unit</div>
-          <button id="unitBtn" class="mode-btn" style="margin-top:4px; background:#1a1a1a; color:#fff; border:none; padding:6px 16px; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.15);" onclick="toggleUnit()">°C</button>
-        </div>
-      </div>
-      <div class="stat-card" style="flex-direction:column; gap:8px;">
-        <div style="width:100%; display:flex; justify-content:space-between;">
-          <span style="font-size:13px; color:#888;">System Status</span>
-          <span style="font-size:13px; font-weight:600; color:#34c759;">Online</span>
-        </div>
-        <div style="width:100%; height:4px; background:rgba(255,255,255,0.6); border-radius:4px; overflow:hidden;">
-          <div style="height:100%; width:70%; background:#34c759; border-radius:4px;"></div>
-        </div>
-      </div>
+      <div class="stat-card"><div class="stat-icon blue">⚡</div><div class="stat-text"><div class="label">Master Toggle</div><button id="masterBtn" class="mode-btn" style="margin-top:4px; background:#1a1a1a; color:#fff; border:none; padding:6px 16px; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.15);" onclick="toggleMaster()">ON</button></div></div>
+      <div class="stat-card"><div class="stat-icon green">🌡️</div><div class="stat-text"><div class="label">Unit</div><button id="unitBtn" class="mode-btn" style="margin-top:4px; background:#1a1a1a; color:#fff; border:none; padding:6px 16px; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.15);" onclick="toggleUnit()">°C</button></div></div>
+      <div class="stat-card" style="flex-direction:column; gap:8px;"><div style="width:100%; display:flex; justify-content:space-between;"><span style="font-size:13px; color:#888;">System Status</span><span style="font-size:13px; font-weight:600; color:#34c759;">Online</span></div><div style="width:100%; height:4px; background:rgba(255,255,255,0.6); border-radius:4px; overflow:hidden;"><div style="height:100%; width:70%; background:#34c759; border-radius:4px;"></div></div></div>
     </div>
   </div>
 </div>
@@ -491,25 +322,36 @@
     alert(data.message || data.error);
   }
 
-  // --- NEW: SEND WI-FI CREDENTIALS ---
+  // --- SEND WI-FI CREDENTIALS ---
   async function sendWiFiCredentials() {
+    const status = document.getElementById('provisionStatus');
     const deviceId = document.getElementById('setupDeviceId').value;
     const ssid = document.getElementById('setupSSID').value;
     const password = document.getElementById('setupPassword').value;
     
     if(!ssid || !password) {
-      alert("Please enter both SSID and Password");
+      status.innerText = "❌ Please enter both SSID and Password.";
+      status.style.color = "#c62828";
       return;
     }
     
-    const res = await fetch('/api/wifi/setup', {
+    status.innerText = "⏳ Sending credentials...";
+    status.style.color = "#888";
+    
+    const res = await fetch('/api/wifi/provision', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deviceId, ssid, password })
     });
     
     const data = await res.json();
-    alert(data.message || data.error);
+    if(res.ok) {
+      status.innerText = "✅ " + data.message;
+      status.style.color = "#2e7d32";
+    } else {
+      status.innerText = "❌ " + data.error;
+      status.style.color = "#c62828";
+    }
   }
 
   setInterval(() => {
