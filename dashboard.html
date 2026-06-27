@@ -407,6 +407,7 @@
     pump: false
   };
 
+  // --- FIXED TO USE RENDER BACKEND VIA API ---
   function toggleDevice(device, btnId) {
     deviceStates[device] = !deviceStates[device];
     const newState = deviceStates[device] ? 'on' : 'off';
@@ -418,10 +419,11 @@
       btn.classList.remove('on-state');
     }
 
-    fetch(`http://192.168.1.217:8080/${device}/${newState}`)
+    // Send command to Render Backend API (Your Server.js endpoint)
+    fetch(`/api/device/${device}/${newState}`)
       .then(res => res.text())
-      .then(data => console.log(`ESP32 ${device} -> ${newState}`))
-      .catch(err => console.error("Failed to reach ESP32:", err));
+      .then(data => console.log(`Command sent to ${device} -> ${newState}`))
+      .catch(err => console.error("Failed to reach Backend:", err));
   }
 
   function toggleUnit() {
@@ -530,7 +532,8 @@
     for (let i = 0; i < payload.length; i++) {
       const cmd = payload[i];
       try {
-        const res = await fetch(`http://192.168.1.217:8080/${cmd.device}/${cmd.state}`);
+        // FIXED: Sending to Render backend API
+        const res = await fetch(`/api/device/${cmd.device}/${cmd.state}`);
         const data = await res.text();
         results.push(`[${i+1}] ${cmd.device} -> ${data}`);
       } catch (err) {
