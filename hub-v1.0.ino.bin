@@ -1,100 +1,82 @@
 // ==========================================
-// FARMIOT ESP32-C3: UNIVERSAL OTA CLIENT
+// FARMIOT FINAL: HTTP POLLING (500ms FAST)
 // ==========================================
 
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
-#include <WebSocketsClient.h>
-#include <ArduinoOTA.h>
-#include <HTTPUpdate.h>  
+#include <HTTPClient.h>
+#include <Preferences.h>
+#include <ArduinoJson.h>  // Install "ArduinoJson" by Benoit Blanchon
 
-// --- WIFI CREDENTIALS ---
-const char* ssid = "scoobydoo gateway";
-const char* pwd  = "scoobydoo";
+Preferences preferences;
+int onboardLed = 8;
+int externalLed = 7;
 
-// --- YOUR RENDER BACKEND URL ---
-const char* wsServer = "farm-iot.onrender.com"; 
-const char* deviceId = "esp32_01";
-
-// --- ESP32-C3 PIN ---
-int ledPin = 8;
-
-WebSocketsClient webSocket;
+const char* wsServer = "farm-iot.onrender.com";
 
 void setup() {
-  // 1. SET UP LED
-  ledcAttach(ledPin, 5000, 8);
-  ledcWrite(ledPin, 0); 
+  Serial.begin(115200);
+  delay(1000);
+  Serial.println("\n=== FarmIOT Hub Starting ===");
 
-  // 2. CONNECT TO WIFI
+  pinMode(onboardLed, OUTPUT);
+  pinMode(externalLed, OUTPUT);
+  digitalWrite(onboardLed, LOW);
+  digitalWrite(externalLed, LOW);
+
+  // --- Load credentials ---
+  preferences.begin("wifi", false);
+  String savedSSID = preferences.getString("ssid", "scoobydoo");
+  String savedPass = preferences.getString("password", "scoobydoo");
+  preferences.end();
+
+  // --- Connect to Wi-Fi ---
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, pwd);
-  
-  int attempts = 0;
+  WiFi.begin(savedSSID.c_str(), savedPass.c_str());
+
+  Serial.print("Connecting to Wi-Fi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    attempts++;
-    ledcWrite(ledPin, 255);
-    delay(100);
-    ledcWrite(ledPin, 0);
-    delay(400);
-    
-    if (attempts > 40) {
-      while(1) { ledcWrite(ledPin, 255); delay(100); ledcWrite(ledPin, 0); delay(100); }
-    }
+    Serial.print(".");
   }
 
-  // 3. CONNECT TO REMOTE OTA SERVER
-  // Using port 443 (standard, unblockable HTTPS port)
-  webSocket.begin(wsServer, 443, "/" + String(deviceId));
-  webSocket.onEvent(webSocketEvent);
-  webSocket.enableHeartbeat(30000, 5000, 2);
-
-  // 4. LED SOLID BLUE = READY
-  ledcWrite(ledPin, 255); 
+  Serial.println("\n✅ Wi-Fi Connected!");
+  Serial.print("📡 IP Address: ");
+  Serial.println(WiFi.localIP());
+  digitalWrite(onboardLed, HIGH);
 }
 
 void loop() {
-  webSocket.loop();
-  delay(10);
-}
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    
+    // --- SPEED BOOST: Max Wi-Fi power ---
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+    
+    http.begin("https://" + String(wsServer) + "/api/led/status");
+    int httpCode = http.GET();
 
-void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
-  switch(type) {
-    case WStype_DISCONNECTED:
-      ledcWrite(ledPin, 0);
-      break;
-    case WStype_CONNECTED:
-      ledcWrite(ledPin, 255);
-      break;
-    case WStype_TEXT:
-      String command = String((char*)payload);
-      if (command.indexOf("ota_update") > 0) {
-        performOTAUpdate(command);
+    if (httpCode > 0) {
+      String payload = http.getString();
+      Serial.println("📡 Server says: " + payload);
+
+      // Parse the JSON response
+      DynamicJsonDocument doc(256);
+      deserializeJson(doc, payload);
+      String state = doc["state"];
+
+      if (state == "on") {
+        digitalWrite(externalLed, HIGH);
+        Serial.println("💡 LED turned ON");
+      } else if (state == "off") {
+        digitalWrite(externalLed, LOW);
+        Serial.println("💡 LED turned OFF");
       }
-      break;
+    } else {
+      Serial.println("❌ HTTP request failed");
+    }
+    http.end();
   }
-}
 
-void performOTAUpdate(String command) {
-  int start = command.indexOf("url\":\"") + 6;
-  int end = command.indexOf("\"", start);
-  String firmwareUrl = command.substring(start, end);
-  
-  for(int i=0; i<3; i++) { ledcWrite(ledPin, 255); delay(100); ledcWrite(ledPin, 0); delay(100); }
-
-  WiFiClientSecure client;
-  client.setInsecure(); 
-
-  t_httpUpdate_return ret = httpUpdate.update(client, firmwareUrl);
-  
-  switch(ret) {
-    case HTTP_UPDATE_FAILED:
-      while(1) { ledcWrite(ledPin, 255); delay(50); ledcWrite(ledPin, 0); delay(50); }
-      break;
-    case HTTP_UPDATE_OK:
-      ledcWrite(ledPin, 255); delay(1000);
-      ESP.restart();
-      break;
-  }
+  // --- INSTANT RESPONSE: Check every 0.5 seconds ---
+  delay(500);
 }
