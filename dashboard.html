@@ -191,14 +191,20 @@
   let isCelsius = true;
   let currentView = 'home';
 
-  function toggleDevice(device, btnId) {
+    function toggleDevice(device, btnId) {
     const btn = document.getElementById(btnId);
     const newState = btn.classList.contains('on-state') ? 'off' : 'on';
     btn.classList.toggle('on-state');
 
-    fetch(`/api/device/${device}/${newState}`)
-      .then(res => res.text())
-      .catch(err => console.error("Failed to reach Backend:", err));
+    // --- NEW: Send command to the HTTP endpoint instead of WebSocket ---
+    fetch(`/api/led/set`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: newState })
+    })
+    .then(res => res.json())
+    .then(data => console.log("LED state set to:", data))
+    .catch(err => console.error("Failed to set LED state:", err));
   }
 
   function toggleUnit() {
