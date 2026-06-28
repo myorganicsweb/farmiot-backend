@@ -19,7 +19,7 @@ app.get('/api/dashboard/1', async (req, res) => {
   res.json(data);
 });
 
-// --- UNIVERSAL WEB SOCKET SERVER ---
+// --- UNIVERSAL WEB SOCKET SERVER (For compatibility) ---
 const wss = new WebSocket.Server({ noServer: true });
 const connectedDevices = {};
 
@@ -66,41 +66,10 @@ app.post('/api/firmware/upload', async (req, res) => {
   res.json({ status: "ok", message: "Firmware release saved!" });
 });
 
-// --- TRIGGER OTA UPDATE USING LATEST FIRMWARE ---
-app.post('/api/ota/update', async (req, res) => {
-  const { deviceId } = req.body;
-  
-  const { data, error } = await supabase
-    .from('firmware_releases')
-    .select('file_url')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (error) return res.status(500).json({ error: "No firmware found in database." });
-  if (!data) return res.status(404).json({ error: "No firmware found." });
-  
-  if (!connectedDevices[deviceId]) {
-    return res.status(404).json({ error: "Device not currently connected." });
-  }
-
-  const firmwareUrl = data.file_url;
-
-  connectedDevices[deviceId].send(JSON.stringify({
-    action: "ota_update",
-    url: firmwareUrl
-  }));
-
-  console.log(`📡 Sending OTA update command to ${deviceId} with URL: ${firmwareUrl}`);
-  res.json({ status: "ok", message: "OTA command sent to device." });
-});
-
-// --- [NEW] LED STATUS ENDPOINT FOR HTTP POLLING ---
-// Store the LED state in memory (default: off)
+// --- LED STATUS ENDPOINT FOR HTTP POLLING ---
 let currentLedState = "off";
 
 app.get('/api/led/status', (req, res) => {
-  // Return the current LED state to the ESP32
   res.json({ state: currentLedState });
 });
 
@@ -115,7 +84,37 @@ app.post('/api/led/set', (req, res) => {
   }
 });
 
-// --- CONTROL DEVICE ---
+// --- OTA UPDATE ENDPOINT (Fixes the 404 error) ---
+app.post('/api/ota/update', async (req, res) => {
+  const { deviceId } = req.body;
+  
+  // Fetch the latest firmware from Supabase
+  const { data, error } = await supabase
+    .from('firmware_releases')
+    .select('file_url')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error) {
+    console.error("Supabase error:", error);
+    return res.status(500).json({ error: "Database error" });
+  }
+  if (!data) {
+    return res.status(404).json({ error: "No firmware found in database." });
+  }
+  
+  // For HTTP polling, the device pulls the update URL itself.
+  // This endpoint is kept for compatibility with the dashboard button.
+  
+  res.json({ 
+    status: "ok", 
+    message: "Firmware update available. Device will pull on next poll.",
+    firmwareUrl: data.file_url 
+  });
+});
+
+// --- CONTROL DEVICE (Legacy WebSocket endpoint) ---
 app.get('/api/device/:device/:state', (req, res) => {
   const { device, state } = req.params;
   const deviceId = "esp32_01"; 
