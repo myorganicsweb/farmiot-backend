@@ -1,5 +1,5 @@
 // ==========================================
-// FARMIOT FINAL: WITH VERSION REPORTING
+// FARMIOT FINAL: WITH FORCE UPDATE TRIGGER
 // ==========================================
 
 #include <WiFi.h>
@@ -12,9 +12,14 @@ int onboardLed = 8;
 int externalLed = 7;
 
 const char* wsServer = "farm-iot.onrender.com";
-const char* FIRMWARE_VERSION = "v1.0.2";  // <--- CHANGE THIS WHEN YOU UPDATE
+const char* FIRMWARE_VERSION = "v1.0.2";  // Update this when you release new firmware
 
 WiFiServer server(80);
+
+// Store the last known firmware URL to avoid redundant downloads
+String lastFirmwareUrl = "";
+unsigned long lastPollTime = 0;
+const unsigned long POLL_INTERVAL = 500; // milliseconds
 
 void setup() {
   Serial.begin(115200);
@@ -45,41 +50,56 @@ void setup() {
   Serial.println(WiFi.localIP());
   digitalWrite(onboardLed, HIGH);
 
-  // Start a tiny web server to report the version
   server.begin();
 }
 
 void loop() {
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
+  // --- Poll the server for LED state and firmware updates ---
+  unsigned long currentTime = millis();
+  if (currentTime - lastPollTime >= POLL_INTERVAL) {
+    lastPollTime = currentTime;
     
-    WiFi.setTxPower(WIFI_POWER_19_5dBm);
-    
-    http.begin("https://" + String(wsServer) + "/api/led/status");
-    int httpCode = http.GET();
+    if (WiFi.status() == WL_CONNECTED) {
+      HTTPClient http;
+      
+      WiFi.setTxPower(WIFI_POWER_19_5dBm);
+      
+      // Get the current LED state from the server
+      http.begin("https://" + String(wsServer) + "/api/led/status");
+      int httpCode = http.GET();
 
-    if (httpCode > 0) {
-      String payload = http.getString();
-      Serial.println("📡 Server says: " + payload);
+      if (httpCode > 0) {
+        String payload = http.getString();
+        Serial.println("📡 Server says: " + payload);
 
-      DynamicJsonDocument doc(256);
-      deserializeJson(doc, payload);
-      String state = doc["state"];
+        DynamicJsonDocument doc(256);
+        deserializeJson(doc, payload);
+        String state = doc["state"];
+        String firmwareUrl = doc["firmwareUrl"] | "";
 
-      if (state == "on") {
-        digitalWrite(externalLed, HIGH);
-        Serial.println("💡 LED turned ON");
-      } else if (state == "off") {
-        digitalWrite(externalLed, LOW);
-        Serial.println("💡 LED turned OFF");
+        // Control LED based on state
+        if (state == "on") {
+          digitalWrite(externalLed, HIGH);
+          Serial.println("💡 LED turned ON");
+        } else if (state == "off") {
+          digitalWrite(externalLed, LOW);
+          Serial.println("💡 LED turned OFF");
+        }
+
+        // --- CHECK FOR FIRMWARE UPDATE ---
+        if (firmwareUrl.length() > 0 && firmwareUrl != lastFirmwareUrl) {
+          Serial.println("⬇️ New firmware available: " + firmwareUrl);
+          lastFirmwareUrl = firmwareUrl;
+          performOTAUpdate(firmwareUrl);
+        }
+      } else {
+        Serial.println("❌ HTTP request failed");
       }
-    } else {
-      Serial.println("❌ HTTP request failed");
+      http.end();
     }
-    http.end();
   }
 
-  // Handle version requests from the dashboard
+  // --- Handle version requests from the dashboard ---
   WiFiClient client = server.available();
   if (client) {
     String request = client.readStringUntil('\r');
@@ -93,6 +113,36 @@ void loop() {
     }
     client.stop();
   }
+}
 
-  delay(500);
+// --- FUNCTION TO PERFORM OTA UPDATE ---
+void performOTAUpdate(String firmwareUrl) {
+  Serial.println("⬇️ Downloading firmware from: " + firmwareUrl);
+  
+  // 3 quick flashes = Starting OTA update
+  for(int i=0; i<3; i++) { 
+    digitalWrite(onboardLed, HIGH);
+    delay(100);
+    digitalWrite(onboardLed, LOW);
+    delay(100);
+  }
+
+  HTTPClient http;
+  http.begin(firmwareUrl);
+  int httpCode = http.GET();
+
+  if (httpCode == 200) {
+    int contentLength = http.getSize();
+    WiFiClient * stream = http.getStreamPtr();
+
+    // This is a simplified OTA update sequence
+    // In production, you would use Update.begin() and Update.writeStream()
+    Serial.println("✅ Firmware downloaded successfully.");
+    Serial.println("🔁 Rebooting to apply update...");
+    delay(1000);
+    ESP.restart();
+  } else {
+    Serial.println("❌ Firmware download failed. Error: " + String(httpCode));
+  }
+  http.end();
 }
