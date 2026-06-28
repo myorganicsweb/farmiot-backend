@@ -1,5 +1,5 @@
 // ==========================================
-// FARMIOT FINAL v1.0.6: FORCE UPDATE ENABLED
+// FARMIOT FINAL v1.0.8: REBOOT FORCE FIX
 // ==========================================
 
 #include <WiFi.h>
@@ -12,7 +12,7 @@ int onboardLed = 8;
 int externalLed = 7;
 
 const char* wsServer = "farm-iot.onrender.com";
-const char* FIRMWARE_VERSION = "v1.0.6";
+const char* FIRMWARE_VERSION = "v1.0.8";
 
 String lastFirmwareUrl = "";
 unsigned long lastPollTime = 0;
@@ -80,7 +80,6 @@ void loop() {
           Serial.println("💡 LED turned OFF");
         }
 
-        // --- FORCE UPDATE HANDLING ---
         if (forceUpdate || (firmwareUrl.length() > 0 && firmwareUrl != lastFirmwareUrl)) {
           Serial.println("⬇️ New firmware available: " + firmwareUrl);
           lastFirmwareUrl = firmwareUrl;
@@ -111,8 +110,10 @@ void performOTAUpdate(String firmwareUrl) {
   if (httpCode == 200) {
     Serial.println("✅ Firmware downloaded successfully.");
     Serial.println("🔁 Rebooting to apply update...");
+    
+    // --- CRITICAL FIX: FORCE A HARD REBOOT ---
     delay(1000);
-    ESP.restart();
+    esp_restart();  // Force the ESP32 to physically reboot
   } else {
     Serial.println("❌ Firmware download failed. Error: " + String(httpCode));
   }
