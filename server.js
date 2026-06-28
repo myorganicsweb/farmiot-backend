@@ -11,6 +11,7 @@ const supabaseUrl = 'https://adxaifphothopomwutcg.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkeGFpZnBob3Rob3BvbXd1dGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxOTM4NTEsImV4cCI6MjA5Nzc2OTg1MX0.uMbkFZP4kPnjJamcaVwgMhcgDbJkkDg1JYbz0HVDfYk';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Serve dashboard
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 app.get('/api/dashboard/1', async (req, res) => {
   const { data, error } = await supabase.from('sensor_data').select('*').order('created_at', { ascending: false }).limit(50);
@@ -18,7 +19,7 @@ app.get('/api/dashboard/1', async (req, res) => {
   res.json(data);
 });
 
-// WebSocket Server
+// --- UNIVERSAL WEB SOCKET SERVER ---
 const wss = new WebSocket.Server({ noServer: true });
 const connectedDevices = {};
 
@@ -43,56 +44,96 @@ wss.on('connection', (ws, req) => {
   });
 });
 
+// --- GET FIRMWARE LIST FROM SUPABASE ---
 app.get('/api/firmware/list', async (req, res) => {
-  const { data, error } = await supabase.from('firmware_releases').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('firmware_releases')
+    .select('*')
+    .order('created_at', { ascending: false });
   if (error) return res.status(500).json(error);
   res.json(data);
 });
 
+// --- UPLOAD NEW FIRMWARE URL TO SUPABASE ---
 app.post('/api/firmware/upload', async (req, res) => {
   const { version, file_url, description } = req.body;
-  const { data, error } = await supabase.from('firmware_releases').insert([{ version, file_url, description }]);
+  
+  const { data, error } = await supabase
+    .from('firmware_releases')
+    .insert([{ version, file_url, description }]);
+
   if (error) return res.status(500).json(error);
   res.json({ status: "ok", message: "Firmware release saved!" });
 });
 
+// --- TRIGGER OTA UPDATE USING LATEST FIRMWARE ---
 app.post('/api/ota/update', async (req, res) => {
   const { deviceId } = req.body;
-  const { data, error } = await supabase.from('firmware_releases').select('file_url').order('created_at', { ascending: false }).limit(1).single();
-  if (error || !data) return res.status(404).json({ error: "No firmware found." });
-  if (!connectedDevices[deviceId]) return res.status(404).json({ error: "Device not currently connected." });
   
-  connectedDevices[deviceId].send(JSON.stringify({ action: "ota_update", url: data.file_url }));
+  const { data, error } = await supabase
+    .from('firmware_releases')
+    .select('file_url')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error) return res.status(500).json({ error: "No firmware found in database." });
+  if (!data) return res.status(404).json({ error: "No firmware found." });
+  
+  if (!connectedDevices[deviceId]) {
+    return res.status(404).json({ error: "Device not currently connected." });
+  }
+
+  const firmwareUrl = data.file_url;
+
+  connectedDevices[deviceId].send(JSON.stringify({
+    action: "ota_update",
+    url: firmwareUrl
+  }));
+
+  console.log(`📡 Sending OTA update command to ${deviceId} with URL: ${firmwareUrl}`);
   res.json({ status: "ok", message: "OTA command sent to device." });
 });
 
-// --- NEW: Send Wi-Fi credentials to the ESP32 via Bluetooth ---
-app.post('/api/wifi/provision', async (req, res) => {
-  const { deviceId, ssid, password } = req.body;
+// --- [NEW] LED STATUS ENDPOINT FOR HTTP POLLING ---
+// Store the LED state in memory (default: off)
+let currentLedState = "off";
 
-  if (!connectedDevices[deviceId]) {
-    return res.status(404).json({ error: "Device not connected. Make sure the ESP32 is in Discovery Mode (solid blue)." });
-  }
-
-  // Send Wi-Fi credentials via the active WebSocket
-  connectedDevices[deviceId].send(JSON.stringify({
-    action: "wifi_provision",
-    ssid: ssid,
-    password: password
-  }));
-
-  console.log(`📡 Sending Wi-Fi credentials to ${deviceId} via Bluetooth`);
-  res.json({ status: "ok", message: "Credentials sent. Device will connect to Wi-Fi." });
+app.get('/api/led/status', (req, res) => {
+  // Return the current LED state to the ESP32
+  res.json({ state: currentLedState });
 });
 
+app.post('/api/led/set', (req, res) => {
+  const { state } = req.body;
+  if (state === "on" || state === "off") {
+    currentLedState = state;
+    console.log(`💡 LED state set to: ${state}`);
+    res.json({ status: "ok", message: "LED state updated." });
+  } else {
+    res.status(400).json({ error: "Invalid state. Use 'on' or 'off'." });
+  }
+});
+
+// --- CONTROL DEVICE ---
 app.get('/api/device/:device/:state', (req, res) => {
   const { device, state } = req.params;
-  const deviceId = "esp32_01";
-  if (!connectedDevices[deviceId]) return res.status(404).send("Device not connected");
-  connectedDevices[deviceId].send(JSON.stringify({ action: "control", device: device, state: state }));
+  const deviceId = "esp32_01"; 
+  
+  if (!connectedDevices[deviceId]) {
+    return res.status(404).send("Device not connected");
+  }
+  
+  connectedDevices[deviceId].send(JSON.stringify({
+    action: "control",
+    device: device,
+    state: state
+  }));
+  
   res.send(`Command sent to ${device}: ${state}`);
 });
 
+// --- LISTEN ON PORT 443 ---
 const PORT = process.env.PORT || 443;
 app.listen(PORT, () => {
   console.log(`✅ FarmIOT Universal Server running on port ${PORT}`);
