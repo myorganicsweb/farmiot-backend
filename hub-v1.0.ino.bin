@@ -1,17 +1,20 @@
 // ==========================================
-// FARMIOT FINAL: HTTP POLLING (500ms FAST)
+// FARMIOT FINAL: WITH VERSION REPORTING
 // ==========================================
 
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <Preferences.h>
-#include <ArduinoJson.h>  // Install "ArduinoJson" by Benoit Blanchon
+#include <ArduinoJson.h>
 
 Preferences preferences;
 int onboardLed = 8;
 int externalLed = 7;
 
 const char* wsServer = "farm-iot.onrender.com";
+const char* FIRMWARE_VERSION = "v1.0.2";  // <--- CHANGE THIS WHEN YOU UPDATE
+
+WiFiServer server(80);
 
 void setup() {
   Serial.begin(115200);
@@ -23,13 +26,11 @@ void setup() {
   digitalWrite(onboardLed, LOW);
   digitalWrite(externalLed, LOW);
 
-  // --- Load credentials ---
   preferences.begin("wifi", false);
   String savedSSID = preferences.getString("ssid", "scoobydoo");
   String savedPass = preferences.getString("password", "scoobydoo");
   preferences.end();
 
-  // --- Connect to Wi-Fi ---
   WiFi.mode(WIFI_STA);
   WiFi.begin(savedSSID.c_str(), savedPass.c_str());
 
@@ -43,13 +44,15 @@ void setup() {
   Serial.print("📡 IP Address: ");
   Serial.println(WiFi.localIP());
   digitalWrite(onboardLed, HIGH);
+
+  // Start a tiny web server to report the version
+  server.begin();
 }
 
 void loop() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
     
-    // --- SPEED BOOST: Max Wi-Fi power ---
     WiFi.setTxPower(WIFI_POWER_19_5dBm);
     
     http.begin("https://" + String(wsServer) + "/api/led/status");
@@ -59,7 +62,6 @@ void loop() {
       String payload = http.getString();
       Serial.println("📡 Server says: " + payload);
 
-      // Parse the JSON response
       DynamicJsonDocument doc(256);
       deserializeJson(doc, payload);
       String state = doc["state"];
@@ -77,6 +79,20 @@ void loop() {
     http.end();
   }
 
-  // --- INSTANT RESPONSE: Check every 0.5 seconds ---
+  // Handle version requests from the dashboard
+  WiFiClient client = server.available();
+  if (client) {
+    String request = client.readStringUntil('\r');
+    client.readStringUntil('\n');
+    
+    if (request.indexOf("/version") != -1) {
+      client.println("HTTP/1.1 200 OK");
+      client.println("Content-type: text/plain");
+      client.println();
+      client.println(FIRMWARE_VERSION);
+    }
+    client.stop();
+  }
+
   delay(500);
 }

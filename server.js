@@ -137,3 +137,11 @@ const PORT = process.env.PORT || 443;
 app.listen(PORT, () => {
   console.log(`✅ FarmIOT Universal Server running on port ${PORT}`);
 });
+
+// --- GET FIRMWARE VERSION FROM ESP32 ---
+app.get('/api/esp32/version', async (req, res) => {
+  // Since the ESP32 is on your local network, you need its IP address.
+  // For now, we return a placeholder. 
+  // Later, you can ask the ESP32 directly via its IP.
+  res.json({ version: "v1.0.1" });
+});
