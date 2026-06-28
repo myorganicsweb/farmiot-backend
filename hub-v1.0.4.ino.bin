@@ -58,8 +58,6 @@ void loop() {
       
       WiFi.setTxPower(WIFI_POWER_19_5dBm);
       
-      // --- POLL THE BACKEND FOR LED STATE AND FIRMWARE ---
-      // We will send the version as a query parameter
       String url = "https://" + String(wsServer) + "/api/poll?version=" + String(FIRMWARE_VERSION);
       http.begin(url);
       int httpCode = http.GET();

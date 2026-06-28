@@ -174,7 +174,7 @@
           <div class="firmware-card">
             <h3 style="font-size:16px; font-weight:600; color:#1a1a1a; margin-bottom:15px;">📋 Release History</h3>
             <div id="fwList">Loading...</div>
-            <button class="api-test-btn" style="margin-top:15px; background:#34c759;" onclick="triggerRemoteUpdate()">📡 Deploy Latest to ESP32</button>
+            <button class="api-test-btn" style="margin-top:15px; background:#ff9800;" onclick="forceFirmwareUpdate()">📡 Force OTA Update</button>
           </div>
         </div>
       </div>
@@ -182,13 +182,7 @@
     <div class="right-col">
       <div class="stat-card"><div class="stat-icon blue">⚡</div><div class="stat-text"><div class="label">Master Toggle</div><button id="masterBtn" class="mode-btn" style="margin-top:4px; background:#1a1a1a; color:#fff; border:none; padding:6px 16px; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.15);" onclick="toggleMaster()">ON</button></div></div>
       <div class="stat-card"><div class="stat-icon green">🌡️</div><div class="stat-text"><div class="label">Unit</div><button id="unitBtn" class="mode-btn" style="margin-top:4px; background:#1a1a1a; color:#fff; border:none; padding:6px 16px; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.15);" onclick="toggleUnit()">°C</button></div></div>
-      <div class="stat-card" style="flex-direction:column; gap:8px;"><div style="width:100%; display:flex; justify-content:space-between;"><span style="font-size:13px; color:#888;">System Status</span><span style="font-size:13px; font-weight:600; color:#34c759;">Online</span></div><div style="width:100%; height:4px; background:rgba(255,255,255,0.6); border-radius:4px; overflow:hidden;"><div style="height:100%; width:70%; background:#34c759; border-radius:4px;"></div></div></div>
-      <div class="stat-card" style="flex-direction:column; gap:8px; margin-top:10px;">
-      <div style="width:100%; display:flex; justify-content:space-between;">
-        <span style="font-size:13px; color:#888;">Firmware Version</span>
-        <span id="fwVersionDisplay" style="font-size:13px; font-weight:600; color:#1a1a1a;">v1.0.1</span>
-      </div>
-    </div>
+      <div class="stat-card" style="flex-direction:column; gap:8px;"><div style="width:100%; display:flex; justify-content:space-between;"><span style="font-size:13px; color:#888;">Firmware Version</span><span id="fwVersionDisplay" style="font-size:13px; font-weight:600; color:#1a1a1a;">v1.0.1</span></div></div>
     </div>
   </div>
 </div>
@@ -197,13 +191,12 @@
   let isCelsius = true;
   let currentView = 'home';
 
-    function toggleDevice(device, btnId) {
+  function toggleDevice(device, btnId) {
     const btn = document.getElementById(btnId);
     const newState = btn.classList.contains('on-state') ? 'off' : 'on';
     btn.classList.toggle('on-state');
 
-    // --- NEW: Send command to the HTTP endpoint instead of WebSocket ---
-    fetch(`/api/led/set`, {
+    fetch('/api/led/set', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ state: newState })
@@ -279,7 +272,11 @@
     for (let i = 0; i < payload.length; i++) {
       const cmd = payload[i];
       try {
-        const res = await fetch(`/api/device/${cmd.device}/${cmd.state}`);
+        const res = await fetch(`/api/led/set`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ state: cmd.state })
+        });
         const data = await res.text();
         results.push(`[${i+1}] ${cmd.device} -> ${data}`);
       } catch (err) {
@@ -324,7 +321,17 @@
     `).join('');
   }
 
-  async function triggerRemoteUpdate() {
+  async function checkFirmwareVersion() {
+    try {
+      const res = await fetch('/api/esp32/version');
+      const data = await res.json();
+      document.getElementById('fwVersionDisplay').innerText = data.version;
+    } catch (err) {
+      console.log("Version check failed");
+    }
+  }
+
+  async function forceFirmwareUpdate() {
     const res = await fetch('/api/ota/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -334,7 +341,6 @@
     alert(data.message || data.error);
   }
 
-  // --- SEND WI-FI CREDENTIALS ---
   async function sendWiFiCredentials() {
     const status = document.getElementById('provisionStatus');
     const deviceId = document.getElementById('setupDeviceId').value;
@@ -366,24 +372,14 @@
     }
   }
 
+  // Check version every 5 seconds
+  setInterval(checkFirmwareVersion, 5000);
+  checkFirmwareVersion();
+
   setInterval(() => {
     document.getElementById('tempText').innerText = (20 + Math.random()*5).toFixed(1);
     document.getElementById('humText').innerText = (40 + Math.random()*10).toFixed(0);
   }, 3000);
-
-  async function checkFirmwareVersion() {
-    try {
-      const res = await fetch('/api/esp32/version');
-      const data = await res.json();
-      document.getElementById('fwVersionDisplay').innerText = data.version;
-    } catch (err) {
-      console.log("Version check failed");
-    }
-  }
-  
-  // Check version every 10 seconds
-  setInterval(checkFirmwareVersion, 10000);
-  checkFirmwareVersion();
 </script>
 </body>
 </html>

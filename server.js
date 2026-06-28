@@ -15,6 +15,7 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')))
 let currentLedState = "off";
 let latestFirmwareUrl = "";
 let currentFirmwareVersion = "v1.0.1";
+let forceUpdateFlag = false;
 
 // --- POLL ENDPOINT (ESP32 calls this every 500ms) ---
 app.get('/api/poll', async (req, res) => {
@@ -34,11 +35,16 @@ app.get('/api/poll', async (req, res) => {
     latestFirmwareUrl = data.file_url;
   }
 
-  res.json({
+  const response = {
     state: currentLedState,
     firmwareUrl: latestFirmwareUrl,
-    force_update: false
-  });
+    force_update: forceUpdateFlag
+  };
+
+  // Reset the flag after it's sent
+  forceUpdateFlag = false;
+
+  res.json(response);
 });
 
 // --- FIRMWARE LIST ---
@@ -79,6 +85,16 @@ app.post('/api/led/set', (req, res) => {
 // --- VERSION ---
 app.get('/api/esp32/version', (req, res) => {
   res.json({ version: currentFirmwareVersion });
+});
+
+// --- FORCE OTA UPDATE ---
+app.post('/api/ota/update', (req, res) => {
+  forceUpdateFlag = true;
+  console.log("📡 Force OTA update triggered!");
+  res.json({ 
+    status: "ok", 
+    message: "Force update triggered. The ESP32 will check for updates on its next poll." 
+  });
 });
 
 const PORT = process.env.PORT || 443;
