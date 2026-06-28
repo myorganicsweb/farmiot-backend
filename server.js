@@ -14,18 +14,16 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')))
 
 let currentLedState = "off";
 let latestFirmwareUrl = "";
-let currentFirmwareVersion = "v1.0.1";  // This will be updated by the ESP32
+let currentFirmwareVersion = "v1.0.1";
 
 // --- POLL ENDPOINT (ESP32 calls this every 500ms) ---
 app.get('/api/poll', async (req, res) => {
-  // 1. Get the ESP32's current version
   const reportedVersion = req.query.version;
   if (reportedVersion) {
     currentFirmwareVersion = reportedVersion;
     console.log("📦 ESP32 firmware version reported:", reportedVersion);
   }
 
-  // 2. Fetch the latest firmware URL from Supabase (if needed)
   const { data, error } = await supabase
     .from('firmware_releases')
     .select('file_url')
@@ -36,7 +34,6 @@ app.get('/api/poll', async (req, res) => {
     latestFirmwareUrl = data.file_url;
   }
 
-  // 3. Return the current state and firmware info
   res.json({
     state: currentLedState,
     firmwareUrl: latestFirmwareUrl,
@@ -44,6 +41,30 @@ app.get('/api/poll', async (req, res) => {
   });
 });
 
+// --- FIRMWARE LIST ---
+app.get('/api/firmware/list', async (req, res) => {
+  const { data, error } = await supabase
+    .from('firmware_releases')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json(error);
+  res.json(data);
+});
+
+// --- FIRMWARE UPLOAD ---
+app.post('/api/firmware/upload', async (req, res) => {
+  const { version, file_url, description } = req.body;
+  const { data, error } = await supabase
+    .from('firmware_releases')
+    .insert([{ version, file_url, description }]);
+  if (error) {
+    console.error("Supabase error:", error);
+    return res.status(500).json({ error: "Database error" });
+  }
+  res.json({ status: "ok", message: "Firmware release saved!" });
+});
+
+// --- LED CONTROL ---
 app.post('/api/led/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
@@ -55,6 +76,7 @@ app.post('/api/led/set', (req, res) => {
   }
 });
 
+// --- VERSION ---
 app.get('/api/esp32/version', (req, res) => {
   res.json({ version: currentFirmwareVersion });
 });
