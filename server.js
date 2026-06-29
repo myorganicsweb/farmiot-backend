@@ -13,9 +13,9 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')))
 
 // --- STATE VARIABLES ---
 let currentLedState = "off";
-let currentPumpState = "off";   // Separate state for the pump
+let currentPumpState = "off";   
 let latestFirmwareUrl = "";
-let currentFirmwareVersion = "v1.0.19";
+let currentFirmwareVersion = "v1.0.20";
 let lastPollTime = 0;
 
 // --- POLL ENDPOINT (ESP32 calls this every 500ms) ---
@@ -38,14 +38,12 @@ app.get('/api/poll', async (req, res) => {
     latestFirmwareUrl = data.file_url;
   }
 
-  // --- LOGIC: Pump overrides LED ---
+  // --- CORRECTED LOGIC: Pump ALWAYS takes priority ---
   let finalState = "off";
   if (currentPumpState == "on") {
-    finalState = "on";
-  } else if (currentLedState == "on") {
-    finalState = "on";
+    finalState = "on";               // If Pump is ON, force ON
   } else {
-    finalState = "off";
+    finalState = currentLedState;    // Otherwise, follow the LED
   }
 
   res.json({
