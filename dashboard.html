@@ -137,7 +137,7 @@
             <button id="btn-led" class="action-btn green" onclick="toggleDevice('led', 'btn-led')">💡 LED</button>
             <button id="btn-buzzer" class="action-btn red" onclick="toggleDevice('buzzer', 'btn-buzzer')">🔊 Buzzer</button>
             <button id="btn-fan" class="action-btn blue" onclick="toggleDevice('fan', 'btn-fan')">🌀 Fan</button>
-            <button id="btn-pump" class="action-btn teal" onclick="toggleDevice('pump', 'btn-pump')">💧 Pump</button>
+            <button id="btn-pump" class="action-btn teal" onclick="toggleDevice('led', 'btn-pump')">💧 Pump</button>
           </div>
         </div>
         <div id="view-setup" class="view-container">
@@ -386,7 +386,7 @@
     document.getElementById('tempText').innerText = (20 + Math.random()*5).toFixed(1);
     document.getElementById('humText').innerText = (40 + Math.random()*10).toFixed(0);
   }, 3000);
-  
+
   async function checkEspStatus() {
   try {
     const res = await fetch('/api/esp32/status');
@@ -405,7 +405,7 @@
 }
 
 // Check every 3 seconds
-setInterval(checkEspStatus, 3000);
+setInterval(checkEspStatus, 2000);
 checkEspStatus();
 </script>
 </body>
