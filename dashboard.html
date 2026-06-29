@@ -213,16 +213,21 @@
     document.getElementById('espStatus').style.color = data.online ? '#4CAF50' : '#f44336';
   }
   function togglePump(btnId) {
+    console.log("🚨 Pump button clicked!");
     const btn = document.getElementById(btnId);
     const newState = btn.classList.contains('on-state') ? 'off' : 'on';
+    console.log("New state:", newState);
     btn.classList.toggle('on-state');
 
     fetch('/api/pump/set', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ state: newState })
-    });
-}
+    })
+    .then(response => response.json())
+    .then(data => console.log("Server response:", data))
+    .catch(error => console.error("Fetch error:", error));
+  }
   setInterval(checkEspStatus, 2000);
   checkEspStatus();
 </script>
