@@ -135,7 +135,7 @@
           </div>
           <div class="bottom-bar">
             <button id="btn-led" class="action-btn green" onclick="toggleDevice('led', 'btn-led')">💡 LED</button>
-            <button id="btn-pump" class="action-btn teal" onclick="togglePump('btn-pump')">💧 Pump</button>
+            <button id="btn-pump" class="action-btn teal" onclick="toggleDevice('pump', 'btn-pump')">💧 Pump</button>
           </div>
         </div>
         <div id="view-setup" class="view-container">
@@ -175,7 +175,7 @@
       <div class="stat-card"><div class="stat-icon blue">⚡</div><div class="stat-text"><div class="label">Master Toggle</div><button onclick="toggleMaster()">ON</button></div></div>
       <div class="stat-card"><div class="stat-icon green">🌡️</div><div class="stat-text"><div class="label">Unit</div><button onclick="toggleUnit()">°C</button></div></div>
       <div class="stat-card"><div><span>ESP32 Status</span><span id="espStatus">● Online</span></div></div>
-      <div class="stat-card"><div><span>Firmware Version</span><span id="fwVersionDisplay">v1.0.18</span></div></div>
+      <div class="stat-card"><div><span>Firmware Version</span><span id="fwVersionDisplay">v1.0.24</span></div></div>
     </div>
   </div>
 </div>
@@ -186,7 +186,8 @@
     const newState = btn.classList.contains('on-state') ? 'off' : 'on';
     btn.classList.toggle('on-state');
 
-    fetch('/api/led/set', {
+    const endpoint = device === 'pump' ? '/api/pump/set' : '/api/led/set';
+    fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ state: newState })
@@ -212,22 +213,7 @@
     document.getElementById('espStatus').innerText = data.online ? '● Online' : '● Offline';
     document.getElementById('espStatus').style.color = data.online ? '#4CAF50' : '#f44336';
   }
-  function togglePump(btnId) {
-    console.log("🚨 Pump button clicked!");
-    const btn = document.getElementById(btnId);
-    const newState = btn.classList.contains('on-state') ? 'off' : 'on';
-    console.log("New state:", newState);
-    btn.classList.toggle('on-state');
 
-    fetch('/api/pump/set', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state: newState })
-    })
-    .then(response => response.json())
-    .then(data => console.log("Server response:", data))
-    .catch(error => console.error("Fetch error:", error));
-  }
   setInterval(checkEspStatus, 2000);
   checkEspStatus();
 </script>

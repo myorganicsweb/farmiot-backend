@@ -11,21 +11,19 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
-// --- STATE VARIABLES ---
 let currentLedState = "off";
-let currentPumpState = "off";   
+let currentPumpState = "off";
 let latestFirmwareUrl = "";
-let currentFirmwareVersion = "v1.0.20";
+let currentFirmwareVersion = "v1.0.24";
 let lastPollTime = 0;
 
-// --- POLL ENDPOINT (ESP32 calls this every 500ms) ---
 app.get('/api/poll', async (req, res) => {
   lastPollTime = Date.now();
 
   const reportedVersion = req.query.version;
   if (reportedVersion) {
     currentFirmwareVersion = reportedVersion;
-    console.log("📦 ESP32 firmware version reported:", reportedVersion);
+    console.log("📦 ESP32 version reported:", reportedVersion);
   }
 
   const { data, error } = await supabase
@@ -38,12 +36,11 @@ app.get('/api/poll', async (req, res) => {
     latestFirmwareUrl = data.file_url;
   }
 
-  // --- CORRECTED LOGIC: Pump ALWAYS takes priority ---
   let finalState = "off";
   if (currentPumpState == "on") {
-    finalState = "on";               // If Pump is ON, force ON
+    finalState = "on";
   } else {
-    finalState = currentLedState;    // Otherwise, follow the LED
+    finalState = currentLedState;
   }
 
   res.json({
@@ -53,7 +50,6 @@ app.get('/api/poll', async (req, res) => {
   });
 });
 
-// --- FIRMWARE LIST ---
 app.get('/api/firmware/list', async (req, res) => {
   const { data, error } = await supabase
     .from('firmware_releases')
@@ -63,7 +59,6 @@ app.get('/api/firmware/list', async (req, res) => {
   res.json(data);
 });
 
-// --- FIRMWARE UPLOAD ---
 app.post('/api/firmware/upload', async (req, res) => {
   const { version, file_url, description } = req.body;
   const { data, error } = await supabase
@@ -76,7 +71,6 @@ app.post('/api/firmware/upload', async (req, res) => {
   res.json({ status: "ok", message: "Firmware release saved!" });
 });
 
-// --- LED CONTROL ---
 app.post('/api/led/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
@@ -88,7 +82,6 @@ app.post('/api/led/set', (req, res) => {
   }
 });
 
-// --- PUMP CONTROL (Separate state) ---
 app.post('/api/pump/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
@@ -100,12 +93,10 @@ app.post('/api/pump/set', (req, res) => {
   }
 });
 
-// --- VERSION ---
 app.get('/api/esp32/version', (req, res) => {
   res.json({ version: currentFirmwareVersion });
 });
 
-// --- ONLINE STATUS ---
 app.get('/api/esp32/status', (req, res) => {
   const now = Date.now();
   const isOnline = (now - lastPollTime) < 5000;
