@@ -67,13 +67,24 @@ app.post('/api/led/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
     currentLedState = state;
-    console.log(`💡 LED / Pump state set to: ${state}`);
-    res.json({ status: "ok", message: "State updated." });
+    console.log(`💡 LED state set to: ${state}`);
+    res.json({ status: "ok", message: "LED updated." });
   } else {
     res.status(400).json({ error: "Invalid state. Use 'on' or 'off'." });
   }
 });
 
+app.post('/api/pump/set', (req, res) => {
+  const { state } = req.body;
+  if (state === "on" || state === "off") {
+    // Since the relay is on Pin 7, we just re-use the same LED state
+    currentLedState = state;
+    console.log(`💧 Pump state set to: ${state}`);
+    res.json({ status: "ok", message: "Pump updated." });
+  } else {
+    res.status(400).json({ error: "Invalid state. Use 'on' or 'off'." });
+  }
+});
 app.get('/api/esp32/version', (req, res) => {
   res.json({ version: currentFirmwareVersion });
 });

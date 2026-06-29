@@ -135,7 +135,7 @@
           </div>
           <div class="bottom-bar">
             <button id="btn-led" class="action-btn green" onclick="toggleDevice('led', 'btn-led')">💡 LED</button>
-            <button id="btn-pump" class="action-btn teal" onclick="toggleDevice('led', 'btn-pump')">💧 Pump</button>
+            <button id="btn-pump" class="action-btn teal" onclick="togglePump('btn-pump')">💧 Pump</button>
           </div>
         </div>
         <div id="view-setup" class="view-container">
@@ -212,7 +212,17 @@
     document.getElementById('espStatus').innerText = data.online ? '● Online' : '● Offline';
     document.getElementById('espStatus').style.color = data.online ? '#4CAF50' : '#f44336';
   }
+  function togglePump(btnId) {
+    const btn = document.getElementById(btnId);
+    const newState = btn.classList.contains('on-state') ? 'off' : 'on';
+    btn.classList.toggle('on-state');
 
+    fetch('/api/pump/set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: newState })
+    });
+}
   setInterval(checkEspStatus, 2000);
   checkEspStatus();
 </script>
