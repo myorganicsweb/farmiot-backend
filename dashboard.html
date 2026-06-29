@@ -183,6 +183,12 @@
       <div class="stat-card"><div class="stat-icon blue">⚡</div><div class="stat-text"><div class="label">Master Toggle</div><button id="masterBtn" class="mode-btn" style="margin-top:4px; background:#1a1a1a; color:#fff; border:none; padding:6px 16px; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.15);" onclick="toggleMaster()">ON</button></div></div>
       <div class="stat-card"><div class="stat-icon green">🌡️</div><div class="stat-text"><div class="label">Unit</div><button id="unitBtn" class="mode-btn" style="margin-top:4px; background:#1a1a1a; color:#fff; border:none; padding:6px 16px; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.15);" onclick="toggleUnit()">°C</button></div></div>
       <div class="stat-card" style="flex-direction:column; gap:8px;"><div style="width:100%; display:flex; justify-content:space-between;"><span style="font-size:13px; color:#888;">Firmware Version</span><span id="fwVersionDisplay" style="font-size:13px; font-weight:600; color:#1a1a1a;">v1.0.1</span></div></div>
+      <div class="stat-card" style="flex-direction:column; gap:8px; margin-top:10px;">
+        <div style="width:100%; display:flex; justify-content:space-between;">
+          <span style="font-size:13px; color:#888;">ESP32 Status</span>
+          <span id="espStatus" style="font-size:13px; font-weight:600; color:#4CAF50;">● Online</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -380,6 +386,27 @@
     document.getElementById('tempText').innerText = (20 + Math.random()*5).toFixed(1);
     document.getElementById('humText').innerText = (40 + Math.random()*10).toFixed(0);
   }, 3000);
+  
+  async function checkEspStatus() {
+  try {
+    const res = await fetch('/api/esp32/status');
+    const data = await res.json();
+    const statusBadge = document.getElementById('espStatus');
+    if (data.online) {
+      statusBadge.innerText = '● Online';
+      statusBadge.style.color = '#4CAF50';
+    } else {
+      statusBadge.innerText = '● Offline';
+      statusBadge.style.color = '#f44336';
+    }
+  } catch (err) {
+    console.log("Status check failed");
+  }
+}
+
+// Check every 3 seconds
+setInterval(checkEspStatus, 3000);
+checkEspStatus();
 </script>
 </body>
 </html>
