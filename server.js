@@ -1,6 +1,5 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
-const WebSocket = require('ws');
 const path = require('path');
 
 const app = express();
@@ -14,11 +13,14 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')))
 
 let currentLedState = "off";
 let latestFirmwareUrl = "";
-let currentFirmwareVersion = "v1.0.1";
-let forceUpdateFlag = false;
+let currentFirmwareVersion = "v1.0.15";
+let lastPollTime = 0;
 
 // --- POLL ENDPOINT (ESP32 calls this every 500ms) ---
 app.get('/api/poll', async (req, res) => {
+  // Update the last seen time
+  lastPollTime = Date.now();
+
   const reportedVersion = req.query.version;
   if (reportedVersion) {
     currentFirmwareVersion = reportedVersion;
@@ -35,16 +37,11 @@ app.get('/api/poll', async (req, res) => {
     latestFirmwareUrl = data.file_url;
   }
 
-  const response = {
+  res.json({
     state: currentLedState,
     firmwareUrl: latestFirmwareUrl,
-    force_update: forceUpdateFlag
-  };
-
-  // Reset the flag after it's sent
-  forceUpdateFlag = false;
-
-  res.json(response);
+    force_update: false
+  });
 });
 
 // --- FIRMWARE LIST ---
@@ -87,14 +84,12 @@ app.get('/api/esp32/version', (req, res) => {
   res.json({ version: currentFirmwareVersion });
 });
 
-// --- FORCE OTA UPDATE ---
-app.post('/api/ota/update', (req, res) => {
-  forceUpdateFlag = true;
-  console.log("📡 Force OTA update triggered!");
-  res.json({ 
-    status: "ok", 
-    message: "Force update triggered. The ESP32 will check for updates on its next poll." 
-  });
+// --- ONLINE STATUS ---
+app.get('/api/esp32/status', (req, res) => {
+  const now = Date.now();
+  // If more than 5 seconds have passed, the ESP32 is offline
+  const isOnline = (now - lastPollTime) < 5000;
+  res.json({ online: isOnline });
 });
 
 const PORT = process.env.PORT || 443;
