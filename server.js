@@ -13,12 +13,10 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')))
 
 let currentLedState = "off";
 let latestFirmwareUrl = "";
-let currentFirmwareVersion = "v1.0.15";
+let currentFirmwareVersion = "v1.0.18";
 let lastPollTime = 0;
 
-// --- POLL ENDPOINT (ESP32 calls this every 500ms) ---
 app.get('/api/poll', async (req, res) => {
-  // Update the last seen time
   lastPollTime = Date.now();
 
   const reportedVersion = req.query.version;
@@ -44,7 +42,6 @@ app.get('/api/poll', async (req, res) => {
   });
 });
 
-// --- FIRMWARE LIST ---
 app.get('/api/firmware/list', async (req, res) => {
   const { data, error } = await supabase
     .from('firmware_releases')
@@ -54,7 +51,6 @@ app.get('/api/firmware/list', async (req, res) => {
   res.json(data);
 });
 
-// --- FIRMWARE UPLOAD ---
 app.post('/api/firmware/upload', async (req, res) => {
   const { version, file_url, description } = req.body;
   const { data, error } = await supabase
@@ -67,27 +63,23 @@ app.post('/api/firmware/upload', async (req, res) => {
   res.json({ status: "ok", message: "Firmware release saved!" });
 });
 
-// --- LED CONTROL ---
 app.post('/api/led/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
     currentLedState = state;
-    console.log(`💡 LED state set to: ${state}`);
-    res.json({ status: "ok", message: "LED state updated." });
+    console.log(`💡 LED / Pump state set to: ${state}`);
+    res.json({ status: "ok", message: "State updated." });
   } else {
     res.status(400).json({ error: "Invalid state. Use 'on' or 'off'." });
   }
 });
 
-// --- VERSION ---
 app.get('/api/esp32/version', (req, res) => {
   res.json({ version: currentFirmwareVersion });
 });
 
-// --- ONLINE STATUS ---
 app.get('/api/esp32/status', (req, res) => {
   const now = Date.now();
-  // If more than 5 seconds have passed, the ESP32 is offline
   const isOnline = (now - lastPollTime) < 5000;
   res.json({ online: isOnline });
 });

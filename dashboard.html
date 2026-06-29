@@ -135,68 +135,52 @@
           </div>
           <div class="bottom-bar">
             <button id="btn-led" class="action-btn green" onclick="toggleDevice('led', 'btn-led')">💡 LED</button>
-            <button id="btn-buzzer" class="action-btn red" onclick="toggleDevice('buzzer', 'btn-buzzer')">🔊 Buzzer</button>
-            <button id="btn-fan" class="action-btn blue" onclick="toggleDevice('fan', 'btn-fan')">🌀 Fan</button>
             <button id="btn-pump" class="action-btn teal" onclick="toggleDevice('led', 'btn-pump')">💧 Pump</button>
           </div>
         </div>
         <div id="view-setup" class="view-container">
           <div class="setup-card" style="border: 2px solid #007aff;">
-            <h3 style="font-size:16px; font-weight:600; color:#007aff; margin-bottom:15px;">📶 Wi-Fi Setup (AP Mode)</h3>
-            <p style="font-size:13px; color:#666; margin-bottom:15px;">Power on your ESP32. It will broadcast a Wi-Fi network named "FarmIOT-Setup". Connect to it and go to 192.168.4.1 in your browser to enter credentials.</p>
-            <p style="font-size:12px; color:#999; margin-bottom:10px;">Alternatively, enter credentials below to send them via Bluetooth.</p>
-            <input id="setupDeviceId" class="fw-input" value="esp32_01" placeholder="Device ID (e.g., esp32_01)">
-            <input id="setupSSID" class="fw-input" placeholder="Wi-Fi SSID (e.g., scoobydoo gateway)">
+            <h3 style="font-size:16px; font-weight:600; color:#007aff; margin-bottom:15px;">📶 Wi-Fi Setup</h3>
+            <p style="font-size:13px; color:#666; margin-bottom:15px;">Power on your ESP32. Enter your Wi-Fi credentials.</p>
+            <input id="setupSSID" class="fw-input" placeholder="Wi-Fi SSID">
             <input id="setupPassword" class="fw-input" type="password" placeholder="Wi-Fi Password">
-            <button class="api-test-btn" style="background:#007aff;" onclick="sendWiFiCredentials()">📤 Send Wi-Fi to Device</button>
-            <div id="provisionStatus" style="margin-top:10px; font-size:14px; color:#888;"></div>
+            <button class="api-test-btn" style="background:#007aff;" onclick="sendWiFiCredentials()">📤 Send Wi-Fi</button>
           </div>
         </div>
         <div id="view-api" class="view-container">
           <div class="api-card">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px;"><span style="font-size:18px;">🛠️</span><h3 style="font-size:16px; font-weight:600; color:#1a1a1a; margin:0;">REST API Tester</h3></div>
+            <div><span>🛠️</span><h3>REST API Tester</h3></div>
             <div class="api-toolbar">
-              <div class="custom-dropdown" id="deviceDropdown"><div class="dropdown-btn" onclick="toggleDeviceDropdown()"><span id="dropdownLabel">Select Devices</span></div><div class="dropdown-content"><label><input type="checkbox" value="led" checked onchange="updateDeviceSelection()"> LED</label><label><input type="checkbox" value="buzzer" onchange="updateDeviceSelection()"> Buzzer</label><label><input type="checkbox" value="fan" onchange="updateDeviceSelection()"> Fan</label><label><input type="checkbox" value="pump" onchange="updateDeviceSelection()"> Pump</label><label><input type="checkbox" value="servo" onchange="updateDeviceSelection()"> Servo</label></div></div>
-              <select id="apiState" class="state-select" onchange="updateDeviceSelection()"><option value="on">ON</option><option value="off">OFF</option></select>
-            </div>
-            <div class="split-container"><div class="split-row"><div class="split-half"><div class="split-half-title"><span>📤 Request</span><span style="font-weight:400; font-size:11px; color:#999;">Auto-updates</span></div><textarea id="requestEditor" spellcheck="false">[{"device":"led","state":"on"}]</textarea></div><div class="split-half"><div class="split-half-title">📥 Responses</div><pre id="responseViewer">Select devices & click "Test"</pre></div></div><button class="api-test-btn" onclick="sendCustomApiRequest()">🧪 Test Batch</button>
+              <div class="custom-dropdown"><div class="dropdown-btn"><span>Select Devices</span></div><div class="dropdown-content"><label><input type="checkbox" value="led" checked> LED</label><label><input type="checkbox" value="pump"> Pump</label></div></div>
+              <select id="apiState"><option>on</option><option>off</option></select>
             </div>
           </div>
         </div>
         <div id="view-firmware" class="view-container">
           <div class="firmware-card">
-            <h3 style="font-size:16px; font-weight:600; color:#1a1a1a; margin-bottom:15px;">📦 Upload New Firmware</h3>
-            <input id="fwVersion" class="fw-input" placeholder="Version (e.g., v1.0.1)">
-            <input id="fwUrl" class="fw-input" placeholder="Public URL to .bin file (e.g., https://.../firmware.bin)">
-            <input id="fwDesc" class="fw-input" placeholder="Description (e.g., Fixed LED bug)">
-            <button class="api-test-btn" onclick="uploadFirmware()">📤 Save to Database</button>
+            <h3>📦 Upload New Firmware</h3>
+            <input id="fwVersion" placeholder="Version">
+            <input id="fwUrl" placeholder="Public URL to .bin file">
+            <button onclick="uploadFirmware()">📤 Save</button>
           </div>
           <div class="firmware-card">
-            <h3 style="font-size:16px; font-weight:600; color:#1a1a1a; margin-bottom:15px;">📋 Release History</h3>
+            <h3>📋 Release History</h3>
             <div id="fwList">Loading...</div>
-            <button class="api-test-btn" style="margin-top:15px; background:#ff9800;" onclick="forceFirmwareUpdate()">📡 Force OTA Update</button>
+            <button style="background:#ff9800;" onclick="forceFirmwareUpdate()">📡 Force OTA Update</button>
           </div>
         </div>
       </div>
     </div>
     <div class="right-col">
-      <div class="stat-card"><div class="stat-icon blue">⚡</div><div class="stat-text"><div class="label">Master Toggle</div><button id="masterBtn" class="mode-btn" style="margin-top:4px; background:#1a1a1a; color:#fff; border:none; padding:6px 16px; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.15);" onclick="toggleMaster()">ON</button></div></div>
-      <div class="stat-card"><div class="stat-icon green">🌡️</div><div class="stat-text"><div class="label">Unit</div><button id="unitBtn" class="mode-btn" style="margin-top:4px; background:#1a1a1a; color:#fff; border:none; padding:6px 16px; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.15);" onclick="toggleUnit()">°C</button></div></div>
-      <div class="stat-card" style="flex-direction:column; gap:8px;"><div style="width:100%; display:flex; justify-content:space-between;"><span style="font-size:13px; color:#888;">Firmware Version</span><span id="fwVersionDisplay" style="font-size:13px; font-weight:600; color:#1a1a1a;">v1.0.1</span></div></div>
-      <div class="stat-card" style="flex-direction:column; gap:8px; margin-top:10px;">
-        <div style="width:100%; display:flex; justify-content:space-between;">
-          <span style="font-size:13px; color:#888;">ESP32 Status</span>
-          <span id="espStatus" style="font-size:13px; font-weight:600; color:#4CAF50;">● Online</span>
-        </div>
-      </div>
+      <div class="stat-card"><div class="stat-icon blue">⚡</div><div class="stat-text"><div class="label">Master Toggle</div><button onclick="toggleMaster()">ON</button></div></div>
+      <div class="stat-card"><div class="stat-icon green">🌡️</div><div class="stat-text"><div class="label">Unit</div><button onclick="toggleUnit()">°C</button></div></div>
+      <div class="stat-card"><div><span>ESP32 Status</span><span id="espStatus">● Online</span></div></div>
+      <div class="stat-card"><div><span>Firmware Version</span><span id="fwVersionDisplay">v1.0.18</span></div></div>
     </div>
   </div>
 </div>
 
 <script>
-  let isCelsius = true;
-  let currentView = 'home';
-
   function toggleDevice(device, btnId) {
     const btn = document.getElementById(btnId);
     const newState = btn.classList.contains('on-state') ? 'off' : 'on';
@@ -206,207 +190,31 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ state: newState })
-    })
-    .then(res => res.json())
-    .then(data => console.log("LED state set to:", data))
-    .catch(err => console.error("Failed to set LED state:", err));
-  }
-
-  function toggleUnit() {
-    isCelsius = !isCelsius;
-    const btn = document.getElementById('unitBtn');
-    btn.innerText = isCelsius ? '°C' : '°F';
-    document.getElementById('tempUnit').innerText = isCelsius ? '°C' : '°F';
-  }
-  
-  function toggleMaster() {
-    const btn = document.getElementById('masterBtn');
-    btn.innerText = btn.innerText === 'ON' ? 'OFF' : 'ON';
-    btn.style.background = btn.innerText === 'OFF' ? '#ff3b30' : '#1a1a1a';
-  }
-  
-  function toggleSensor(type) {
-    const btn = document.getElementById(type + 'Btn');
-    btn.classList.toggle('on');
-    document.getElementById(type + 'Card').classList.toggle('disabled');
+    });
   }
 
   function switchView(viewName) {
     document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.icon-btn').forEach(el => el.classList.remove('active'));
-    
-    const targetView = document.getElementById('view-' + viewName);
-    const targetBtn = document.getElementById('btn-' + viewName);
-    
-    if(targetView) targetView.classList.add('active');
-    if(targetBtn) targetBtn.classList.add('active');
-    
-    if(viewName === 'firmware') {
-      loadFirmwareList();
-    }
-  }
-
-  function toggleDeviceDropdown() {
-    document.getElementById('deviceDropdown').classList.toggle('open');
-  }
-  
-  function updateDeviceSelection() {
-    const checkboxes = document.querySelectorAll('#deviceDropdown input[type="checkbox"]');
-    const state = document.getElementById('apiState').value;
-    const editor = document.getElementById('requestEditor');
-    
-    const selected = [];
-    checkboxes.forEach(cb => { if (cb.checked) selected.push(cb.value); });
-    
-    document.getElementById('dropdownLabel').innerText = selected.length === 0 ? 'None selected' : selected.join(', ');
-    const batch = selected.map(dev => ({ device: dev, state: state }));
-    editor.value = JSON.stringify(batch, null, 2);
-  }
-
-  document.addEventListener('click', function(e) {
-    const container = document.getElementById('deviceDropdown');
-    if (container && !container.contains(e.target)) container.classList.remove('open');
-  });
-
-  async function sendCustomApiRequest() {
-    const editor = document.getElementById('requestEditor');
-    const viewer = document.getElementById('responseViewer');
-    let payload;
-    try { payload = JSON.parse(editor.value.trim()); } catch (e) { viewer.innerText = '❌ Invalid JSON syntax'; return; }
-    viewer.innerText = '⏳ Executing batch...\n';
-    let results = [];
-    for (let i = 0; i < payload.length; i++) {
-      const cmd = payload[i];
-      try {
-        const res = await fetch(`/api/led/set`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ state: cmd.state })
-        });
-        const data = await res.text();
-        results.push(`[${i+1}] ${cmd.device} -> ${data}`);
-      } catch (err) {
-        results.push(`[${i+1}] ${cmd.device} -> ❌ Error: ${err}`);
-      }
-    }
-    viewer.innerText = '✅ Batch Complete:\n' + results.join('\n');
-  }
-
-  async function uploadFirmware() {
-    const version = document.getElementById('fwVersion').value;
-    const file_url = document.getElementById('fwUrl').value;
-    const description = document.getElementById('fwDesc').value;
-    
-    if(!version || !file_url) { alert("Version and URL are required!"); return; }
-    
-    const res = await fetch('/api/firmware/upload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ version, file_url, description })
-    });
-    const data = await res.json();
-    alert(data.message || "Saved!");
-    loadFirmwareList();
-  }
-
-  async function loadFirmwareList() {
-    const list = document.getElementById('fwList');
-    list.innerText = "Loading...";
-    const res = await fetch('/api/firmware/list');
-    const data = await res.json();
-    list.innerHTML = data.map(fw => `
-      <div class="fw-list-item">
-        <div>
-          <div class="fw-version">${fw.version}</div>
-          <div class="fw-date">${new Date(fw.created_at).toLocaleString()}</div>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <span style="font-size:11px; color:#888;">${fw.description || ''}</span>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  async function checkFirmwareVersion() {
-    try {
-      const res = await fetch('/api/esp32/version');
-      const data = await res.json();
-      document.getElementById('fwVersionDisplay').innerText = data.version;
-    } catch (err) {
-      console.log("Version check failed");
-    }
+    document.getElementById('view-' + viewName).classList.add('active');
+    document.getElementById('btn-' + viewName).classList.add('active');
   }
 
   async function forceFirmwareUpdate() {
-    const res = await fetch('/api/ota/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId: "esp32_01" })
-    });
+    const res = await fetch('/api/ota/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: "esp32_01" }) });
     const data = await res.json();
     alert(data.message || data.error);
   }
 
-  async function sendWiFiCredentials() {
-    const status = document.getElementById('provisionStatus');
-    const deviceId = document.getElementById('setupDeviceId').value;
-    const ssid = document.getElementById('setupSSID').value;
-    const password = document.getElementById('setupPassword').value;
-    
-    if(!ssid || !password) {
-      status.innerText = "❌ Please enter both SSID and Password.";
-      status.style.color = "#c62828";
-      return;
-    }
-    
-    status.innerText = "⏳ Sending credentials...";
-    status.style.color = "#888";
-    
-    const res = await fetch('/api/wifi/provision', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId, ssid, password })
-    });
-    
-    const data = await res.json();
-    if(res.ok) {
-      status.innerText = "✅ " + data.message;
-      status.style.color = "#2e7d32";
-    } else {
-      status.innerText = "❌ " + data.error;
-      status.style.color = "#c62828";
-    }
-  }
-
-  // Check version every 5 seconds
-  setInterval(checkFirmwareVersion, 5000);
-  checkFirmwareVersion();
-
-  setInterval(() => {
-    document.getElementById('tempText').innerText = (20 + Math.random()*5).toFixed(1);
-    document.getElementById('humText').innerText = (40 + Math.random()*10).toFixed(0);
-  }, 3000);
-
   async function checkEspStatus() {
-  try {
     const res = await fetch('/api/esp32/status');
     const data = await res.json();
-    const statusBadge = document.getElementById('espStatus');
-    if (data.online) {
-      statusBadge.innerText = '● Online';
-      statusBadge.style.color = '#4CAF50';
-    } else {
-      statusBadge.innerText = '● Offline';
-      statusBadge.style.color = '#f44336';
-    }
-  } catch (err) {
-    console.log("Status check failed");
+    document.getElementById('espStatus').innerText = data.online ? '● Online' : '● Offline';
+    document.getElementById('espStatus').style.color = data.online ? '#4CAF50' : '#f44336';
   }
-}
 
-// Check every 3 seconds
-setInterval(checkEspStatus, 2000);
-checkEspStatus();
+  setInterval(checkEspStatus, 2000);
+  checkEspStatus();
 </script>
 </body>
 </html>
