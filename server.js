@@ -11,11 +11,14 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
+// --- STATE VARIABLES ---
 let currentLedState = "off";
+let currentPumpState = "off";   // Separate state for the pump
 let latestFirmwareUrl = "";
-let currentFirmwareVersion = "v1.0.18";
+let currentFirmwareVersion = "v1.0.19";
 let lastPollTime = 0;
 
+// --- POLL ENDPOINT (ESP32 calls this every 500ms) ---
 app.get('/api/poll', async (req, res) => {
   lastPollTime = Date.now();
 
@@ -35,13 +38,24 @@ app.get('/api/poll', async (req, res) => {
     latestFirmwareUrl = data.file_url;
   }
 
+  // --- LOGIC: Pump overrides LED ---
+  let finalState = "off";
+  if (currentPumpState == "on") {
+    finalState = "on";
+  } else if (currentLedState == "on") {
+    finalState = "on";
+  } else {
+    finalState = "off";
+  }
+
   res.json({
-    state: currentLedState,
+    state: finalState,
     firmwareUrl: latestFirmwareUrl,
     force_update: false
   });
 });
 
+// --- FIRMWARE LIST ---
 app.get('/api/firmware/list', async (req, res) => {
   const { data, error } = await supabase
     .from('firmware_releases')
@@ -51,6 +65,7 @@ app.get('/api/firmware/list', async (req, res) => {
   res.json(data);
 });
 
+// --- FIRMWARE UPLOAD ---
 app.post('/api/firmware/upload', async (req, res) => {
   const { version, file_url, description } = req.body;
   const { data, error } = await supabase
@@ -63,6 +78,7 @@ app.post('/api/firmware/upload', async (req, res) => {
   res.json({ status: "ok", message: "Firmware release saved!" });
 });
 
+// --- LED CONTROL ---
 app.post('/api/led/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
@@ -74,21 +90,24 @@ app.post('/api/led/set', (req, res) => {
   }
 });
 
+// --- PUMP CONTROL (Separate state) ---
 app.post('/api/pump/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
-    // Since the relay is on Pin 7, we just re-use the same LED state
-    currentLedState = state;
+    currentPumpState = state;
     console.log(`💧 Pump state set to: ${state}`);
     res.json({ status: "ok", message: "Pump updated." });
   } else {
     res.status(400).json({ error: "Invalid state. Use 'on' or 'off'." });
   }
 });
+
+// --- VERSION ---
 app.get('/api/esp32/version', (req, res) => {
   res.json({ version: currentFirmwareVersion });
 });
 
+// --- ONLINE STATUS ---
 app.get('/api/esp32/status', (req, res) => {
   const now = Date.now();
   const isOnline = (now - lastPollTime) < 5000;
@@ -97,5 +116,5 @@ app.get('/api/esp32/status', (req, res) => {
 
 const PORT = process.env.PORT || 443;
 app.listen(PORT, () => {
-  console.log(`✅ FarmIOT Universal Server running on port ${PORT}`);
+  console.log(`✅ FarmIOT Server running on port ${PORT}`);
 });
