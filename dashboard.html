@@ -181,7 +181,7 @@
 </div>
 
 <script>
-  function toggleDevice(device, btnId) {
+    function toggleDevice(device, btnId) {
     const btn = document.getElementById(btnId);
     const newState = btn.classList.contains('on-state') ? 'off' : 'on';
     btn.classList.toggle('on-state');
@@ -191,7 +191,10 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ state: newState })
-    });
+    })
+    .then(res => res.json())
+    .then(data => console.log("✅ Command sent:", data))
+    .catch(err => console.error("❌ Fetch error:", err));
   }
 
   function switchView(viewName) {
@@ -202,7 +205,11 @@
   }
 
   async function forceFirmwareUpdate() {
-    const res = await fetch('/api/ota/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: "esp32_01" }) });
+    const res = await fetch('/api/ota/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId: "esp32_01" })
+    });
     const data = await res.json();
     alert(data.message || data.error);
   }
