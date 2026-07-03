@@ -15,14 +15,17 @@ let currentLedState = "off";
 let currentPumpState = "off";
 let latestFirmwareUrl = "";
 let currentFirmwareVersion = "v1.0.0";
-let lastPollTime = 0;
 let latestSensorData = { moisture: 0, timestamp: Date.now() };
 
 // --- POLL ENDPOINT ---
 app.get('/api/poll', async (req, res) => {
-  // --- THIS LINE UPDATES THE STATUS ---
-  lastPollTime = Date.now();
-  console.log(`📡 Poll received at ${new Date().toISOString()}`);
+  // --- CRITICAL FIX: Save the poll time to Supabase ---
+  const now = Date.now();
+  await supabase
+    .from('system_status')
+    .upsert({ id: 1, last_poll_time: now }, { onConflict: 'id' });
+
+  console.log(`📡 Poll received at ${new Date(now).toISOString()}`);
 
   const reportedVersion = req.query.version;
   if (reportedVersion) {
@@ -106,10 +109,20 @@ app.get('/api/esp32/version', (req, res) => {
   res.json({ version: currentFirmwareVersion });
 });
 
-app.get('/api/esp32/status', (req, res) => {
+app.get('/api/esp32/status', async (req, res) => {
+  // --- Read the poll time from Supabase ---
+  const { data, error } = await supabase
+    .from('system_status')
+    .select('last_poll_time')
+    .eq('id', 1)
+    .single();
+
+  if (error || !data) {
+    return res.json({ online: false });
+  }
+
   const now = Date.now();
-  // If last poll was within 6 seconds, the ESP32 is online
-  const isOnline = (now - lastPollTime) < 6000;
+  const isOnline = (now - data.last_poll_time) < 6000;
   res.json({ online: isOnline });
 });
 
