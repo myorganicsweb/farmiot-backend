@@ -11,7 +11,6 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
-// --- STATE VARIABLES ---
 let currentLedState = "off";
 let currentPumpState = "off";
 let latestFirmwareUrl = "";
@@ -19,16 +18,14 @@ let currentFirmwareVersion = "v1.0.0";
 let lastPollTime = 0;
 let latestSensorData = { moisture: 0, timestamp: Date.now() };
 
-// --- POLL ENDPOINT (ESP32 calls this every 500ms) ---
 app.get('/api/poll', async (req, res) => {
-  // Update the last seen timestamp
+  // --- CRITICAL: Update timestamp on ANY successful request ---
   lastPollTime = Date.now();
   console.log(`📡 Poll received at ${new Date().toISOString()}`);
 
   const reportedVersion = req.query.version;
   if (reportedVersion) {
     currentFirmwareVersion = reportedVersion;
-    console.log("📦 ESP32 version reported:", reportedVersion);
   }
 
   const { data, error } = await supabase
@@ -55,60 +52,45 @@ app.get('/api/poll', async (req, res) => {
   });
 });
 
-// --- FIRMWARE LIST ---
 app.get('/api/firmware/list', async (req, res) => {
-  const { data, error } = await supabase
-    .from('firmware_releases')
-    .select('*')
-    .order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('firmware_releases').select('*').order('created_at', { ascending: false });
   if (error) return res.status(500).json(error);
   res.json(data);
 });
 
-// --- FIRMWARE UPLOAD ---
 app.post('/api/firmware/upload', async (req, res) => {
   const { version, file_url, description } = req.body;
-  const { data, error } = await supabase
-    .from('firmware_releases')
-    .insert([{ version, file_url, description }]);
-  if (error) {
-    console.error("Supabase error:", error);
-    return res.status(500).json({ error: "Database error" });
-  }
+  const { data, error } = await supabase.from('firmware_releases').insert([{ version, file_url, description }]);
+  if (error) return res.status(500).json(error);
   res.json({ status: "ok", message: "Firmware release saved!" });
 });
 
-// --- LED CONTROL ---
 app.post('/api/led/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
     currentLedState = state;
-    console.log(`💡 LED state set to: ${state}`);
     res.json({ status: "ok", message: "LED updated." });
   } else {
     res.status(400).json({ error: "Invalid state. Use 'on' or 'off'." });
   }
 });
 
-// --- PUMP CONTROL ---
 app.post('/api/pump/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
     currentPumpState = state;
-    console.log(`💧 Pump state set to: ${state}`);
     res.json({ status: "ok", message: "Pump updated." });
   } else {
     res.status(400).json({ error: "Invalid state. Use 'on' or 'off'." });
   }
 });
 
-// --- SENSOR DATA (Soil Moisture) ---
 app.post('/api/sensor/update', (req, res) => {
   const { moisture } = req.body;
   if (moisture !== undefined) {
     latestSensorData.moisture = moisture;
     latestSensorData.timestamp = Date.now();
-    console.log(`🌱 Soil Moisture received: ${moisture}`);
+    console.log(`🌱 Soil: ${moisture}`);
     res.json({ status: "ok" });
   } else {
     res.status(400).json({ error: "Missing moisture data" });
@@ -119,15 +101,13 @@ app.get('/api/sensor/latest', (req, res) => {
   res.json(latestSensorData);
 });
 
-// --- VERSION ---
 app.get('/api/esp32/version', (req, res) => {
   res.json({ version: currentFirmwareVersion });
 });
 
-// --- ONLINE STATUS ---
 app.get('/api/esp32/status', (req, res) => {
   const now = Date.now();
-  const isOnline = (now - lastPollTime) < 5000;
+  const isOnline = (now - lastPollTime) < 6000;
   res.json({ online: isOnline });
 });
 
