@@ -21,7 +21,9 @@ let latestSensorData = { moisture: 0, timestamp: Date.now() };
 
 // --- POLL ENDPOINT (ESP32 calls this every 500ms) ---
 app.get('/api/poll', async (req, res) => {
+  // Update the last seen timestamp
   lastPollTime = Date.now();
+  console.log(`📡 Poll received at ${new Date().toISOString()}`);
 
   const reportedVersion = req.query.version;
   if (reportedVersion) {
