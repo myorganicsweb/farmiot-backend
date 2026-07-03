@@ -207,28 +207,18 @@
     alert(data.message || data.error);
   }
 
-    async function checkEspStatus() {
+  async function checkEspStatus() {
     try {
       const t = Date.now();
-      const res = await fetch('/api/sensor/latest?_t=' + t);
+      const res = await fetch('/api/esp32/status?_t=' + t);
       const data = await res.json();
-      
-      const now = Date.now();
-      const lastSeen = Number(data.timestamp) || 0;
-      const timeDiff = now - lastSeen;
-      
-      // --- FORCE ONLINE IF THE DATA IS FRESH ---
-      const isOnline = timeDiff < 6000;
-      
-      // Debug log to console
-      console.log(`📡 Time since last sensor: ${timeDiff}ms (${isOnline ? 'ONLINE' : 'OFFLINE'})`);
-      
-      document.getElementById('espStatus').innerText = isOnline ? '● Online' : '● Offline';
-      document.getElementById('espStatus').style.color = isOnline ? '#4CAF50' : '#f44336';
+      document.getElementById('espStatus').innerText = data.online ? '● Online' : '● Offline';
+      document.getElementById('espStatus').style.color = data.online ? '#4CAF50' : '#f44336';
     } catch (err) {
       console.log("Status check failed");
     }
   }
+  
   async function checkSoilMoisture() {
     try {
       const res = await fetch('/api/sensor/latest');
