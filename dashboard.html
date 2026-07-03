@@ -207,11 +207,17 @@
     alert(data.message || data.error);
   }
 
-  async function checkEspStatus() {
-    const res = await fetch('/api/esp32/status');
-    const data = await res.json();
-    document.getElementById('espStatus').innerText = data.online ? '● Online' : '● Offline';
-    document.getElementById('espStatus').style.color = data.online ? '#4CAF50' : '#f44336';
+   async function checkEspStatus() {
+    try {
+      // --- CRITICAL FIX: Add a random timestamp to bust every cache ---
+      const t = Date.now(); // Unique timestamp
+      const res = await fetch('/api/esp32/status?_t=' + t);
+      const data = await res.json();
+      document.getElementById('espStatus').innerText = data.online ? '● Online' : '● Offline';
+      document.getElementById('espStatus').style.color = data.online ? '#4CAF50' : '#f44336';
+    } catch (err) {
+      console.log("Status check failed");
+    }
   }
 
   async function checkSoilMoisture() {
