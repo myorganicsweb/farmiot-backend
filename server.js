@@ -18,7 +18,9 @@ let currentFirmwareVersion = "v1.0.0";
 let lastPollTime = 0;
 let latestSensorData = { moisture: 0, timestamp: Date.now() };
 
+// --- POLL ENDPOINT ---
 app.get('/api/poll', async (req, res) => {
+  // --- THIS LINE UPDATES THE STATUS ---
   lastPollTime = Date.now();
   console.log(`📡 Poll received at ${new Date().toISOString()}`);
 
@@ -106,6 +108,7 @@ app.get('/api/esp32/version', (req, res) => {
 
 app.get('/api/esp32/status', (req, res) => {
   const now = Date.now();
+  // If last poll was within 6 seconds, the ESP32 is online
   const isOnline = (now - lastPollTime) < 6000;
   res.json({ online: isOnline });
 });
