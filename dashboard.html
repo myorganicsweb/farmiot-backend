@@ -207,14 +207,19 @@
     alert(data.message || data.error);
   }
 
-   async function checkEspStatus() {
+  async function checkEspStatus() {
     try {
-      // --- CRITICAL FIX: Add a random timestamp to bust every cache ---
-      const t = Date.now(); // Unique timestamp
-      const res = await fetch('/api/esp32/status?_t=' + t);
+      // Instead of asking the backend for status, we check the sensor timestamp
+      const res = await fetch('/api/sensor/latest');
       const data = await res.json();
-      document.getElementById('espStatus').innerText = data.online ? '● Online' : '● Offline';
-      document.getElementById('espStatus').style.color = data.online ? '#4CAF50' : '#f44336';
+      
+      const now = Date.now();
+      const lastSeen = data.timestamp || 0;
+      // If the last sensor data was received within 6 seconds, the ESP32 is online
+      const isOnline = (now - lastSeen) < 6000;
+      
+      document.getElementById('espStatus').innerText = isOnline ? '● Online' : '● Offline';
+      document.getElementById('espStatus').style.color = isOnline ? '#4CAF50' : '#f44336';
     } catch (err) {
       console.log("Status check failed");
     }
