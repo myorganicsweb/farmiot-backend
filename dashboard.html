@@ -134,8 +134,7 @@
             <div class="glass-card" id="waterCard"><div class="title"><span class="icon">🌊</span> Water Level</div><div class="value"><span id="waterText">--</span><span class="unit">%</span></div><button id="waterBtn" class="toggle-switch on" onclick="toggleSensor('water')"></button><div class="chart-area"><svg viewBox="0 0 200 100" id="waterChart"></svg></div></div>
           </div>
           <div class="bottom-bar">
-            <button id="btn-led" class="action-btn green" onclick="toggleDevice('led', 'btn-led')">💡 LED</button>
-            <button id="btn-pump" class="action-btn teal" onclick="toggleDevice('pump', 'btn-pump')">💧 Pump</button>
+            <button id="btn-led" class="action-btn green on-state" onclick="toggleDevice('led', 'btn-led')">💡 LED</button>            <button id="btn-pump" class="action-btn teal" onclick="toggleDevice('pump', 'btn-pump')">💧 Pump</button>
           </div>
         </div>
         <div id="view-setup" class="view-container">
@@ -181,7 +180,7 @@
 </div>
 
 <script>
-  function toggleDevice(device, btnId) {
+    function toggleDevice(device, btnId) {
     const btn = document.getElementById(btnId);
     const newState = btn.classList.contains('on-state') ? 'off' : 'on';
     btn.classList.toggle('on-state');
@@ -218,7 +217,7 @@
       console.log("Status check failed");
     }
   }
-  
+
   async function checkSoilMoisture() {
     try {
       const res = await fetch('/api/sensor/latest');
