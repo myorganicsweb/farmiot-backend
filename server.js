@@ -53,6 +53,14 @@ app.get('/api/poll', async (req, res) => {
     currentFirmwareVersion = reportedVersion;
   }
 
+  // --- NEW: Read soil moisture from the same request ---
+  const moisture = req.query.moisture;
+  if (moisture) {
+    latestSensorData.moisture = parseInt(moisture);
+    latestSensorData.timestamp = now;
+    console.log(`🌱 Soil received: ${moisture}`);
+  }
+
   const { data, error } = await supabase
     .from('firmware_releases')
     .select('file_url')
@@ -76,7 +84,6 @@ app.get('/api/poll', async (req, res) => {
     force_update: false
   });
 });
-
 // --- FIRMWARE LIST ---
 app.get('/api/firmware/list', async (req, res) => {
   const { data, error } = await supabase.from('firmware_releases').select('*').order('created_at', { ascending: false });
