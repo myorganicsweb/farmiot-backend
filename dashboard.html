@@ -207,15 +207,15 @@
     alert(data.message || data.error);
   }
 
-  async function checkEspStatus() {
+    async function checkEspStatus() {
     try {
-      // Instead of asking the backend for status, we check the sensor timestamp
-      const res = await fetch('/api/sensor/latest');
+      const t = Date.now();
+      const res = await fetch('/api/sensor/latest?_t=' + t);
       const data = await res.json();
       
+      // --- CRITICAL FIX: Force the timestamp to be a Number ---
       const now = Date.now();
-      const lastSeen = data.timestamp || 0;
-      // If the last sensor data was received within 6 seconds, the ESP32 is online
+      const lastSeen = Number(data.timestamp) || 0;
       const isOnline = (now - lastSeen) < 6000;
       
       document.getElementById('espStatus').innerText = isOnline ? '● Online' : '● Offline';
