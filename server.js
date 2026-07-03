@@ -1,7 +1,6 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
+const path = require('path');
 
 const app = express();
 app.use(express.json());
@@ -12,26 +11,8 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
-// --- State file path ---
-const STATE_FILE = '/tmp/last_poll.json';
-
-// Helper: Read state from file
-function readState() {
-  try {
-    if (fs.existsSync(STATE_FILE)) {
-      const data = fs.readFileSync(STATE_FILE, 'utf8');
-      return JSON.parse(data);
-    }
-  } catch (e) {}
-  return { lastPollTime: 0 };
-}
-
-// Helper: Write state to file
-function writeState(state) {
-  try {
-    fs.writeFileSync(STATE_FILE, JSON.stringify(state));
-  } catch (e) {}
-}
+// --- GLOBAL VARIABLE (NO FILE, NO TABLE) ---
+let lastPollTime = 0;
 
 let currentLedState = "off";
 let currentPumpState = "off";
@@ -39,25 +20,20 @@ let latestFirmwareUrl = "";
 let currentFirmwareVersion = "v1.0.0";
 let latestSensorData = { moisture: 0, timestamp: Date.now() };
 
-// --- POLL ENDPOINT ---
 app.get('/api/poll', async (req, res) => {
-  const now = Date.now();
-  const state = readState();
-  state.lastPollTime = now;
-  writeState(state);
-  
-  console.log(`📡 Poll received at ${new Date(now).toISOString()}`);
+  // --- UPDATE THE GLOBAL VARIABLE ---
+  lastPollTime = Date.now();
+  console.log(`📡 Poll received at ${new Date().toISOString()}`);
 
   const reportedVersion = req.query.version;
   if (reportedVersion) {
     currentFirmwareVersion = reportedVersion;
   }
 
-  // --- NEW: Read soil moisture from the same request ---
   const moisture = req.query.moisture;
   if (moisture) {
     latestSensorData.moisture = parseInt(moisture);
-    latestSensorData.timestamp = now;
+    latestSensorData.timestamp = Date.now();
     console.log(`🌱 Soil received: ${moisture}`);
   }
 
@@ -84,14 +60,13 @@ app.get('/api/poll', async (req, res) => {
     force_update: false
   });
 });
-// --- FIRMWARE LIST ---
+
 app.get('/api/firmware/list', async (req, res) => {
   const { data, error } = await supabase.from('firmware_releases').select('*').order('created_at', { ascending: false });
   if (error) return res.status(500).json(error);
   res.json(data);
 });
 
-// --- FIRMWARE UPLOAD ---
 app.post('/api/firmware/upload', async (req, res) => {
   const { version, file_url, description } = req.body;
   const { data, error } = await supabase.from('firmware_releases').insert([{ version, file_url, description }]);
@@ -99,7 +74,6 @@ app.post('/api/firmware/upload', async (req, res) => {
   res.json({ status: "ok", message: "Firmware release saved!" });
 });
 
-// --- LED CONTROL ---
 app.post('/api/led/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
@@ -110,7 +84,6 @@ app.post('/api/led/set', (req, res) => {
   }
 });
 
-// --- PUMP CONTROL ---
 app.post('/api/pump/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
@@ -121,33 +94,17 @@ app.post('/api/pump/set', (req, res) => {
   }
 });
 
-// --- SENSOR DATA (Soil Moisture) ---
-app.post('/api/sensor/update', (req, res) => {
-  const { moisture } = req.body;
-  if (moisture !== undefined) {
-    latestSensorData.moisture = moisture;
-    latestSensorData.timestamp = Date.now();
-    console.log(`🌱 Soil: ${moisture}`);
-    res.json({ status: "ok" });
-  } else {
-    res.status(400).json({ error: "Missing moisture data" });
-  }
-});
-
 app.get('/api/sensor/latest', (req, res) => {
   res.json(latestSensorData);
 });
 
-// --- VERSION ---
 app.get('/api/esp32/version', (req, res) => {
   res.json({ version: currentFirmwareVersion });
 });
 
-// --- STATUS ---
 app.get('/api/esp32/status', (req, res) => {
-  const state = readState();
   const now = Date.now();
-  const isOnline = (now - state.lastPollTime) < 6000;
+  const isOnline = (now - lastPollTime) < 6000;
   res.json({ online: isOnline });
 });
 
