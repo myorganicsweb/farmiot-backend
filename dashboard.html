@@ -174,9 +174,8 @@
     <div class="right-col">
       <div class="stat-card"><div class="stat-icon blue">⚡</div><div class="stat-text"><div class="label">Master Toggle</div><button onclick="toggleMaster()">ON</button></div></div>
       <div class="stat-card"><div class="stat-icon green">🌡️</div><div class="stat-text"><div class="label">Unit</div><button onclick="toggleUnit()">°C</button></div></div>
-      <div class="stat-card" style="flex-direction:column; gap:8px;"><div style="width:100%; display:flex; justify-content:space-between;"><span>🌱 Soil Moisture</span><span id="soilMoistureDisplay">-- %</span></div><div style="width:100%; height:4px; background:rgba(255,255,255,0.6); border-radius:4px; overflow:hidden;"><div id="soilBar" style="height:100%; width:0%; background:#388e3c; border-radius:4px;"></div></div></div>
-      <div class="stat-card"><div><span>ESP32 Status</span><span id="espStatus">● Online</span></div></div>
-      <div class="stat-card"><div><span>Firmware Version</span><span id="fwVersionDisplay">v1.0.0</span></div></div>
+      <div class="stat-card" style="flex-direction:column; gap:8px;"><div style="width:100%; display:flex; justify-content:space-between;"><span>ESP32 Status</span><span id="espStatus">● Online</span></div></div>
+      <div class="stat-card" style="flex-direction:column; gap:8px;"><div style="width:100%; display:flex; justify-content:space-between;"><span>Firmware Version</span><span id="fwVersionDisplay">v1.0.0</span></div></div>
     </div>
   </div>
 </div>
@@ -219,13 +218,13 @@
     try {
       const res = await fetch('/api/sensor/latest');
       const data = await res.json();
-      const moistureValue = data.moisture;
+      const rawValue = data.moisture;
 
-      // Map 0–4095 to percentage
-      const percentage = Math.min(100, Math.max(0, (1 - (moistureValue / 4095)) * 100));
+      // Map 0–4095 to 0–100%
+      let percentage = 100 - ((rawValue / 4095) * 100);
+      percentage = Math.min(100, Math.max(0, percentage));
 
-      document.getElementById('soilMoistureDisplay').innerText = percentage.toFixed(0) + ' %';
-      document.getElementById('soilBar').style.width = percentage + '%';
+      document.getElementById('soilText').innerText = percentage.toFixed(0);
     } catch (err) {
       console.log("Sensor read failed");
     }

@@ -19,7 +19,6 @@ let lastPollTime = 0;
 let latestSensorData = { moisture: 0, timestamp: Date.now() };
 
 app.get('/api/poll', async (req, res) => {
-  // --- CRITICAL: Update timestamp on ANY successful request ---
   lastPollTime = Date.now();
   console.log(`📡 Poll received at ${new Date().toISOString()}`);
 
