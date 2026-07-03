@@ -11,9 +11,9 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
-// --- GLOBAL VARIABLE ---
-let lastPollTime = 0;
-let lastHeartbeatCount = 0; // Tracks how many times we've seen the same poll time
+// --- PERSISTENT STORAGE USING MAP ---
+const statusStore = new Map();
+const LED_STATE_KEY = 'lastPollTime';
 
 let currentLedState = "off";
 let currentPumpState = "off";
@@ -22,18 +22,9 @@ let currentFirmwareVersion = "v1.0.0";
 let latestSensorData = { moisture: 0, timestamp: Date.now() };
 
 app.get('/api/poll', async (req, res) => {
-  const now = Date.now();
-  
-  // If the time has changed, reset the heartbeat count
-  if (lastPollTime !== now) {
-    lastHeartbeatCount = 0;
-    lastPollTime = now;
-  } else {
-    // If the time hasn't changed, increment the heartbeat count
-    lastHeartbeatCount++;
-  }
-
-  console.log(`📡 Poll received at ${new Date(now).toISOString()} (heartbeat: ${lastHeartbeatCount})`);
+  // --- Store the time in the Map ---
+  statusStore.set(LED_STATE_KEY, Date.now());
+  console.log(`📡 Poll received at ${new Date().toISOString()}`);
 
   const reportedVersion = req.query.version;
   if (reportedVersion) {
@@ -43,7 +34,7 @@ app.get('/api/poll', async (req, res) => {
   const moisture = req.query.moisture;
   if (moisture) {
     latestSensorData.moisture = parseInt(moisture);
-    latestSensorData.timestamp = now;
+    latestSensorData.timestamp = Date.now();
     console.log(`🌱 Soil received: ${moisture}`);
   }
 
@@ -114,13 +105,8 @@ app.get('/api/esp32/version', (req, res) => {
 
 app.get('/api/esp32/status', (req, res) => {
   const now = Date.now();
-  const isOnline = (now - lastPollTime) < 3000 && lastHeartbeatCount < 3;
-  
-  // --- CRITICAL FIX: Prevent browser caching ---
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  
+  const lastPoll = statusStore.get(LED_STATE_KEY) || 0;
+  const isOnline = (now - lastPoll) < 6000;
   res.json({ online: isOnline });
 });
 
