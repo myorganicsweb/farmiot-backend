@@ -11,12 +11,15 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
+// --- STATE VARIABLES ---
 let currentLedState = "off";
 let currentPumpState = "off";
 let latestFirmwareUrl = "";
-let currentFirmwareVersion = "v1.0.24";
+let currentFirmwareVersion = "v1.0.0";
 let lastPollTime = 0;
+let latestSensorData = { moisture: 0, timestamp: Date.now() };
 
+// --- POLL ENDPOINT (ESP32 calls this every 500ms) ---
 app.get('/api/poll', async (req, res) => {
   lastPollTime = Date.now();
 
@@ -50,6 +53,7 @@ app.get('/api/poll', async (req, res) => {
   });
 });
 
+// --- FIRMWARE LIST ---
 app.get('/api/firmware/list', async (req, res) => {
   const { data, error } = await supabase
     .from('firmware_releases')
@@ -59,6 +63,7 @@ app.get('/api/firmware/list', async (req, res) => {
   res.json(data);
 });
 
+// --- FIRMWARE UPLOAD ---
 app.post('/api/firmware/upload', async (req, res) => {
   const { version, file_url, description } = req.body;
   const { data, error } = await supabase
@@ -71,6 +76,7 @@ app.post('/api/firmware/upload', async (req, res) => {
   res.json({ status: "ok", message: "Firmware release saved!" });
 });
 
+// --- LED CONTROL ---
 app.post('/api/led/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
@@ -82,6 +88,7 @@ app.post('/api/led/set', (req, res) => {
   }
 });
 
+// --- PUMP CONTROL ---
 app.post('/api/pump/set', (req, res) => {
   const { state } = req.body;
   if (state === "on" || state === "off") {
@@ -93,10 +100,29 @@ app.post('/api/pump/set', (req, res) => {
   }
 });
 
+// --- SENSOR DATA (Soil Moisture) ---
+app.post('/api/sensor/update', (req, res) => {
+  const { moisture } = req.body;
+  if (moisture !== undefined) {
+    latestSensorData.moisture = moisture;
+    latestSensorData.timestamp = Date.now();
+    console.log(`🌱 Soil Moisture received: ${moisture}`);
+    res.json({ status: "ok" });
+  } else {
+    res.status(400).json({ error: "Missing moisture data" });
+  }
+});
+
+app.get('/api/sensor/latest', (req, res) => {
+  res.json(latestSensorData);
+});
+
+// --- VERSION ---
 app.get('/api/esp32/version', (req, res) => {
   res.json({ version: currentFirmwareVersion });
 });
 
+// --- ONLINE STATUS ---
 app.get('/api/esp32/status', (req, res) => {
   const now = Date.now();
   const isOnline = (now - lastPollTime) < 5000;
