@@ -114,8 +114,13 @@ app.get('/api/esp32/version', (req, res) => {
 
 app.get('/api/esp32/status', (req, res) => {
   const now = Date.now();
-  // If we haven't seen a new poll in 2 seconds, or the heartbeat count is too high, go offline
   const isOnline = (now - lastPollTime) < 3000 && lastHeartbeatCount < 3;
+  
+  // --- CRITICAL FIX: Prevent browser caching ---
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
   res.json({ online: isOnline });
 });
 
