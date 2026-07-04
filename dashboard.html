@@ -181,87 +181,33 @@
 </div>
 
 <script>
-    function toggleDevice(device, btnId) {
-    const btn = document.getElementById(btnId);
-    const newState = btn.classList.contains('on-state') ? 'off' : 'on';
-    btn.classList.toggle('on-state');
-
-    const endpoint = device === 'pump' ? '/api/pump/set' : '/api/led/set';
-    fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state: newState })
-    })
-    .then(res => res.json())
-    .then(data => console.log("✅ Command sent:", data))
-    .catch(err => console.error("❌ Fetch error:", err));
+      async function fetchSoilData() {
+    try {
+      const res = await fetch('/api/esp32/soil');
+      const data = await res.json();
+      const moisture = data.moisture || 0;
+      const percentage = Math.min(100, Math.max(0, (1 - (moisture / 4095)) * 100));
+      document.getElementById('soilText').innerText = percentage.toFixed(0);
+    } catch (err) {
+      console.log("Soil fetch failed");
+    }
   }
 
-  function switchView(viewName) {
-    document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.icon-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById('view-' + viewName).classList.add('active');
-    document.getElementById('btn-' + viewName).classList.add('active');
-  }
-
-  async function forceFirmwareUpdate() {
-    const res = await fetch('/api/ota/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId: "esp32_01" })
-    });
-    const data = await res.json();
-    alert(data.message || data.error);
-  }
-
-  async function checkEspStatus() {
+  async function fetchStatus() {
     try {
       const res = await fetch('/api/esp32/status');
       const data = await res.json();
       document.getElementById('espStatus').innerText = data.online ? '● Online' : '● Offline';
       document.getElementById('espStatus').style.color = data.online ? '#4CAF50' : '#f44336';
     } catch (err) {
-      console.log("Status check failed");
+      console.log("Status fetch failed");
     }
   }
 
-  async function uploadFirmware() {
-    const version = document.getElementById('fwVersion').value;
-    const file_url = document.getElementById('fwUrl').value;
-    const description = document.getElementById('fwDesc').value;
-    
-    if(!version || !file_url) { alert("Version and URL are required!"); return; }
-    
-    const res = await fetch('/api/firmware/upload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ version, file_url, description })
-    });
-    const data = await res.json();
-    alert(data.message || "Saved!");
-    loadFirmwareList();
-  }
-
-  async function loadFirmwareList() {
-    const list = document.getElementById('fwList');
-    list.innerText = "Loading...";
-    const res = await fetch('/api/firmware/list');
-    const data = await res.json();
-    list.innerHTML = data.map(fw => `
-      <div class="fw-list-item">
-        <div>
-          <div class="fw-version">${fw.version}</div>
-          <div class="fw-date">${new Date(fw.created_at).toLocaleString()}</div>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <span style="font-size:11px; color:#888;">${fw.description || ''}</span>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  setInterval(checkEspStatus, 2000);
-  checkEspStatus();
+  setInterval(fetchSoilData, 5000);
+  setInterval(fetchStatus, 5000);
+  fetchSoilData();
+  fetchStatus();
 </script>
 </body>
 </html>
