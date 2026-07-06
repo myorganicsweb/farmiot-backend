@@ -9,7 +9,19 @@ let espSocket = null;
 
 wss.on('connection', (ws) => {
   espSocket = ws;
-  console.log("✅ ESP32 connected via WebSocket");
+  console.log("✅ ESP32 WebSocket Connected");
+  
+  ws.on('close', () => {
+    espSocket = null;
+    console.log("❌ ESP32 WebSocket Disconnected");
+  });
+});
+
+// --- CRITICAL: Handle WebSocket upgrade requests ---
+app.on('upgrade', (request, socket, head) => {
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit('connection', ws, request);
+  });
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
@@ -34,4 +46,7 @@ app.get('/api/esp32/soil', async (req, res) => {
   res.json({ moisture: parseInt(data) });
 });
 
-app.listen(443, () => console.log("✅ FarmIOT Server running"));
+const PORT = process.env.PORT || 443;
+app.listen(PORT, () => {
+  console.log(`✅ FarmIOT Server running on port ${PORT}`);
+});
