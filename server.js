@@ -7,20 +7,24 @@ const wss = new WebSocket.Server({ noServer: true });
 
 let espSocket = null;
 
+// --- Handle WebSocket upgrade ---
+app.on('upgrade', (request, socket, head) => {
+  if (request.url === '/ws') {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
+});
+
 wss.on('connection', (ws) => {
   espSocket = ws;
   console.log("✅ ESP32 WebSocket Connected");
-  
+
   ws.on('close', () => {
     espSocket = null;
     console.log("❌ ESP32 WebSocket Disconnected");
-  });
-});
-
-// --- CRITICAL: Handle WebSocket upgrade requests ---
-app.on('upgrade', (request, socket, head) => {
-  wss.handleUpgrade(request, socket, head, (ws) => {
-    wss.emit('connection', ws, request);
   });
 });
 
