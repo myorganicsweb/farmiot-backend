@@ -7,7 +7,6 @@ const wss = new WebSocket.Server({ noServer: true });
 
 let espSocket = null;
 
-// --- Handle WebSocket upgrade ---
 app.on('upgrade', (request, socket, head) => {
   if (request.url === '/ws') {
     wss.handleUpgrade(request, socket, head, (ws) => {
@@ -50,7 +49,7 @@ app.get('/api/esp32/soil', async (req, res) => {
   res.json({ moisture: parseInt(data) });
 });
 
-const PORT = process.env.PORT || 443;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`✅ FarmIOT Server running on port ${PORT}`);
 });
