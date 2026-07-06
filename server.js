@@ -8,7 +8,7 @@ app.use(express.json());
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
 // --- ESP32's local IP address ---
-const ESP32_IP = "192.168.1.119";
+const ESP32_IP = "192.168.1.35";
 
 // --- PROXY: UI calls Render -> Render calls ESP32 -> Returns data to UI ---
 app.get('/api/esp32/soil', async (req, res) => {
