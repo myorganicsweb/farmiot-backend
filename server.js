@@ -1,46 +1,37 @@
 const express = require('express');
-const http = require('http');
-const path = require('path');
+const WebSocket = require('ws');
 
 const app = express();
-app.use(express.json());
+const wss = new WebSocket.Server({ port: 8080 });
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
+let espSocket = null;
 
-// --- ESP32's local IP address ---
-const ESP32_IP = "192.168.1.35";
+wss.on('connection', (ws) => {
+  espSocket = ws;
+  console.log("✅ ESP32 connected via WebSocket");
+});
 
-// --- PROXY: UI calls Render -> Render calls ESP32 -> Returns data to UI ---
+app.get('/', (req, res) => res.sendFile(__dirname + '/dashboard.html'));
+
+// UI calls this -> Server asks ESP32 via WebSocket
 app.get('/api/esp32/soil', async (req, res) => {
-  try {
-    const response = await http.get(`http://${ESP32_IP}/soil`);
-    let data = '';
-    response.on('data', chunk => data += chunk);
-    response.on('end', () => {
-      try {
-        res.json(JSON.parse(data));
-      } catch {
-        res.status(500).json({ error: "Invalid JSON from ESP32" });
-      }
-    });
-  } catch (error) {
-    console.error("❌ ESP32 offline");
-    res.json({ moisture: 0 });
+  if (!espSocket) return res.json({ moisture: 0 });
+  espSocket.send("get_soil");
+  
+  // Wait for a response (simple polling)
+  let data = 0;
+  for (let i = 0; i < 10; i++) {
+    if (espSocket.lastData) {
+      data = espSocket.lastData;
+      break;
+    }
+    await new Promise(r => setTimeout(r, 200));
   }
+  res.json({ moisture: parseInt(data) });
 });
 
-app.get('/api/esp32/status', async (req, res) => {
-  try {
-    const response = await http.get(`http://${ESP32_IP}/status`);
-    let data = '';
-    response.on('data', chunk => data += chunk);
-    response.on('end', () => res.json(JSON.parse(data)));
-  } catch {
-    res.json({ online: false });
-  }
+app.get('/api/esp32/status', (req, res) => {
+  res.json({ online: espSocket !== null });
 });
 
-const PORT = process.env.PORT || 443;
-app.listen(PORT, () => {
-  console.log(`✅ FarmIOT Server running on port ${PORT}`);
-});
+app.listen(443, () => console.log("✅ FarmIOT Server running"));
