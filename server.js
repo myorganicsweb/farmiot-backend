@@ -7,10 +7,8 @@ app.use(express.json());
 
 const mqttClient = mqtt.connect('mqtt://broker.hivemq.com');
 
-let latestSensorData = {
-  moisture: 0,
-  lastSeen: 0
-};
+let latestMoisture = 0;
+let lastUpdate = 0;
 
 mqttClient.on('connect', () => {
   console.log('✅ MQTT Connected to broker.hivemq.com');
@@ -18,32 +16,26 @@ mqttClient.on('connect', () => {
 });
 
 mqttClient.on('message', (topic, message) => {
-  console.log(`📡 MQTT Message [${topic}]: ${message.toString()}`);
-  
   if (topic === 'farmiot/response') {
-    const moisture = parseInt(message.toString());
-    latestSensorData.moisture = moisture;
-    latestSensorData.lastSeen = Date.now();
-    console.log(`🌱 Soil updated: ${moisture} at ${new Date().toISOString()}`);
+    const val = parseInt(message.toString());
+    if (!isNaN(val)) {
+      latestMoisture = val;
+      lastUpdate = Date.now();
+      console.log(`🌱 Soil: ${val} at ${new Date().toISOString()}`);
+    }
   }
 });
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dashboard.html'));
-});
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
 app.get('/api/esp32/status', (req, res) => {
   const now = Date.now();
-  const isOnline = (now - latestSensorData.lastSeen) < 30000;
-  res.json({
-    online: isOnline,
-    lastSeen: latestSensorData.lastSeen,
-    now: now
-  });
+  const isOnline = (now - lastUpdate) < 30000; // 30 seconds
+  res.json({ online: isOnline });
 });
 
 app.get('/api/esp32/soil', (req, res) => {
-  res.json({ moisture: latestSensorData.moisture });
+  res.json({ moisture: latestMoisture });
 });
 
 app.post('/api/valve/command', (req, res) => {

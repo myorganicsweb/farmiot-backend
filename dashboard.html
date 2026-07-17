@@ -1,51 +1,186 @@
-const express = require('express');
-const mqtt = require('mqtt');
-const path = require('path');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FarmIOT Mesh Status</title>
+  <style>
+    body {
+      background: #121212;
+      color: #eee;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container { max-width: 600px; width: 100%; }
+    h1 { font-size: 24px; font-weight: 600; margin-bottom: 20px; text-align: center; color: #fff; }
+    .card {
+      background: #1e1e1e;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid #333;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .row { display: flex; justify-content: space-between; align-items: center; }
+    .label { color: #888; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+    .status-badge { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; }
+    .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+    .dot.online { background: #4CAF50; box-shadow: 0 0 8px rgba(76, 175, 80, 0.4); }
+    .dot.offline { background: #f44336; }
+    .last-seen { font-size: 12px; color: #555; margin-top: 6px; font-family: monospace; }
+    .footer { text-align: center; margin-top: 30px; font-size: 13px; color: #444; }
+  </style>
+</head>
+<body>
 
-const app = express();
-app.use(express.json());
+<div class="container">
 
-const mqttClient = mqtt.connect('mqtt://broker.hivemq.com');
+  <h1>🚜 FarmIOT Mesh Status</h1>
 
-let latestMoisture = 0;
-let lastUpdate = 0;
+  <!-- HUB STATUS -->
+  <div class="card">
+    <div class="row">
+      <span class="label">📡 Hub ESP32</span>
+      <span class="status-badge" id="hubStatus">
+        <span class="dot offline" id="hubDot"></span>
+        <span id="hubText">Checking...</span>
+      </span>
+    </div>
+    <div class="last-seen" id="hubLastSeen">Last seen: --</div>
+  </div>
 
-mqttClient.on('connect', () => {
-  console.log('✅ MQTT Connected to broker.hivemq.com');
-  mqttClient.subscribe('farmiot/response');
-});
+  <!-- SENSOR STATUS -->
+  <div class="card">
+    <div class="row">
+      <span class="label">🌱 Sensor ESP32</span>
+      <span class="status-badge" id="sensorStatus">
+        <span class="dot offline" id="sensorDot"></span>
+        <span id="sensorText">Checking...</span>
+      </span>
+    </div>
+    <div class="last-seen" id="sensorLastSeen">Last seen: --</div>
+  </div>
 
-mqttClient.on('message', (topic, message) => {
-  if (topic === 'farmiot/response') {
-    const val = parseInt(message.toString());
-    if (!isNaN(val)) {
-      latestMoisture = val;
-      lastUpdate = Date.now();
-      console.log(`🌱 Soil: ${val} at ${new Date().toISOString()}`);
+  <!-- SOIL DATA -->
+  <div class="card" style="border-color: #2a2a2a;">
+    <div class="row">
+      <span class="label">🌱 Latest Soil Reading</span>
+      <span style="font-weight:600; color:#4CAF50;" id="soilDisplay">--%</span>
+    </div>
+  </div>
+
+  <div class="footer">Auto-refreshes every 5 seconds</div>
+
+</div>
+
+<script>
+  const hubText = document.getElementById('hubText');
+  const hubDot = document.getElementById('hubDot');
+  const hubLastSeen = document.getElementById('hubLastSeen');
+
+  const sensorText = document.getElementById('sensorText');
+  const sensorDot = document.getElementById('sensorDot');
+  const sensorLastSeen = document.getElementById('sensorLastSeen');
+
+  const soilDisplay = document.getElementById('soilDisplay');
+
+  async function checkStatus() {
+
+    const res = await fetch('/api/esp32/status');
+    const data = await res.json();
+    console.log("📡 Status API:", data);
+    console.log("--- Checking ESP32 Status ---");
+
+    try {
+      // --- 1. Fetch Status ---
+      console.log("📡 Fetching /api/esp32/status...");
+      const statusRes = await fetch('/api/esp32/status');
+      
+      console.log(`📡 Status HTTP Code: ${statusRes.status} ${statusRes.statusText}`);
+      console.log(`📡 Status Headers:`, Object.fromEntries(statusRes.headers.entries()));
+
+      const statusText = await statusRes.text();
+      console.log(`📡 Status Raw Response: ${statusText}`);
+
+      let statusData;
+      try {
+        statusData = JSON.parse(statusText);
+        console.log(`📡 Status JSON:`, statusData);
+      } catch (e) {
+        console.error("❌ Status Response is NOT valid JSON. It is:", statusText);
+        throw new Error("Invalid JSON from server");
+      }
+
+      // --- 2. Fetch Soil Data ---
+      console.log("📡 Fetching /api/esp32/soil...");
+      const soilRes = await fetch('/api/esp32/soil');
+      
+      console.log(`📡 Soil HTTP Code: ${soilRes.status} ${soilRes.statusText}`);
+      
+      const soilText = await soilRes.text();
+      console.log(`📡 Soil Raw Response: ${soilText}`);
+
+      let soilData;
+      try {
+        soilData = JSON.parse(soilText);
+        console.log(`📡 Soil JSON:`, soilData);
+      } catch (e) {
+        console.error("❌ Soil Response is NOT valid JSON. It is:", soilText);
+        throw new Error("Invalid JSON from server");
+      }
+
+      // --- 3. Update UI ---
+      const now = Date.now();
+
+      // Hub status
+      hubText.innerText = statusData.online ? '● Online' : '● Offline';
+      hubDot.className = statusData.online ? 'dot online' : 'dot offline';
+      hubLastSeen.innerText = 'Last seen: now';
+
+      // Sensor status
+      const raw = soilData.moisture || 0;
+      const sensorIsOnline = raw !== undefined && raw !== null;
+      sensorText.innerText = sensorIsOnline ? '● Online' : '● Offline';
+      sensorDot.className = sensorIsOnline ? 'dot online' : 'dot offline';
+      sensorLastSeen.innerText = sensorIsOnline ? 'Last seen: now' : 'Last seen: --';
+
+      // Soil percentage
+      let percent = 0;
+      if (raw > 10) {
+        percent = Math.min(100, Math.max(0, (1 - (raw / 4095)) * 100));
+        soilDisplay.innerText = percent.toFixed(0) + '%';
+        soilDisplay.style.color = '#4CAF50';
+      } else {
+        soilDisplay.innerText = '--% (Unplugged?)';
+        soilDisplay.style.color = '#ff9800';
+      }
+
+      console.log("✅ UI Updated Successfully.");
+
+    } catch (err) {
+      console.error("❌ Error in checkStatus():", err.message);
+      console.log(err);
+
+      hubText.innerText = '● Offline';
+      hubDot.className = 'dot offline';
+      hubLastSeen.innerText = 'Unable to reach server';
+
+      sensorText.innerText = '● Offline';
+      sensorDot.className = 'dot offline';
+      sensorLastSeen.innerText = 'Unable to reach server';
+
+      soilDisplay.innerText = '--%';
+      soilDisplay.style.color = '#888';
     }
   }
-});
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
+  setInterval(checkStatus, 5000);
+  checkStatus();
+</script>
 
-app.get('/api/esp32/status', (req, res) => {
-  const now = Date.now();
-  const isOnline = (now - lastUpdate) < 30000; // 30 seconds
-  res.json({ online: isOnline });
-});
-
-app.get('/api/esp32/soil', (req, res) => {
-  res.json({ moisture: latestMoisture });
-});
-
-app.post('/api/valve/command', (req, res) => {
-  const { state } = req.body;
-  console.log(`💧 Command: ${state}`);
-  mqttClient.publish('farmiot/command', state);
-  res.json({ status: 'ok' });
-});
-
-const PORT = process.env.PORT || 443;
-app.listen(PORT, () => {
-  console.log(`✅ FarmIOT Server running on port ${PORT}`);
-});
+</body>
+</html>
