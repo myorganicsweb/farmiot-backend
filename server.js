@@ -5,21 +5,15 @@ const path = require('path');
 const app = express();
 app.use(express.json());
 
-// --- Connect to the same MQTT broker ---
-const mqttClient = mqtt.connect('mqtt://broker.hivemq.com');
+// --- Connect using port 443 ---
+const mqttClient = mqtt.connect('mqtt://broker.hivemq.com:443');
 
 let latestMoisture = 0;
 let lastUpdate = 0;
 
 mqttClient.on('connect', () => {
-  console.log('✅ MQTT Connected to broker.hivemq.com');
-  mqttClient.subscribe('farmiot/response', (err) => {
-    if (err) {
-      console.error('❌ Subscription failed:', err);
-    } else {
-      console.log('✅ Subscribed to farmiot/response');
-    }
-  });
+  console.log('✅ MQTT Connected on port 443');
+  mqttClient.subscribe('farmiot/response');
 });
 
 mqttClient.on('message', (topic, message) => {
@@ -27,7 +21,6 @@ mqttClient.on('message', (topic, message) => {
   if (topic === 'farmiot/response') {
     latestMoisture = parseInt(message.toString());
     lastUpdate = Date.now();
-    console.log(`🌱 Soil updated: ${latestMoisture}`);
   }
 });
 
