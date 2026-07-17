@@ -1,60 +1,65 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>FarmIOT Status</title>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FarmIOT Dashboard</title>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 20px; background: #121212; color: #fff; }
-    .card { background: #1e1e1e; padding: 20px; border-radius: 12px; margin: 10px auto; max-width: 400px; }
+    body { background: #121212; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
+    .card { background: #1e1e1e; padding: 20px; border-radius: 12px; margin: 10px auto; max-width: 400px; border: 1px solid #333; }
     .online { color: #4CAF50; }
     .offline { color: #f44336; }
-    .debug { font-size: 12px; color: #888; font-family: monospace; margin-top: 20px; }
+    .status-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
   </style>
 </head>
 <body>
 
-  <h1>🚜 FarmIOT Status</h1>
+  <h1>🚜 FarmIOT</h1>
 
   <div class="card">
+    <p>ESP32 Status</p>
     <h2 id="statusBadge" class="offline">● OFFLINE</h2>
-    <p>Soil Moisture: <span id="soilDisplay">--%</span></p>
-    <p>Last Update (Server Time): <span id="lastUpdateDisplay">---</span></p>
   </div>
 
-  <div class="debug">
-    Auto-refreshes every 5 seconds
+  <div class="card">
+    <p>Soil Moisture</p>
+    <h2 id="soilDisplay">--%</h2>
+  </div>
+
+  <div class="card">
+    <p>Last Update</p>
+    <h3 id="lastUpdateDisplay" style="color:#888; font-size:16px;">Never</h3>
   </div>
 
   <script>
-    async function check() {
+    async function checkStatus() {
       try {
         const res = await fetch('/api/esp32/status');
         const data = await res.json();
-        
         const badge = document.getElementById('statusBadge');
         badge.innerText = data.online ? '● ONLINE' : '● OFFLINE';
         badge.className = data.online ? 'online' : 'offline';
-
-        // Show the timestamp the server sees
-        document.getElementById('lastUpdateDisplay').innerText = 
-          data.lastUpdate ? new Date(data.lastUpdate).toLocaleTimeString() : 'never';
       } catch (e) {
         console.error(e);
       }
+    }
 
+    async function checkSoil() {
       try {
         const res = await fetch('/api/esp32/soil');
         const data = await res.json();
-        const raw = data.moisture || 0;
-        const percent = Math.min(100, Math.max(0, (1 - (raw / 4095)) * 100));
-        document.getElementById('soilDisplay').innerText = percent.toFixed(0) + '%';
+        const moisture = data.moisture || 0;
+        document.getElementById('soilDisplay').innerText = moisture + '%';
+        document.getElementById('lastUpdateDisplay').innerText = new Date().toLocaleTimeString();
       } catch (e) {
         document.getElementById('soilDisplay').innerText = '--%';
       }
     }
 
-    setInterval(check, 5000);
-    check();
+    setInterval(checkStatus, 5000);
+    setInterval(checkSoil, 5000);
+    checkStatus();
+    checkSoil();
   </script>
 
 </body>
