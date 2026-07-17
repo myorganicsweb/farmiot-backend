@@ -45,26 +45,10 @@
     }
 
     async function checkSoil() {
-      console.log("📡 Fetching soil...");
-      try {
-        const res = await fetch('/api/esp32/soil');
-        const data = await res.json();
-        console.log("📡 Soil response:", data);
-        const raw = data.moisture || 0;
-        const percent = Math.min(100, Math.max(0, (1 - (raw / 4095)) * 100));
-        document.getElementById('soilDisplay').innerText = Math.round(percent) + '%';
-        if (raw > 0) {
-          document.getElementById('sensorStatus').innerText = '● ONLINE';
-          document.getElementById('sensorStatus').className = 'online';
-        } else {
-          document.getElementById('sensorStatus').innerText = '● OFFLINE';
-          document.getElementById('sensorStatus').className = 'offline';
-        }
-      } catch (e) {
-        console.error("❌ Soil failed:", e);
-        document.getElementById('soilDisplay').innerText = '--%';
-      }
-    }
+    const res = await fetch('/api/esp32/soil');
+    const data = await res.json();
+    console.log("📡 Raw value from server:", data.moisture);
+  }
 
     setInterval(checkStatus, 5000);
     setInterval(checkSoil, 5000);
