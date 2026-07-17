@@ -89,6 +89,10 @@
   const soilDisplay = document.getElementById('soilDisplay');
 
   async function checkStatus() {
+
+    const res = await fetch('/api/esp32/status');
+    const data = await res.json();
+    console.log("📡 Status API:", data);
     console.log("--- Checking ESP32 Status ---");
 
     try {

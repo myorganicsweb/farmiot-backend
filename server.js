@@ -5,55 +5,54 @@ const path = require('path');
 const app = express();
 app.use(express.json());
 
-// --- 1. Connect to MQTT broker FIRST ---
 const mqttClient = mqtt.connect('mqtt://broker.hivemq.com');
 
-// --- 2. Store the latest sensor data ---
 let latestSensorData = {
   moisture: 0,
   lastSeen: 0
 };
 
-// --- 3. Set up MQTT event listeners AFTER client is created ---
 mqttClient.on('connect', () => {
   console.log('✅ MQTT Connected to broker.hivemq.com');
   mqttClient.subscribe('farmiot/response');
 });
 
 mqttClient.on('message', (topic, message) => {
+  console.log(`📡 MQTT Message [${topic}]: ${message.toString()}`);
+  
   if (topic === 'farmiot/response') {
     const moisture = parseInt(message.toString());
     latestSensorData.moisture = moisture;
     latestSensorData.lastSeen = Date.now();
-    console.log(`🌱 Soil data received: ${moisture}`);
+    console.log(`🌱 Soil updated: ${moisture} at ${new Date().toISOString()}`);
   }
 });
 
-// --- 4. Serve the dashboard ---
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
-// --- 5. API Endpoints ---
 app.get('/api/esp32/status', (req, res) => {
   const now = Date.now();
-  const isOnline = (now - latestSensorData.lastSeen) < 30000; // 30 seconds
-  res.json({ online: isOnline });
+  const isOnline = (now - latestSensorData.lastSeen) < 30000;
+  res.json({
+    online: isOnline,
+    lastSeen: latestSensorData.lastSeen,
+    now: now
+  });
 });
 
 app.get('/api/esp32/soil', (req, res) => {
   res.json({ moisture: latestSensorData.moisture });
 });
 
-// --- 6. Valve Command Endpoint ---
 app.post('/api/valve/command', (req, res) => {
   const { state } = req.body;
-  console.log(`💧 Command received: ${state}`);
+  console.log(`💧 Command: ${state}`);
   mqttClient.publish('farmiot/command', state);
   res.json({ status: 'ok' });
 });
 
-// --- 7. Start the server ---
 const PORT = process.env.PORT || 443;
 app.listen(PORT, () => {
   console.log(`✅ FarmIOT Server running on port ${PORT}`);
