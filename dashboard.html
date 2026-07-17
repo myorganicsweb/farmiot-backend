@@ -9,7 +9,6 @@
     .card { background: #1e1e1e; padding: 20px; border-radius: 12px; margin: 10px auto; max-width: 400px; border: 1px solid #333; }
     .online { color: #4CAF50; }
     .offline { color: #f44336; }
-    .status-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
   </style>
 </head>
 <body>
@@ -33,25 +32,32 @@
 
   <script>
     async function checkStatus() {
+      console.log("📡 Checking ESP32 status...");
       try {
         const res = await fetch('/api/esp32/status');
         const data = await res.json();
+        console.log("📡 Status API response:", data);
+        
         const badge = document.getElementById('statusBadge');
         badge.innerText = data.online ? '● ONLINE' : '● OFFLINE';
         badge.className = data.online ? 'online' : 'offline';
       } catch (e) {
-        console.error(e);
+        console.error("❌ Status fetch failed:", e);
       }
     }
 
     async function checkSoil() {
+      console.log("📡 Checking soil moisture...");
       try {
         const res = await fetch('/api/esp32/soil');
         const data = await res.json();
+        console.log("📡 Soil API response:", data);
+        
         const moisture = data.moisture || 0;
         document.getElementById('soilDisplay').innerText = moisture + '%';
         document.getElementById('lastUpdateDisplay').innerText = new Date().toLocaleTimeString();
       } catch (e) {
+        console.error("❌ Soil fetch failed:", e);
         document.getElementById('soilDisplay').innerText = '--%';
       }
     }
