@@ -5,14 +5,14 @@ const path = require('path');
 const app = express();
 app.use(express.json());
 
-// --- Connect using port 443 ---
-const mqttClient = mqtt.connect('mqtt://broker.hivemq.com:443');
+// --- Connect via WebSocket port 8000 ---
+const mqttClient = mqtt.connect('ws://broker.hivemq.com:8000/mqtt');
 
 let latestMoisture = 0;
 let lastUpdate = 0;
 
 mqttClient.on('connect', () => {
-  console.log('✅ MQTT Connected on port 443');
+  console.log('✅ MQTT Connected via WebSocket');
   mqttClient.subscribe('farmiot/response');
 });
 
