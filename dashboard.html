@@ -34,7 +34,7 @@
     async function checkStatus() {
       console.log("📡 Fetching status...");
       try {
-        const res = await fetch('/api/esp32/status');
+        const res = await fetch('/api/esp32/status?_t=' + Date.now());
         const data = await res.json();
         console.log("📡 Status response:", data);
         document.getElementById('hubStatus').innerText = '● ONLINE';

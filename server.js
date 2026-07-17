@@ -18,12 +18,14 @@ app.post('/api/sensor/update', (req, res) => {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
 app.get('/api/esp32/status', (req, res) => {
-  const isOnline = (Date.now() - lastUpdate) < 30000;
+  const now = Date.now();
+  const diff = now - lastUpdate;
+  const isOnline = diff < 30000;
+  console.log(`📡 Status check: diff=${diff}ms, online=${isOnline}`);
   res.json({ online: isOnline });
 });
 
 app.get('/api/esp32/soil', (req, res) => {
-  console.log(`📡 Sending to dashboard: ${latestMoisture}`);
   res.json({ moisture: latestMoisture });
 });
 
