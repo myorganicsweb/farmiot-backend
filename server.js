@@ -5,28 +5,20 @@ const path = require('path');
 const app = express();
 app.use(express.json());
 
-// --- Server connects to HiveMQ via WebSocket ---
-const ws = new WebSocket('ws://broker.hivemq.com:8000/mqtt');
+// --- Connect to Mosquitto instead of HiveMQ ---
+const ws = new WebSocket('ws://test.mosquitto.org:8080/mqtt');
 
 let latestMoisture = 0;
 let lastUpdate = 0;
 
 ws.on('open', () => {
-  console.log('✅ Server WebSocket connected to HiveMQ');
-  
-  // Send an MQTT subscribe command
-  const subscribePacket = JSON.stringify({
-    type: 'subscribe',
-    topic: 'farmiot/response'
-  });
-  ws.send(subscribePacket);
+  console.log('✅ Server WebSocket connected to Mosquitto');
+  ws.send(JSON.stringify({ type: 'subscribe', topic: 'farmiot/response' }));
   console.log('📡 Subscribed to farmiot/response');
 });
 
 ws.on('message', (data) => {
   console.log(`📡 Server received: ${data}`);
-  
-  // Try to parse the payload if it's a publish
   try {
     const msg = JSON.parse(data.toString());
     if (msg.type === 'publish' && msg.topic === 'farmiot/response') {
@@ -34,9 +26,7 @@ ws.on('message', (data) => {
       lastUpdate = Date.now();
       console.log(`🌱 Soil updated: ${latestMoisture}`);
     }
-  } catch (e) {
-    // Ignore non-JSON messages
-  }
+  } catch (e) {}
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
