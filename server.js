@@ -1,59 +1,27 @@
-const express = require('express');
-const mqtt = require('mqtt');
-const path = require('path');
+// --- Store the last received time ---
+let latestSensorData = {
+  moisture: 0,
+  lastSeen: 0  // <-- NEW: track the time data was received
+};
 
-const app = express();
-app.use(express.json());
-
-// --- MQTT Broker ---
-const mqttClient = mqtt.connect('mqtt://broker.hivemq.com');
-
-let latestSensorData = 0;
-let lastSeen = 0;
-
-mqttClient.on('connect', () => {
-  console.log('✅ MQTT Connected to broker.hivemq.com');
-  mqttClient.subscribe('farmiot/response');
-});
-
+// --- When MQTT receives data, update the timestamp ---
 mqttClient.on('message', (topic, message) => {
   if (topic === 'farmiot/response') {
-    latestSensorData = parseInt(message.toString());
-    lastSeen = Date.now();
-    console.log(`🌱 Soil data received: ${latestSensorData}`);
+    const moisture = parseInt(message.toString());
+    latestSensorData.moisture = moisture;
+    latestSensorData.lastSeen = Date.now(); // Update timestamp
+    console.log(`🌱 Soil data received: ${moisture}`);
   }
 });
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dashboard.html'));
-});
-
-app.get('/api/esp32/soil', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  
-  // Return a default value for now (replace with your actual sensor data)
-  res.json({ moisture: 42 });
-});
+// --- Status endpoint now checks the timestamp ---
 app.get('/api/esp32/status', (req, res) => {
-  // Always return valid JSON
-  res.setHeader('Content-Type', 'application/json');
-  
-  // You can replace this logic with your actual ESP32 presence check
-  // For now, we'll assume it's online if we can reach the MQTT broker
-  const isOnline = true; // Replace with actual check later
-  
+  const now = Date.now();
+  const isOnline = (now - latestSensorData.lastSeen) < 30000; // 30 seconds
   res.json({ online: isOnline });
 });
 
-// --- Valve Control ---
-app.post('/api/valve/command', (req, res) => {
-  const { state } = req.body;
-  console.log(`💧 Sending command: ${state}`);
-  mqttClient.publish('farmiot/command', state);
-  res.json({ status: 'ok' });
-});
-
-const PORT = process.env.PORT || 443;
-app.listen(PORT, () => {
-  console.log(`✅ FarmIOT Server running on port ${PORT}`);
+// --- Soil endpoint returns the data ---
+app.get('/api/esp32/soil', (req, res) => {
+  res.json({ moisture: latestSensorData.moisture });
 });
