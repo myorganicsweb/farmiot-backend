@@ -32,11 +32,9 @@
 
   <script>
     async function checkStatus() {
-      console.log("📡 Checking ESP32 status...");
       try {
         const res = await fetch('/api/esp32/status');
         const data = await res.json();
-        console.log("📡 Status API response:", data);
         
         const badge = document.getElementById('statusBadge');
         badge.innerText = data.online ? '● ONLINE' : '● OFFLINE';
@@ -47,14 +45,23 @@
     }
 
     async function checkSoil() {
-      console.log("📡 Checking soil moisture...");
       try {
         const res = await fetch('/api/esp32/soil');
         const data = await res.json();
-        console.log("📡 Soil API response:", data);
         
-        const moisture = data.moisture || 0;
-        document.getElementById('soilDisplay').innerText = moisture + '%';
+        console.log("============================================");
+        console.log("📡 [DASHBOARD] Fetched data at:", new Date().toLocaleTimeString());
+        console.log("📦 [DASHBOARD] Raw moisture received from server:", data.moisture);
+
+        // Convert raw ADC to percentage for display
+        const raw = data.moisture || 0;
+        const percent = Math.min(100, Math.max(0, (1 - (raw / 4095)) * 100));
+        const displayPercent = Math.round(percent);
+
+        console.log(`📊 [DASHBOARD] Calculated percentage: ${displayPercent}%`);
+        console.log("============================================");
+
+        document.getElementById('soilDisplay').innerText = displayPercent + '%';
         document.getElementById('lastUpdateDisplay').innerText = new Date().toLocaleTimeString();
       } catch (e) {
         console.error("❌ Soil fetch failed:", e);
