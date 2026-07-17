@@ -1,32 +1,23 @@
 const express = require('express');
-const WebSocket = require('ws');
 const path = require('path');
 
 const app = express();
 app.use(express.json());
 
-// --- Connect to Mosquitto instead of HiveMQ ---
-const ws = new WebSocket('ws://test.mosquitto.org:8080/mqtt');
-
 let latestMoisture = 0;
 let lastUpdate = 0;
 
-ws.on('open', () => {
-  console.log('✅ Server WebSocket connected to Mosquitto');
-  ws.send(JSON.stringify({ type: 'subscribe', topic: 'farmiot/response' }));
-  console.log('📡 Subscribed to farmiot/response');
-});
-
-ws.on('message', (data) => {
-  console.log(`📡 Server received: ${data}`);
-  try {
-    const msg = JSON.parse(data.toString());
-    if (msg.type === 'publish' && msg.topic === 'farmiot/response') {
-      latestMoisture = parseInt(msg.payload);
-      lastUpdate = Date.now();
-      console.log(`🌱 Soil updated: ${latestMoisture}`);
-    }
-  } catch (e) {}
+// --- Hub sends data via HTTP POST ---
+app.post('/api/sensor/update', (req, res) => {
+  const { moisture } = req.body;
+  if (moisture !== undefined) {
+    latestMoisture = moisture;
+    lastUpdate = Date.now();
+    console.log(`🌱 Soil updated: ${moisture}`);
+    res.json({ status: 'ok' });
+  } else {
+    res.status(400).json({ error: 'Invalid data' });
+  }
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
