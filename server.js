@@ -1,55 +1,51 @@
 const express = require('express');
-const WebSocket = require('ws');
+const mqtt = require('mqtt');
 const path = require('path');
 
 const app = express();
-const wss = new WebSocket.Server({ noServer: true });
+app.use(express.json());
 
-let espSocket = null;
+// --- MQTT Broker ---
+const mqttClient = mqtt.connect('mqtt://broker.hivemq.com');
 
-app.on('upgrade', (request, socket, head) => {
-  if (request.url === '/ws') {
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit('connection', ws, request);
-    });
-  } else {
-    socket.destroy();
+let latestSensorData = 0;
+let lastSeen = 0;
+
+mqttClient.on('connect', () => {
+  console.log('✅ MQTT Connected to broker.hivemq.com');
+  mqttClient.subscribe('farmiot/response');
+});
+
+mqttClient.on('message', (topic, message) => {
+  if (topic === 'farmiot/response') {
+    latestSensorData = parseInt(message.toString());
+    lastSeen = Date.now();
+    console.log(`🌱 Soil data received: ${latestSensorData}`);
   }
 });
 
-wss.on('connection', (ws) => {
-  espSocket = ws;
-  console.log("✅ ESP32 WebSocket Connected");
-
-  ws.on('close', () => {
-    espSocket = null;
-    console.log("❌ ESP32 WebSocket Disconnected");
-  });
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
+app.get('/api/esp32/soil', (req, res) => {
+  res.json({ moisture: latestSensorData });
+});
 
 app.get('/api/esp32/status', (req, res) => {
-  res.json({ online: espSocket !== null });
+  const isOnline = (Date.now() - lastSeen) < 60000; // 60 second timeout
+  res.json({ online: isOnline });
 });
 
-app.get('/api/esp32/soil', async (req, res) => {
-  if (!espSocket) return res.json({ moisture: 0 });
-  
-  espSocket.send("get_soil");
-  
-  let data = 0;
-  for (let i = 0; i < 10; i++) {
-    if (espSocket.lastData) {
-      data = espSocket.lastData;
-      break;
-    }
-    await new Promise(r => setTimeout(r, 200));
-  }
-  res.json({ moisture: parseInt(data) });
+// --- Valve Control ---
+app.post('/api/valve/command', (req, res) => {
+  const { state } = req.body;
+  console.log(`💧 Sending command: ${state}`);
+  mqttClient.publish('farmiot/command', state);
+  res.json({ status: 'ok' });
 });
 
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 443;
 app.listen(PORT, () => {
   console.log(`✅ FarmIOT Server running on port ${PORT}`);
 });
