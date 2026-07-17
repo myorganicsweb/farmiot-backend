@@ -9,23 +9,21 @@ let lastUpdate = 0;
 
 app.post('/api/sensor/update', (req, res) => {
   const { moisture } = req.body;
-  if (moisture !== undefined) {
-    latestMoisture = moisture;
-    lastUpdate = Date.now();
-    console.log(`🌱 Soil updated: ${moisture}`);
-    res.json({ status: 'ok' });
-  } else {
-    res.status(400).json({ error: 'Invalid data' });
-  }
+  console.log(`📡 POST received: ${moisture}`);
+  latestMoisture = moisture;
+  lastUpdate = Date.now();
+  res.json({ status: 'ok' });
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
 app.get('/api/esp32/status', (req, res) => {
-  res.json({ online: (Date.now() - lastUpdate) < 30000 });
+  const isOnline = (Date.now() - lastUpdate) < 30000;
+  res.json({ online: isOnline });
 });
 
 app.get('/api/esp32/soil', (req, res) => {
+  console.log(`📡 Sending to dashboard: ${latestMoisture}`);
   res.json({ moisture: latestMoisture });
 });
 

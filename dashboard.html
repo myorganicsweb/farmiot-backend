@@ -31,31 +31,28 @@
   </div>
 
   <script>
-    let hubLastSeen = 0;
-    let sensorLastSeen = 0;
-    let latestSoil = 0;
-
     async function checkStatus() {
+      console.log("📡 Fetching status...");
       try {
         const res = await fetch('/api/esp32/status');
         const data = await res.json();
-        
-        // Hub is online if server is reachable
+        console.log("📡 Status response:", data);
         document.getElementById('hubStatus').innerText = '● ONLINE';
         document.getElementById('hubStatus').className = 'online';
       } catch (e) {
-        document.getElementById('hubStatus').innerText = '● OFFLINE';
-        document.getElementById('hubStatus').className = 'offline';
+        console.error("❌ Status failed:", e);
       }
     }
 
     async function checkSoil() {
+      console.log("📡 Fetching soil...");
       try {
         const res = await fetch('/api/esp32/soil');
         const data = await res.json();
+        console.log("📡 Soil response:", data);
         const raw = data.moisture || 0;
-        
-        // If raw > 0, the sensor is alive
+        const percent = Math.min(100, Math.max(0, (1 - (raw / 4095)) * 100));
+        document.getElementById('soilDisplay').innerText = Math.round(percent) + '%';
         if (raw > 0) {
           document.getElementById('sensorStatus').innerText = '● ONLINE';
           document.getElementById('sensorStatus').className = 'online';
@@ -63,11 +60,8 @@
           document.getElementById('sensorStatus').innerText = '● OFFLINE';
           document.getElementById('sensorStatus').className = 'offline';
         }
-
-        // Convert to percentage
-        const percent = Math.min(100, Math.max(0, (1 - (raw / 4095)) * 100));
-        document.getElementById('soilDisplay').innerText = Math.round(percent) + '%';
       } catch (e) {
+        console.error("❌ Soil failed:", e);
         document.getElementById('soilDisplay').innerText = '--%';
       }
     }
