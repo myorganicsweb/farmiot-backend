@@ -16,31 +16,36 @@
   <h1>🚜 FarmIOT</h1>
 
   <div class="card">
-    <p>ESP32 Status</p>
-    <h2 id="statusBadge" class="offline">● OFFLINE</h2>
+    <p>📡 Hub ESP32 Status</p>
+    <h2 id="hubStatus" class="offline">● OFFLINE</h2>
   </div>
 
   <div class="card">
-    <p>Soil Moisture</p>
+    <p>🌱 Sensor ESP32 Status</p>
+    <h2 id="sensorStatus" class="offline">● OFFLINE</h2>
+  </div>
+
+  <div class="card">
+    <p>Latest Soil Reading</p>
     <h2 id="soilDisplay">--%</h2>
   </div>
 
-  <div class="card">
-    <p>Last Update</p>
-    <h3 id="lastUpdateDisplay" style="color:#888; font-size:16px;">Never</h3>
-  </div>
-
   <script>
+    let hubLastSeen = 0;
+    let sensorLastSeen = 0;
+    let latestSoil = 0;
+
     async function checkStatus() {
       try {
         const res = await fetch('/api/esp32/status');
         const data = await res.json();
         
-        const badge = document.getElementById('statusBadge');
-        badge.innerText = data.online ? '● ONLINE' : '● OFFLINE';
-        badge.className = data.online ? 'online' : 'offline';
+        // Hub is online if server is reachable
+        document.getElementById('hubStatus').innerText = '● ONLINE';
+        document.getElementById('hubStatus').className = 'online';
       } catch (e) {
-        console.error("❌ Status fetch failed:", e);
+        document.getElementById('hubStatus').innerText = '● OFFLINE';
+        document.getElementById('hubStatus').className = 'offline';
       }
     }
 
@@ -48,23 +53,21 @@
       try {
         const res = await fetch('/api/esp32/soil');
         const data = await res.json();
-        
-        console.log("============================================");
-        console.log("📡 [DASHBOARD] Fetched data at:", new Date().toLocaleTimeString());
-        console.log("📦 [DASHBOARD] Raw moisture received from server:", data.moisture);
-
-        // Convert raw ADC to percentage for display
         const raw = data.moisture || 0;
+        
+        // If raw > 0, the sensor is alive
+        if (raw > 0) {
+          document.getElementById('sensorStatus').innerText = '● ONLINE';
+          document.getElementById('sensorStatus').className = 'online';
+        } else {
+          document.getElementById('sensorStatus').innerText = '● OFFLINE';
+          document.getElementById('sensorStatus').className = 'offline';
+        }
+
+        // Convert to percentage
         const percent = Math.min(100, Math.max(0, (1 - (raw / 4095)) * 100));
-        const displayPercent = Math.round(percent);
-
-        console.log(`📊 [DASHBOARD] Calculated percentage: ${displayPercent}%`);
-        console.log("============================================");
-
-        document.getElementById('soilDisplay').innerText = displayPercent + '%';
-        document.getElementById('lastUpdateDisplay').innerText = new Date().toLocaleTimeString();
+        document.getElementById('soilDisplay').innerText = Math.round(percent) + '%';
       } catch (e) {
-        console.error("❌ Soil fetch failed:", e);
         document.getElementById('soilDisplay').innerText = '--%';
       }
     }
