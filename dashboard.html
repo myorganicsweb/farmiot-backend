@@ -15,17 +15,8 @@
       justify-content: center;
       min-height: 100vh;
     }
-    .container {
-      max-width: 600px;
-      width: 100%;
-    }
-    h1 {
-      font-size: 24px;
-      font-weight: 600;
-      margin-bottom: 20px;
-      text-align: center;
-      color: #fff;
-    }
+    .container { max-width: 600px; width: 100%; }
+    h1 { font-size: 24px; font-weight: 600; margin-bottom: 20px; text-align: center; color: #fff; }
     .card {
       background: #1e1e1e;
       border-radius: 16px;
@@ -34,53 +25,14 @@
       border: 1px solid #333;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
-    .row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .label {
-      color: #888;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .status-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 600;
-      font-size: 16px;
-    }
-    .dot {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      display: inline-block;
-    }
+    .row { display: flex; justify-content: space-between; align-items: center; }
+    .label { color: #888; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+    .status-badge { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; }
+    .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
     .dot.online { background: #4CAF50; box-shadow: 0 0 8px rgba(76, 175, 80, 0.4); }
     .dot.offline { background: #f44336; }
-    .dot.warning { background: #ff9800; }
-
-    .sub-text {
-      font-size: 13px;
-      color: #666;
-      margin-top: 4px;
-    }
-    .last-seen {
-      font-size: 12px;
-      color: #555;
-      margin-top: 6px;
-      font-family: monospace;
-    }
-
-    .footer {
-      text-align: center;
-      margin-top: 30px;
-      font-size: 13px;
-      color: #444;
-    }
+    .last-seen { font-size: 12px; color: #555; margin-top: 6px; font-family: monospace; }
+    .footer { text-align: center; margin-top: 30px; font-size: 13px; color: #444; }
   </style>
 </head>
 <body>
@@ -113,7 +65,7 @@
     <div class="last-seen" id="sensorLastSeen">Last seen: --</div>
   </div>
 
-  <!-- SOIL DATA (Briefly shown to prove the sensor is working) -->
+  <!-- SOIL DATA -->
   <div class="card" style="border-color: #2a2a2a;">
     <div class="row">
       <span class="label">🌱 Latest Soil Reading</span>
@@ -121,14 +73,11 @@
     </div>
   </div>
 
-  <div class="footer">
-    Auto-refreshes every 5 seconds
-  </div>
+  <div class="footer">Auto-refreshes every 5 seconds</div>
 
 </div>
 
 <script>
-  // --- UI ELEMENTS ---
   const hubText = document.getElementById('hubText');
   const hubDot = document.getElementById('hubDot');
   const hubLastSeen = document.getElementById('hubLastSeen');
@@ -139,39 +88,79 @@
 
   const soilDisplay = document.getElementById('soilDisplay');
 
-  // --- CONFIG ---
-  const TIMEOUT_MS = 15000; // 15 seconds before marking device offline
-
   async function checkStatus() {
-    try {
-      const res = await fetch('/api/esp32/soil');
-      if (!res.ok) throw new Error('Server unreachable');
+    console.log("--- Checking ESP32 Status ---");
 
-      const data = await res.json();
+    try {
+      // --- 1. Fetch Status ---
+      console.log("📡 Fetching /api/esp32/status...");
+      const statusRes = await fetch('/api/esp32/status');
+      
+      console.log(`📡 Status HTTP Code: ${statusRes.status} ${statusRes.statusText}`);
+      console.log(`📡 Status Headers:`, Object.fromEntries(statusRes.headers.entries()));
+
+      const statusText = await statusRes.text();
+      console.log(`📡 Status Raw Response: ${statusText}`);
+
+      let statusData;
+      try {
+        statusData = JSON.parse(statusText);
+        console.log(`📡 Status JSON:`, statusData);
+      } catch (e) {
+        console.error("❌ Status Response is NOT valid JSON. It is:", statusText);
+        throw new Error("Invalid JSON from server");
+      }
+
+      // --- 2. Fetch Soil Data ---
+      console.log("📡 Fetching /api/esp32/soil...");
+      const soilRes = await fetch('/api/esp32/soil');
+      
+      console.log(`📡 Soil HTTP Code: ${soilRes.status} ${soilRes.statusText}`);
+      
+      const soilText = await soilRes.text();
+      console.log(`📡 Soil Raw Response: ${soilText}`);
+
+      let soilData;
+      try {
+        soilData = JSON.parse(soilText);
+        console.log(`📡 Soil JSON:`, soilData);
+      } catch (e) {
+        console.error("❌ Soil Response is NOT valid JSON. It is:", soilText);
+        throw new Error("Invalid JSON from server");
+      }
+
+      // --- 3. Update UI ---
       const now = Date.now();
 
-      // --- Check Hub Status ---
-      // (If we received data, the Hub is online)
-      const hubIsOnline = true;
-      hubText.innerText = hubIsOnline ? '● Online' : '● Offline';
-      hubDot.className = hubIsOnline ? 'dot online' : 'dot offline';
+      // Hub status
+      hubText.innerText = statusData.online ? '● Online' : '● Offline';
+      hubDot.className = statusData.online ? 'dot online' : 'dot offline';
       hubLastSeen.innerText = 'Last seen: now';
 
-      // --- Check Sensor Status ---
-      // (If we received a moisture value, the Sensor is online)
-      const moisture = data.moisture || 0;
-      const sensorIsOnline = moisture > 0 || moisture === 0; // Any valid value means alive
-
+      // Sensor status
+      const raw = soilData.moisture || 0;
+      const sensorIsOnline = raw !== undefined && raw !== null;
       sensorText.innerText = sensorIsOnline ? '● Online' : '● Offline';
       sensorDot.className = sensorIsOnline ? 'dot online' : 'dot offline';
-      sensorLastSeen.innerText = 'Last seen: now';
+      sensorLastSeen.innerText = sensorIsOnline ? 'Last seen: now' : 'Last seen: --';
 
-      // --- Update Soil Display ---
-      const percent = Math.min(100, Math.max(0, (1 - (moisture / 4095)) * 100));
-      soilDisplay.innerText = percent.toFixed(0) + '%';
+      // Soil percentage
+      let percent = 0;
+      if (raw > 10) {
+        percent = Math.min(100, Math.max(0, (1 - (raw / 4095)) * 100));
+        soilDisplay.innerText = percent.toFixed(0) + '%';
+        soilDisplay.style.color = '#4CAF50';
+      } else {
+        soilDisplay.innerText = '--% (Unplugged?)';
+        soilDisplay.style.color = '#ff9800';
+      }
+
+      console.log("✅ UI Updated Successfully.");
 
     } catch (err) {
-      // --- If the server is unreachable ---
+      console.error("❌ Error in checkStatus():", err.message);
+      console.log(err);
+
       hubText.innerText = '● Offline';
       hubDot.className = 'dot offline';
       hubLastSeen.innerText = 'Unable to reach server';
@@ -181,10 +170,10 @@
       sensorLastSeen.innerText = 'Unable to reach server';
 
       soilDisplay.innerText = '--%';
+      soilDisplay.style.color = '#888';
     }
   }
 
-  // --- Poll every 5 seconds ---
   setInterval(checkStatus, 5000);
   checkStatus();
 </script>
