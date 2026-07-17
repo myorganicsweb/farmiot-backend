@@ -7,7 +7,6 @@ app.use(express.json());
 let latestMoisture = 0;
 let lastUpdate = 0;
 
-// --- Hub sends data via HTTP POST ---
 app.post('/api/sensor/update', (req, res) => {
   const { moisture } = req.body;
   if (moisture !== undefined) {
