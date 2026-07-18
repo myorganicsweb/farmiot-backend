@@ -28,26 +28,14 @@
       border-radius: 16px; 
       margin: 15px auto; 
       box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-      transition: transform 0.2s;
-    }
-    .card:hover {
-      transform: translateY(-2px);
     }
     .card p {
       margin: 0 0 10px 0;
       font-size: 1.1em;
       color: #aaa;
     }
-    .online { 
-      color: #4CAF50; 
-    }
-    .offline { 
-      color: #f44336; 
-    }
-    .soil { 
-      color: #ff9800; 
-      font-size: 2em;
-    }
+    .online { color: #4CAF50; }
+    .offline { color: #f44336; }
     .status-indicator {
       font-size: 1.8em;
       font-weight: bold;
@@ -70,38 +58,6 @@
     .soil-label {
       font-size: 0.8em;
       color: #888;
-    }
-    .refresh-btn {
-      background: #4CAF50;
-      color: white;
-      border: none;
-      padding: 8px 20px;
-      border-radius: 20px;
-      cursor: pointer;
-      margin-top: 10px;
-      font-size: 0.9em;
-    }
-    .refresh-btn:hover {
-      background: #45a049;
-    }
-    .log-container {
-      background: #0a0a0a;
-      padding: 15px;
-      border-radius: 8px;
-      max-height: 200px;
-      overflow-y: auto;
-      text-align: left;
-      font-family: 'Courier New', monospace;
-      font-size: 0.8em;
-      color: #aaa;
-      margin-top: 10px;
-    }
-    .log-entry {
-      padding: 2px 0;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    .timestamp {
-      color: #666;
     }
   </style>
 </head>
@@ -129,61 +85,14 @@
       <div id="soilDisplay" class="soil-value">--</div>
       <div class="soil-label">Analog Reading</div>
       <div id="soilLastUpdated" class="last-updated">Waiting for data...</div>
-      <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh Now</button>
-    </div>
-
-    <div class="card">
-      <p>📋 Activity Log</p>
-      <div id="logContainer" class="log-container">
-        <div class="log-entry"><span class="timestamp">[System]</span> Waiting for data...</div>
-      </div>
     </div>
   </div>
 
   <script>
-    let hubLastSeen = 0;
-    let sensorLastSeen = 0;
-    let soilLastUpdated = 0;
-    let logEntries = [];
-
     function formatTime(timestamp) {
       if (!timestamp) return 'Never';
       const date = new Date(timestamp);
-      return date.toLocaleString('en-US', { 
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-    }
-
-    function addLog(message, type = 'info') {
-      const timestamp = new Date().toLocaleString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-      const entry = { timestamp, message, type };
-      logEntries.unshift(entry);
-      if (logEntries.length > 50) logEntries.pop();
-      updateLogDisplay();
-    }
-
-    function updateLogDisplay() {
-      const container = document.getElementById('logContainer');
-      container.innerHTML = logEntries.map(entry => 
-        `<div class="log-entry"><span class="timestamp">[${entry.timestamp}]</span> ${entry.message}</div>`
-      ).join('');
-    }
-
-    async function refreshAll() {
-      addLog('🔄 Manual refresh triggered');
-      await checkHub();
-      await checkSensor();
-      await checkSoil();
-      addLog('✅ Refresh complete');
+      return date.toLocaleTimeString('en-US', { hour12: false });
     }
 
     async function checkHub() {
@@ -191,23 +100,12 @@
         const res = await fetch('/api/hub/status');
         const data = await res.json();
         const statusEl = document.getElementById('hubStatus');
-        const wasOffline = statusEl.classList.contains('offline');
-        
         statusEl.innerText = data.online ? '● ONLINE' : '● OFFLINE';
         statusEl.className = 'status-indicator ' + (data.online ? 'online' : 'offline');
-        
         if (data.lastSeen) {
-          hubLastSeen = data.lastSeen;
-          document.getElementById('hubLastSeen').innerText = 'Last seen: ' + formatTime(hubLastSeen);
-        }
-        
-        if (data.online && wasOffline) {
-          addLog('✅ Hub came online');
-        } else if (!data.online && !wasOffline) {
-          addLog('⚠️ Hub went offline');
+          document.getElementById('hubLastSeen').innerText = 'Last seen: ' + formatTime(data.lastSeen);
         }
       } catch (error) {
-        addLog('❌ Error fetching hub status: ' + error.message);
         console.error('Error fetching hub status:', error);
       }
     }
@@ -217,23 +115,12 @@
         const res = await fetch('/api/sensor/status');
         const data = await res.json();
         const statusEl = document.getElementById('sensorStatus');
-        const wasOffline = statusEl.classList.contains('offline');
-        
         statusEl.innerText = data.online ? '● ONLINE' : '● OFFLINE';
         statusEl.className = 'status-indicator ' + (data.online ? 'online' : 'offline');
-        
         if (data.lastSeen) {
-          sensorLastSeen = data.lastSeen;
-          document.getElementById('sensorLastSeen').innerText = 'Last seen: ' + formatTime(sensorLastSeen);
-        }
-        
-        if (data.online && wasOffline) {
-          addLog('✅ Sensor came online');
-        } else if (!data.online && !wasOffline) {
-          addLog('⚠️ Sensor went offline');
+          document.getElementById('sensorLastSeen').innerText = 'Last seen: ' + formatTime(data.lastSeen);
         }
       } catch (error) {
-        addLog('❌ Error fetching sensor status: ' + error.message);
         console.error('Error fetching sensor status:', error);
       }
     }
@@ -243,34 +130,23 @@
         const res = await fetch('/api/sensor/soil');
         const data = await res.json();
         const soilEl = document.getElementById('soilDisplay');
-        
-        if (data.moisture !== undefined && data.moisture !== null && data.moisture !== 0) {
-          const oldValue = soilEl.innerText;
+        if (data.moisture !== undefined && data.moisture !== null) {
           soilEl.innerText = data.moisture;
-          if (oldValue !== data.moisture.toString() && oldValue !== '--') {
-            addLog(`🌱 Soil moisture updated: ${data.moisture}`);
-          }
         } else {
           soilEl.innerText = '--';
         }
-        
         if (data.lastUpdated) {
-          soilLastUpdated = data.lastUpdated;
-          document.getElementById('soilLastUpdated').innerText = 'Updated: ' + formatTime(soilLastUpdated);
+          document.getElementById('soilLastUpdated').innerText = 'Updated: ' + formatTime(data.lastUpdated);
         }
       } catch (error) {
-        addLog('❌ Error fetching soil data: ' + error.message);
         console.error('Error fetching soil data:', error);
       }
     }
 
-    // Initial load
-    addLog('🚀 Dashboard started');
     checkHub();
     checkSensor();
     checkSoil();
 
-    // Refresh every 3 seconds
     setInterval(() => {
       checkHub();
       checkSensor();

@@ -1,17 +1,13 @@
 {
   "name": "farmiot-server",
   "version": "1.0.0",
-  "description": "FarmIOT MQTT Server with Auto-Reconnect",
+  "description": "FarmIOT MQTT Server",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "mqtt": "^4.3.7"
-  },
-  "devDependencies": {
-    "nodemon": "^2.0.22"
   }
 }
