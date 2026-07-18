@@ -1,37 +1,30 @@
 const express = require('express');
-const http = require('http');
+const mqtt = require('mqtt');
 const path = require('path');
 
 const app = express();
 
-// --- HUB's IP ADDRESS (change this to match your ESP32's IP) ---
-const HUB_IP = "192.168.1.35";
+// --- Connect to the same MQTT broker ---
+const mqttClient = mqtt.connect('mqtt://broker.hivemq.com');
 
-let lastUpdate = 0;
+let lastHubSeen = 0;
 
-// --- Poll the Hub every 5 seconds ---
-setInterval(() => {
-  http.get(`http://${HUB_IP}/api/status`, (res) => {
-    let data = '';
-    res.on('data', chunk => data += chunk);
-    res.on('end', () => {
-      try {
-        const json = JSON.parse(data);
-        if (json.online !== undefined) {
-          lastUpdate = Date.now();
-          console.log("📡 Hub is online");
-        }
-      } catch (e) {}
-    });
-  }).on('error', (e) => {
-    console.log("❌ Hub is offline");
-  });
-}, 5000);
+mqttClient.on('connect', () => {
+  console.log('✅ Server MQTT Connected');
+  mqttClient.subscribe('farmiot/hub/status');
+});
+
+mqttClient.on('message', (topic, message) => {
+  if (topic === 'farmiot/hub/status') {
+    lastHubSeen = Date.now();
+    console.log(`📡 Hub status received: ${message.toString()}`);
+  }
+});
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
-app.get('/api/esp32/status', (req, res) => {
-  const isOnline = (Date.now() - lastUpdate) < 15000;
+app.get('/api/hub/status', (req, res) => {
+  const isOnline = (Date.now() - lastHubSeen) < 15000;
   res.json({ online: isOnline });
 });
 
