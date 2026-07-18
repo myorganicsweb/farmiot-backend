@@ -18,15 +18,18 @@
     <h2 id="statusBadge" class="offline">● OFFLINE</h2>
   </div>
   <script>
-    async function checkStatus() {
+      async function checkStatus() {
       try {
-        const res = await fetch('/api/esp32/status');
+        // --- Add a random timestamp to force a fresh request ---
+        const t = Date.now();
+        const res = await fetch('/api/esp32/status?_t=' + t);
         const data = await res.json();
         const badge = document.getElementById('statusBadge');
         badge.innerText = data.online ? '● ONLINE' : '● OFFLINE';
         badge.className = data.online ? 'online' : 'offline';
+        console.log("📡 Status:", data.online);
       } catch (e) {
-        console.log("Status check failed");
+        console.log("❌ Status check failed");
       }
     }
     setInterval(checkStatus, 5000);
