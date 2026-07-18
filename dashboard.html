@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FarmIOT Status</title>
+  <title>FarmIOT Dashboard</title>
   <style>
     body { background: #121212; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
     .card { background: #1e1e1e; padding: 20px; border-radius: 12px; margin: 10px auto; max-width: 400px; }
@@ -12,37 +12,31 @@
   </style>
 </head>
 <body>
-  <h1>🚜 FarmIOT</h1>
-  
+  <h1>🌱 FarmIOT</h1>
   <div class="card">
-    <p>📡 Hub ESP32</p>
-    <h2 id="hubStatus" class="offline">● OFFLINE</h2>
-  </div>
-
-  <div class="card">
-    <p>🌱 Sensor ESP32</p>
+    <p>Sensor ESP32</p>
     <h2 id="sensorStatus" class="offline">● OFFLINE</h2>
   </div>
-
+  <div class="card">
+    <p>Soil Moisture</p>
+    <h2 id="soilDisplay">--</h2>
+  </div>
   <script>
-    async function checkHub() {
-      const res = await fetch('/api/hub/status');
-      const data = await res.json();
-      document.getElementById('hubStatus').innerText = data.online ? '● ONLINE' : '● OFFLINE';
-      document.getElementById('hubStatus').className = data.online ? 'online' : 'offline';
-    }
-
-    async function checkSensor() {
+    async function checkStatus() {
       const res = await fetch('/api/sensor/status');
       const data = await res.json();
       document.getElementById('sensorStatus').innerText = data.online ? '● ONLINE' : '● OFFLINE';
       document.getElementById('sensorStatus').className = data.online ? 'online' : 'offline';
     }
-
-    setInterval(checkHub, 5000);
-    setInterval(checkSensor, 5000);
-    checkHub();
-    checkSensor();
+    async function checkSoil() {
+      const res = await fetch('/api/sensor/soil');
+      const data = await res.json();
+      document.getElementById('soilDisplay').innerText = data.moisture || '--';
+    }
+    setInterval(checkStatus, 5000);
+    setInterval(checkSoil, 5000);
+    checkStatus();
+    checkSoil();
   </script>
 </body>
 </html>
