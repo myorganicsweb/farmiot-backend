@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FarmIOT Hub Status</title>
+  <title>FarmIOT Sensor Status</title>
   <style>
     body { background: #121212; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
     .card { background: #1e1e1e; padding: 20px; border-radius: 12px; margin: 10px auto; max-width: 400px; }
@@ -12,22 +12,17 @@
   </style>
 </head>
 <body>
-  <h1>🚜 FarmIOT Hub</h1>
+  <h1>🌱 Sensor ESP32</h1>
   <div class="card">
-    <p>Hub Status</p>
-    <h2 id="statusBadge" class="offline">● OFFLINE</h2>
+    <p>Sensor ESP32 Status</p>
+    <h2 id="sensorStatus" class="offline">● OFFLINE</h2>
   </div>
   <script>
     async function checkStatus() {
-      try {
-        const res = await fetch('/api/hub/status');
-        const data = await res.json();
-        const badge = document.getElementById('statusBadge');
-        badge.innerText = data.online ? '● ONLINE' : '● OFFLINE';
-        badge.className = data.online ? 'online' : 'offline';
-      } catch (e) {
-        console.log("Status fetch failed");
-      }
+      const res = await fetch('/api/sensor/status');
+      const data = await res.json();
+      document.getElementById('sensorStatus').innerText = data.online ? '● ONLINE' : '● OFFLINE';
+      document.getElementById('sensorStatus').className = data.online ? 'online' : 'offline';
     }
     setInterval(checkStatus, 5000);
     checkStatus();

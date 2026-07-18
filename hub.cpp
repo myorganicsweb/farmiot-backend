@@ -1,72 +1,55 @@
 // ==========================================
-// HUB ESP32: Sends soil data via HTTP POST
+// HUB ESP32: Forwards Sensor Status to MQTT
 // ==========================================
 
 #include <WiFi.h>
-#include <HTTPClient.h>
+#include <PubSubClient.h>
+#include <esp_now.h>
 
 const char* ssid = "scoobydoo gateway";
 const char* password = "scoobydoo";
-const char* server_url = "https://farm-iot.onrender.com/api/sensor/update";
+const char* mqtt_server = "broker.hivemq.com";
+const int mqtt_port = 1883;
 
-int soilPin = 4;  // Connect your soil sensor to Pin 4
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
+
+uint8_t sensorMac[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("=== Hub ESP32 Starting ===");
+  Serial.println("=== Hub MQTT + ESP-NOW ===");
 
-  pinMode(soilPin, INPUT);
-
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  Serial.print("Connecting to Wi-Fi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
   }
-  Serial.println("\n✅ Wi-Fi Connected!");
-  Serial.print("📡 IP: ");
-  Serial.println(WiFi.localIP());
+  Serial.println("✅ Wi-Fi Connected!");
+
+  mqttClient.setServer(mqtt_server, mqtt_port);
+  mqttClient.connect("FarmIOT_Hub");
+  Serial.println("✅ MQTT Connected");
+
+  esp_now_init();
+  esp_now_register_recv_cb(onDataReceived);
+  esp_now_peer_info_t peerInfo;
+  memcpy(peerInfo.peer_addr, sensorMac, 6);
+  peerInfo.channel = 0;
+  peerInfo.ifidx = WIFI_IF_STA;
+  peerInfo.encrypt = false;
+  esp_now_add_peer(&peerInfo);
+  Serial.println("✅ ESP-NOW ready");
 }
 
 void loop() {
-  // --- 1. Read the sensor ---
-  int rawSoil = analogRead(soilPin);
-  // Convert to 0-100% (dry = 0%, wet = 100%)
-  int percent = 100 - ((rawSoil / 4095.0) * 100);
-  if (percent < 0) percent = 0;
-  if (percent > 100) percent = 100;
+  mqttClient.loop();
+}
 
-  Serial.println("================================");
-  Serial.print("🌱 Raw ADC: ");
-  Serial.print(rawSoil);
-  Serial.print("  |  Moisture: ");
-  Serial.print(percent);
-  Serial.println("%");
-
-  // --- 2. Send to Render via HTTP POST ---
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin(server_url);
-    http.addHeader("Content-Type", "application/json");
-
-    String payload = "{\"moisture\":" + String(rawSoil) + "}";
-    Serial.println("📡 Sending POST to Render...");
-    Serial.println("📦 Payload: " + payload);
-
-    int httpCode = http.POST(payload);
-    
-    if (httpCode > 0) {
-      Serial.println("✅ HTTP POST sent successfully!");
-      Serial.println("📡 Server response code: " + String(httpCode));
-    } else {
-      Serial.println("❌ HTTP POST failed. Error: " + String(httpCode));
-    }
-    http.end();
-  } else {
-    Serial.println("⚠️ Wi-Fi disconnected. Skipping POST.");
-  }
-
-  Serial.println("================================\n");
-  delay(10000); // Wait 10 seconds before the next read
+void onDataReceived(const esp_now_recv_info_t *recv_info, const uint8_t *data, int len) {
+  String msg = String((char*)data).substring(0, len);
+  Serial.print("📡 Sensor status: ");
+  Serial.println(msg);
+  mqttClient.publish("farmiot/sensor/status", msg.c_str());
 }

@@ -4,27 +4,26 @@ const path = require('path');
 
 const app = express();
 
-// --- Connect to the same MQTT broker ---
 const mqttClient = mqtt.connect('mqtt://broker.hivemq.com');
 
-let lastHubSeen = 0;
+let sensorSeen = 0;
 
 mqttClient.on('connect', () => {
   console.log('✅ Server MQTT Connected');
-  mqttClient.subscribe('farmiot/hub/status');
+  mqttClient.subscribe('farmiot/sensor/status');
 });
 
 mqttClient.on('message', (topic, message) => {
-  if (topic === 'farmiot/hub/status') {
-    lastHubSeen = Date.now();
-    console.log(`📡 Hub status received: ${message.toString()}`);
+  if (topic === 'farmiot/sensor/status') {
+    sensorSeen = Date.now();
+    console.log(`📡 Sensor status: ${message.toString()}`);
   }
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
-app.get('/api/hub/status', (req, res) => {
-  const isOnline = (Date.now() - lastHubSeen) < 15000;
+app.get('/api/sensor/status', (req, res) => {
+  const isOnline = (Date.now() - sensorSeen) < 15000;
   res.json({ online: isOnline });
 });
 
