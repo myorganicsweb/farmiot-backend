@@ -5,58 +5,175 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FarmIOT Dashboard</title>
   <style>
-    body { background: #121212; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
-    .card { background: #1e1e1e; padding: 20px; border-radius: 12px; margin: 10px auto; max-width: 400px; }
-    .online { color: #4CAF50; }
-    .offline { color: #f44336; }
-    .soil { color: #ff9800; }
+    body { 
+      background: #121212; 
+      color: #fff; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      text-align: center; 
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #4CAF50;
+      font-size: 2.5em;
+      margin-bottom: 30px;
+    }
+    .card { 
+      background: #1e1e1e; 
+      padding: 25px; 
+      border-radius: 16px; 
+      margin: 15px auto; 
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+    }
+    .card p {
+      margin: 0 0 10px 0;
+      font-size: 1.1em;
+      color: #aaa;
+    }
+    .online { 
+      color: #4CAF50; 
+    }
+    .offline { 
+      color: #f44336; 
+    }
+    .soil { 
+      color: #ff9800; 
+      font-size: 2em;
+    }
+    .status-indicator {
+      font-size: 1.8em;
+      font-weight: bold;
+    }
+    .last-updated {
+      font-size: 0.8em;
+      color: #666;
+      margin-top: 10px;
+    }
+    .icon {
+      font-size: 2em;
+      display: block;
+      margin-bottom: 10px;
+    }
+    .soil-value {
+      font-size: 3em;
+      font-weight: bold;
+      color: #ff9800;
+    }
+    .soil-label {
+      font-size: 0.8em;
+      color: #888;
+    }
   </style>
 </head>
 <body>
-  <h1>🚜 FarmIOT</h1>
+  <div class="container">
+    <h1>🚜 FarmIOT</h1>
 
-  <div class="card">
-    <p>📡 Hub ESP32</p>
-    <h2 id="hubStatus" class="offline">● OFFLINE</h2>
-  </div>
+    <div class="card">
+      <span class="icon">📡</span>
+      <p>Hub ESP32</p>
+      <div id="hubStatus" class="status-indicator offline">● OFFLINE</div>
+      <div id="hubLastSeen" class="last-updated">Waiting for data...</div>
+    </div>
 
-  <div class="card">
-    <p>🌱 Sensor ESP32</p>
-    <h2 id="sensorStatus" class="offline">● OFFLINE</h2>
-  </div>
+    <div class="card">
+      <span class="icon">🌱</span>
+      <p>Sensor ESP32</p>
+      <div id="sensorStatus" class="status-indicator offline">● OFFLINE</div>
+      <div id="sensorLastSeen" class="last-updated">Waiting for data...</div>
+    </div>
 
-  <div class="card">
-    <p>💧 Soil Moisture</p>
-    <h2 id="soilDisplay" class="soil">--</h2>
+    <div class="card">
+      <span class="icon">💧</span>
+      <p>Soil Moisture</p>
+      <div id="soilDisplay" class="soil-value">--</div>
+      <div class="soil-label">Analog Reading</div>
+      <div id="soilLastUpdated" class="last-updated">Waiting for data...</div>
+    </div>
   </div>
 
   <script>
+    let hubLastSeen = 0;
+    let sensorLastSeen = 0;
+    let soilLastUpdated = 0;
+
+    function formatTime(timestamp) {
+      if (!timestamp) return 'Never';
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString();
+    }
+
     async function checkHub() {
-      const res = await fetch('/api/hub/status');
-      const data = await res.json();
-      document.getElementById('hubStatus').innerText = data.online ? '● ONLINE' : '● OFFLINE';
-      document.getElementById('hubStatus').className = data.online ? 'online' : 'offline';
+      try {
+        const res = await fetch('/api/hub/status');
+        const data = await res.json();
+        const statusEl = document.getElementById('hubStatus');
+        statusEl.innerText = data.online ? '● ONLINE' : '● OFFLINE';
+        statusEl.className = 'status-indicator ' + (data.online ? 'online' : 'offline');
+        
+        if (data.lastSeen) {
+          hubLastSeen = data.lastSeen;
+          document.getElementById('hubLastSeen').innerText = 'Last seen: ' + formatTime(hubLastSeen);
+        }
+      } catch (error) {
+        console.error('Error fetching hub status:', error);
+      }
     }
 
     async function checkSensor() {
-      const res = await fetch('/api/sensor/status');
-      const data = await res.json();
-      document.getElementById('sensorStatus').innerText = data.online ? '● ONLINE' : '● OFFLINE';
-      document.getElementById('sensorStatus').className = data.online ? 'online' : 'offline';
+      try {
+        const res = await fetch('/api/sensor/status');
+        const data = await res.json();
+        const statusEl = document.getElementById('sensorStatus');
+        statusEl.innerText = data.online ? '● ONLINE' : '● OFFLINE';
+        statusEl.className = 'status-indicator ' + (data.online ? 'online' : 'offline');
+        
+        if (data.lastSeen) {
+          sensorLastSeen = data.lastSeen;
+          document.getElementById('sensorLastSeen').innerText = 'Last seen: ' + formatTime(sensorLastSeen);
+        }
+      } catch (error) {
+        console.error('Error fetching sensor status:', error);
+      }
     }
 
     async function checkSoil() {
-      const res = await fetch('/api/sensor/soil');
-      const data = await res.json();
-      document.getElementById('soilDisplay').innerText = data.moisture || '--';
+      try {
+        const res = await fetch('/api/sensor/soil');
+        const data = await res.json();
+        const soilEl = document.getElementById('soilDisplay');
+        if (data.moisture !== undefined && data.moisture !== null) {
+          soilEl.innerText = data.moisture;
+        } else {
+          soilEl.innerText = '--';
+        }
+        
+        if (data.lastUpdated) {
+          soilLastUpdated = data.lastUpdated;
+          document.getElementById('soilLastUpdated').innerText = 'Updated: ' + formatTime(soilLastUpdated);
+        }
+      } catch (error) {
+        console.error('Error fetching soil data:', error);
+      }
     }
 
-    setInterval(checkHub, 5000);
-    setInterval(checkSensor, 5000);
-    setInterval(checkSoil, 5000);
+    // Initial load
     checkHub();
     checkSensor();
     checkSoil();
+
+    // Refresh every 3 seconds
+    setInterval(checkHub, 3000);
+    setInterval(checkSensor, 3000);
+    setInterval(checkSoil, 3000);
   </script>
 </body>
 </html>
