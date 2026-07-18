@@ -32,23 +32,35 @@
 
   <script>
     async function checkStatus() {
-      console.log("📡 Fetching status...");
       try {
-        const res = await fetch('/api/esp32/status?_t=' + Date.now());
+        const res = await fetch('/api/esp32/status');
         const data = await res.json();
-        console.log("📡 Status response:", data);
         document.getElementById('hubStatus').innerText = '● ONLINE';
         document.getElementById('hubStatus').className = 'online';
       } catch (e) {
-        console.error("❌ Status failed:", e);
+        document.getElementById('hubStatus').innerText = '● OFFLINE';
+        document.getElementById('hubStatus').className = 'offline';
       }
     }
 
     async function checkSoil() {
-    const res = await fetch('/api/esp32/soil');
-    const data = await res.json();
-    console.log("📡 Raw value from server:", data.moisture);
-  }
+      try {
+        const res = await fetch('/api/esp32/soil');
+        const data = await res.json();
+        const raw = data.moisture || 0;
+        const percent = Math.min(100, Math.max(0, (1 - (raw / 4095)) * 100));
+        document.getElementById('soilDisplay').innerText = Math.round(percent) + '%';
+        if (raw > 0) {
+          document.getElementById('sensorStatus').innerText = '● ONLINE';
+          document.getElementById('sensorStatus').className = 'online';
+        } else {
+          document.getElementById('sensorStatus').innerText = '● OFFLINE';
+          document.getElementById('sensorStatus').className = 'offline';
+        }
+      } catch (e) {
+        document.getElementById('soilDisplay').innerText = '--%';
+      }
+    }
 
     setInterval(checkStatus, 5000);
     setInterval(checkSoil, 5000);

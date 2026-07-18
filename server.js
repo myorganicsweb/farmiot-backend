@@ -7,6 +7,7 @@ app.use(express.json());
 let latestMoisture = 0;
 let lastUpdate = 0;
 
+// --- Hub sends data via HTTP POST ---
 app.post('/api/sensor/update', (req, res) => {
   const { moisture } = req.body;
   console.log(`📡 POST received: ${moisture}`);
@@ -18,10 +19,7 @@ app.post('/api/sensor/update', (req, res) => {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 
 app.get('/api/esp32/status', (req, res) => {
-  const now = Date.now();
-  const diff = now - lastUpdate;
-  const isOnline = diff < 30000;
-  console.log(`📡 Status check: diff=${diff}ms, online=${isOnline}`);
+  const isOnline = (Date.now() - lastUpdate) < 30000;
   res.json({ online: isOnline });
 });
 
