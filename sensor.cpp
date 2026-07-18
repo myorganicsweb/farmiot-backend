@@ -1,11 +1,10 @@
 // ==========================================
-// SENSOR ESP32: Sends "online" status only
+// SENSOR ESP32: Sends "online" via ESP-NOW
 // ==========================================
 
 #include <esp_now.h>
 #include <WiFi.h>
 
-// --- Hub's MAC address (must match hub.ino) ---
 uint8_t hubMac[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
 
 unsigned long lastSend = 0;
@@ -14,7 +13,7 @@ const unsigned long SEND_INTERVAL = 10000; // 10 seconds
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("=== Sensor ESP32 (Status Only) ===");
+  Serial.println("=== Sensor ESP32 ===");
 
   WiFi.mode(WIFI_STA);
   esp_now_init();

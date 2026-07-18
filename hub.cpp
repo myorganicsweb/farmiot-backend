@@ -1,5 +1,5 @@
 // ==========================================
-// HUB ESP32: Forwards Sensor Status to MQTT
+// HUB ESP32: Publishes own status + forwards sensor status
 // ==========================================
 
 #include <WiFi.h>
@@ -15,6 +15,9 @@ WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
 uint8_t sensorMac[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
+
+unsigned long lastPublish = 0;
+const unsigned long PUBLISH_INTERVAL = 5000; // 5 seconds
 
 void setup() {
   Serial.begin(115200);
@@ -45,6 +48,13 @@ void setup() {
 
 void loop() {
   mqttClient.loop();
+
+  unsigned long now = millis();
+  if (now - lastPublish >= PUBLISH_INTERVAL) {
+    lastPublish = now;
+    mqttClient.publish("farmiot/hub/status", "online");
+    Serial.println("📡 Hub status published");
+  }
 }
 
 void onDataReceived(const esp_now_recv_info_t *recv_info, const uint8_t *data, int len) {
