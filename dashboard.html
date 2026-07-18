@@ -5,153 +5,548 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FarmIOT Dashboard</title>
   <style>
-    body { 
-      background: #121212; 
-      color: #fff; 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      text-align: center; 
-      padding: 20px;
+    * {
       margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    .container {
-      max-width: 500px;
-      margin: 0 auto;
+
+    body {
+      background: #0a0e17;
+      color: #fff;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
     }
-    h1 {
-      color: #4CAF50;
-      font-size: 2.5em;
-      margin-bottom: 30px;
+
+    .dashboard {
+      width: 100%;
+      max-width: 1200px;
+      background: linear-gradient(145deg, #111827, #0f1629);
+      border-radius: 24px;
+      padding: 30px 35px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.04);
     }
-    .card { 
-      background: #1e1e1e; 
-      padding: 25px; 
-      border-radius: 16px; 
-      margin: 15px auto; 
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     }
-    .card p {
-      margin: 0 0 10px 0;
-      font-size: 1.1em;
-      color: #aaa;
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
     }
-    .online { color: #4CAF50; }
-    .offline { color: #f44336; }
-    .status-indicator {
-      font-size: 1.8em;
-      font-weight: bold;
+
+    .logo {
+      font-size: 28px;
+      line-height: 1;
     }
-    .last-updated {
-      font-size: 0.8em;
-      color: #666;
-      margin-top: 10px;
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #4ade80, #22d3ee);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
     }
-    .icon {
-      font-size: 2em;
-      display: block;
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      display: inline-block;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* Cards Row */
+    .cards-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 20px 22px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Card status color accents */
+    .card-hub.online::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 40px;
+      height: 40px;
+      background: radial-gradient(circle at top right, rgba(74, 222, 128, 0.08), transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .card-sensor.online::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 40px;
+      height: 40px;
+      background: radial-gradient(circle at top right, rgba(74, 222, 128, 0.08), transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .card-soil::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 40px;
+      height: 40px;
+      background: radial-gradient(circle at top right, rgba(251, 191, 36, 0.08), transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .card-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #6b7280;
       margin-bottom: 10px;
     }
-    .soil-value {
-      font-size: 3em;
-      font-weight: bold;
-      color: #ff9800;
+
+    .card-icon {
+      font-size: 16px;
     }
-    .soil-label {
-      font-size: 0.8em;
-      color: #888;
+
+    .card-value {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .card-sub {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 400;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-top: 6px;
+    }
+
+    .status-badge.online {
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.15);
+    }
+
+    .status-badge.offline {
+      color: #f87171;
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.15);
+    }
+
+    .status-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .status-badge.online .dot {
+      background: #4ade80;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .status-badge.offline .dot {
+      background: #f87171;
+    }
+
+    /* Soil specific */
+    .soil-reading {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .soil-reading .value {
+      font-size: 36px;
+      font-weight: 700;
+      color: #fbbf24;
+    }
+
+    .soil-reading .unit {
+      font-size: 16px;
+      color: #6b7280;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .cards-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .dashboard {
+        padding: 16px;
+        border-radius: 16px;
+      }
+
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .cards-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .card {
+        padding: 16px 18px;
+      }
+
+      .card-value {
+        font-size: 22px;
+      }
+
+      .soil-reading .value {
+        font-size: 28px;
+      }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2d3748;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4a5568;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🚜 FarmIOT</h1>
 
-    <div class="card">
-      <span class="icon">📡</span>
-      <p>Hub ESP32</p>
-      <div id="hubStatus" class="status-indicator offline">● OFFLINE</div>
-      <div id="hubLastSeen" class="last-updated">Waiting for data...</div>
+<div class="dashboard">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <span class="logo">🚜</span>
+      <h1>FarmIOT</h1>
     </div>
-
-    <div class="card">
-      <span class="icon">🌱</span>
-      <p>Sensor ESP32</p>
-      <div id="sensorStatus" class="status-indicator offline">● OFFLINE</div>
-      <div id="sensorLastSeen" class="last-updated">Waiting for data...</div>
-    </div>
-
-    <div class="card">
-      <span class="icon">💧</span>
-      <p>Soil Moisture</p>
-      <div id="soilDisplay" class="soil-value">--</div>
-      <div class="soil-label">Analog Reading</div>
-      <div id="soilLastUpdated" class="last-updated">Waiting for data...</div>
+    <div class="header-right">
+      <span class="live-dot"></span>
+      <span id="liveTime">--:--:--</span>
+      <span style="color:#374151;">|</span>
+      <span id="sensorCount">0 Sensors</span>
     </div>
   </div>
 
-  <script>
-    function formatTime(timestamp) {
-      if (!timestamp) return 'Never';
-      const date = new Date(timestamp);
-      return date.toLocaleTimeString('en-US', { hour12: false });
-    }
+  <!-- Cards Row -->
+  <div class="cards-row">
+    <!-- Hub Card -->
+    <div class="card card-hub" id="hubCard">
+      <div class="card-label">
+        <span class="card-icon">📡</span>
+        Hub
+      </div>
+      <div class="card-value" id="hubStatusText">OFFLINE</div>
+      <div class="status-badge offline" id="hubBadge">
+        <span class="dot"></span>
+        <span id="hubBadgeText">Offline</span>
+      </div>
+      <div class="card-sub" id="hubLastSeen">—</div>
+    </div>
 
-    async function checkHub() {
-      try {
-        const res = await fetch('/api/hub/status');
-        const data = await res.json();
-        const statusEl = document.getElementById('hubStatus');
-        statusEl.innerText = data.online ? '● ONLINE' : '● OFFLINE';
-        statusEl.className = 'status-indicator ' + (data.online ? 'online' : 'offline');
-        if (data.lastSeen) {
-          document.getElementById('hubLastSeen').innerText = 'Last seen: ' + formatTime(data.lastSeen);
-        }
-      } catch (error) {
-        console.error('Error fetching hub status:', error);
+    <!-- Sensor Card -->
+    <div class="card card-sensor" id="sensorCard">
+      <div class="card-label">
+        <span class="card-icon">🌱</span>
+        Sensor
+      </div>
+      <div class="card-value" id="sensorStatusText">OFFLINE</div>
+      <div class="status-badge offline" id="sensorBadge">
+        <span class="dot"></span>
+        <span id="sensorBadgeText">Offline</span>
+      </div>
+      <div class="card-sub" id="sensorLastSeen">—</div>
+    </div>
+
+    <!-- Soil Card -->
+    <div class="card card-soil">
+      <div class="card-label">
+        <span class="card-icon">💧</span>
+        Soil Moisture
+      </div>
+      <div class="soil-reading">
+        <span class="value" id="soilValue">—</span>
+        <span class="unit">ADC</span>
+      </div>
+      <div style="margin-top:6px;">
+        <span style="font-size:12px;color:#6b7280;" id="soilStatus">Waiting for data...</span>
+      </div>
+      <div class="card-sub" id="soilLastUpdated">—</div>
+    </div>
+
+    <!-- Stats Card -->
+    <div class="card" style="background:rgba(255,255,255,0.02);">
+      <div class="card-label">
+        <span class="card-icon">📊</span>
+        System
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:#6b7280;">Uptime</span>
+          <span style="color:#e5e7eb;font-weight:500;" id="uptime">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:#6b7280;">Requests</span>
+          <span style="color:#e5e7eb;font-weight:500;" id="requestCount">0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:#6b7280;">Status</span>
+          <span style="color:#4ade80;font-weight:500;">● Live</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // State
+  let requestCount = 0;
+  let startTime = Date.now();
+
+  // Format time
+  function formatTime(timestamp) {
+    if (!timestamp) return '—';
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', { hour12: false });
+  }
+
+  // Format uptime
+  function formatUptime(ms) {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    if (hours > 0) return `${hours}h ${minutes % 60}m`;
+    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+    return `${seconds}s`;
+  }
+
+  // Update live time
+  function updateLiveTime() {
+    document.getElementById('liveTime').textContent = new Date().toLocaleTimeString('en-US', { hour12: false });
+    document.getElementById('uptime').textContent = formatUptime(Date.now() - startTime);
+  }
+
+  // Fetch Hub Status
+  async function checkHub() {
+    try {
+      const res = await fetch('/api/hub/status');
+      const data = await res.json();
+      
+      const statusText = document.getElementById('hubStatusText');
+      const badge = document.getElementById('hubBadge');
+      const badgeText = document.getElementById('hubBadgeText');
+      const lastSeen = document.getElementById('hubLastSeen');
+      const card = document.getElementById('hubCard');
+
+      if (data.online) {
+        statusText.textContent = 'ONLINE';
+        statusText.style.color = '#4ade80';
+        badge.className = 'status-badge online';
+        badgeText.textContent = 'Online';
+        card.className = 'card card-hub online';
+      } else {
+        statusText.textContent = 'OFFLINE';
+        statusText.style.color = '#f87171';
+        badge.className = 'status-badge offline';
+        badgeText.textContent = 'Offline';
+        card.className = 'card card-hub';
       }
-    }
 
-    async function checkSensor() {
-      try {
-        const res = await fetch('/api/sensor/status');
-        const data = await res.json();
-        const statusEl = document.getElementById('sensorStatus');
-        statusEl.innerText = data.online ? '● ONLINE' : '● OFFLINE';
-        statusEl.className = 'status-indicator ' + (data.online ? 'online' : 'offline');
-        if (data.lastSeen) {
-          document.getElementById('sensorLastSeen').innerText = 'Last seen: ' + formatTime(data.lastSeen);
-        }
-      } catch (error) {
-        console.error('Error fetching sensor status:', error);
+      lastSeen.textContent = data.lastSeen ? `Last seen: ${formatTime(data.lastSeen)}` : '—';
+    } catch (error) {
+      console.error('Hub error:', error);
+    }
+  }
+
+  // Fetch Sensor Status
+  async function checkSensor() {
+    try {
+      const res = await fetch('/api/sensor/status');
+      const data = await res.json();
+      
+      const statusText = document.getElementById('sensorStatusText');
+      const badge = document.getElementById('sensorBadge');
+      const badgeText = document.getElementById('sensorBadgeText');
+      const lastSeen = document.getElementById('sensorLastSeen');
+      const card = document.getElementById('sensorCard');
+
+      if (data.online) {
+        statusText.textContent = 'ONLINE';
+        statusText.style.color = '#4ade80';
+        badge.className = 'status-badge online';
+        badgeText.textContent = 'Online';
+        card.className = 'card card-sensor online';
+        document.getElementById('sensorCount').textContent = '1 Sensor';
+      } else {
+        statusText.textContent = 'OFFLINE';
+        statusText.style.color = '#f87171';
+        badge.className = 'status-badge offline';
+        badgeText.textContent = 'Offline';
+        card.className = 'card card-sensor';
+        document.getElementById('sensorCount').textContent = '0 Sensors';
       }
-    }
 
-    async function checkSoil() {
-      try {
-        const res = await fetch('/api/sensor/soil');
-        const data = await res.json();
-        const soilEl = document.getElementById('soilDisplay');
-        if (data.moisture !== undefined && data.moisture !== null) {
-          soilEl.innerText = data.moisture;
+      lastSeen.textContent = data.lastSeen ? `Last seen: ${formatTime(data.lastSeen)}` : '—';
+    } catch (error) {
+      console.error('Sensor error:', error);
+    }
+  }
+
+  // Fetch Soil Data
+  async function checkSoil() {
+    try {
+      const res = await fetch('/api/sensor/soil');
+      const data = await res.json();
+      
+      const valueEl = document.getElementById('soilValue');
+      const statusEl = document.getElementById('soilStatus');
+      const updatedEl = document.getElementById('soilLastUpdated');
+
+      if (data.moisture !== undefined && data.moisture !== null && data.moisture > 0) {
+        valueEl.textContent = data.moisture;
+        valueEl.style.color = '#fbbf24';
+        
+        // Soil condition
+        if (data.moisture < 300) {
+          statusEl.textContent = '💧 Very Wet';
+          statusEl.style.color = '#60a5fa';
+        } else if (data.moisture < 600) {
+          statusEl.textContent = '🌱 Moist';
+          statusEl.style.color = '#4ade80';
+        } else if (data.moisture < 1000) {
+          statusEl.textContent = '🌿 Dry';
+          statusEl.style.color = '#fbbf24';
         } else {
-          soilEl.innerText = '--';
+          statusEl.textContent = '🔥 Very Dry';
+          statusEl.style.color = '#f87171';
         }
+        
+        // Increment request count on new data
         if (data.lastUpdated) {
-          document.getElementById('soilLastUpdated').innerText = 'Updated: ' + formatTime(data.lastUpdated);
+          const lastUpdate = new Date(data.lastUpdated);
+          const now = new Date();
+          if ((now - lastUpdate) < 5000) {
+            requestCount++;
+            document.getElementById('requestCount').textContent = requestCount;
+          }
         }
-      } catch (error) {
-        console.error('Error fetching soil data:', error);
+      } else {
+        valueEl.textContent = '—';
+        valueEl.style.color = '#6b7280';
+        statusEl.textContent = 'Waiting for data...';
+        statusEl.style.color = '#6b7280';
       }
+
+      updatedEl.textContent = data.lastUpdated ? `Updated: ${formatTime(data.lastUpdated)}` : '—';
+    } catch (error) {
+      console.error('Soil error:', error);
     }
+  }
 
-    checkHub();
-    checkSensor();
-    checkSoil();
+  // Refresh all
+  async function refreshAll() {
+    await Promise.all([
+      checkHub(),
+      checkSensor(),
+      checkSoil()
+    ]);
+    updateLiveTime();
+  }
 
-    setInterval(() => {
-      checkHub();
-      checkSensor();
-      checkSoil();
-    }, 3000);
-  </script>
+  // Initial load
+  refreshAll();
+
+  // Update every 3 seconds
+  setInterval(refreshAll, 3000);
+
+  // Update time every second
+  setInterval(updateLiveTime, 1000);
+</script>
+
 </body>
 </html>
