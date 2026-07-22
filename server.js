@@ -33,7 +33,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 // MIDDLEWARE
 // ==========================================
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: '*',
   credentials: true
 }));
 app.use(express.json());
@@ -87,9 +87,13 @@ app.post('/api/auth/register', async (req, res) => {
   
   const { email, password, name } = req.body;
   
+  // Validate input
   if (!email || !password) {
     console.log('❌ Missing email or password');
-    return res.status(400).json({ error: 'Email and password required' });
+    return res.status(400).json({ 
+      error: 'Email and password required',
+      received: { email: !!email, password: !!password }
+    });
   }
   
   if (password.length < 6) {
@@ -148,10 +152,6 @@ app.post('/api/auth/register', async (req, res) => {
     
     if (createError) {
       console.error('❌ Profile create error:', createError);
-      // Try to delete the auth user if profile creation fails
-      try {
-        await supabase.auth.admin.deleteUser(authUser.user.id);
-      } catch (e) {}
       return res.status(500).json({ error: 'Failed to create user profile' });
     }
     
@@ -192,6 +192,7 @@ app.post('/api/auth/register', async (req, res) => {
 // EMAIL/PASSWORD LOGIN
 app.post('/api/auth/login', async (req, res) => {
   console.log('📥 Login request received');
+  console.log('Body:', req.body);
   
   const { email, password } = req.body;
   
