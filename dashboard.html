@@ -612,37 +612,35 @@
         }
     }
 
+    // ==========================================
+    // REGISTER - Using URL-Encoded Form Data
+    // ==========================================
     async function registerUser(email, password) {
         const btn = document.getElementById('authActionBtn');
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Creating account...';
         
         debugLog(`📝 Sending registration for: ${email}`, 'info');
-        debugLog(`📦 Request body: ${JSON.stringify({ email, password })}`, 'info');
         
         try {
             const url = `${API_BASE}/api/auth/register`;
             debugLog(`📍 POST ${url}`, 'info');
             
-            const startTime = Date.now();
+            // Use URLSearchParams for form-urlencoded
+            const formData = new URLSearchParams();
+            formData.append('email', email);
+            formData.append('password', password);
+            
             const res = await fetch(url, {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: JSON.stringify({ 
-                    email: email, 
-                    password: password 
-                })
+                body: formData.toString()
             });
-            const elapsed = Date.now() - startTime;
-            
-            debugLog(`📥 Response received in ${elapsed}ms`, 'info');
-            debugLog(`📥 Status: ${res.status} ${res.statusText}`, 'info');
             
             const data = await res.json();
-            debugLog(`📦 Response body: ${JSON.stringify(data, null, 2)}`, 'info');
+            debugLog(`📦 Response: ${JSON.stringify(data, null, 2)}`, 'info');
             
             if (data.success) {
                 token = data.token;
@@ -669,37 +667,34 @@
         btn.innerHTML = authMode === 'register' ? 'Register' : 'Sign In';
     }
 
+    // ==========================================
+    // LOGIN - Using URL-Encoded Form Data
+    // ==========================================
     async function loginUser(email, password) {
         const btn = document.getElementById('authActionBtn');
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Signing in...';
         
         debugLog(`🔑 Sending login for: ${email}`, 'info');
-        debugLog(`📦 Request body: ${JSON.stringify({ email, password })}`, 'info');
         
         try {
             const url = `${API_BASE}/api/auth/login`;
             debugLog(`📍 POST ${url}`, 'info');
             
-            const startTime = Date.now();
+            const formData = new URLSearchParams();
+            formData.append('email', email);
+            formData.append('password', password);
+            
             const res = await fetch(url, {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: JSON.stringify({ 
-                    email: email, 
-                    password: password 
-                })
+                body: formData.toString()
             });
-            const elapsed = Date.now() - startTime;
-            
-            debugLog(`📥 Response received in ${elapsed}ms`, 'info');
-            debugLog(`📥 Status: ${res.status} ${res.statusText}`, 'info');
             
             const data = await res.json();
-            debugLog(`📦 Response body: ${JSON.stringify(data, null, 2)}`, 'info');
+            debugLog(`📦 Response: ${JSON.stringify(data, null, 2)}`, 'info');
             
             if (data.success) {
                 token = data.token;
