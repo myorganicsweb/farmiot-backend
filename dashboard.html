@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FarmIOT - Dashboard</title>
-    <script src="https://accounts.google.com/gsi/client"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -139,17 +138,6 @@
             font-size: 12px;
         }
         .btn-logout:hover { background: rgba(248,113,113,0.2); }
-        
-        .g_id_signin {
-            display: flex !important;
-            align-items: center;
-        }
-        .g_id_signin .gsi-material-button {
-            min-height: 36px !important;
-            min-width: 120px !important;
-            padding: 0 16px !important;
-            border-radius: 10px !important;
-        }
         
         .tabs {
             display: flex;
@@ -369,11 +357,6 @@
             margin-bottom: 12px;
         }
         
-        .google-btn-wrapper {
-            display: flex;
-            align-items: center;
-        }
-        
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
             .tabs { flex-direction: column; }
@@ -407,8 +390,6 @@
                             <button class="active" id="loginModeBtn" onclick="setAuthMode('login')">Sign In</button>
                             <button id="registerModeBtn" onclick="setAuthMode('register')">Register</button>
                         </div>
-                        <div class="google-btn-wrapper" id="googleBtn"></div>
-                        <span class="auth-divider">or</span>
                         <div class="auth-forms" id="authForms">
                             <input type="email" id="emailInput" placeholder="Email" autocomplete="email">
                             <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
@@ -416,7 +397,7 @@
                             <button class="btn btn-primary" id="authActionBtn" onclick="handleAuthAction()">Sign In</button>
                         </div>
                     </div>
-                    <div class="auth-hint" id="authHint">💡 Already have an account? Sign in above. New user? Switch to Register or use Google.</div>
+                    <div class="auth-hint" id="authHint">💡 New user? Switch to Register above to create an account.</div>
                 </div>
                 
                 <div id="loggedInState" style="display:none;">
@@ -510,71 +491,6 @@
     let isReconfigure = false;
 
     // ==========================================
-    // GOOGLE SSO
-    // ==========================================
-    function initGoogleSSO() {
-        if (typeof google !== 'undefined') {
-            google.accounts.id.initialize({
-                client_id: '472048491207-hofjvaisdj9vnaglutb9kd23ci948jc5.apps.googleusercontent.com',
-                callback: handleGoogleCredential,
-                cancel_on_tap_outside: false,
-                auto_select: false  // Changed to false to avoid issues
-            });
-            google.accounts.id.renderButton(
-                document.getElementById('googleBtn'),
-                {
-                    theme: 'outline',
-                    size: 'medium',
-                    text: 'signin_with',
-                    shape: 'pill',
-                    logo_alignment: 'left'
-                }
-            );
-            // Removed prompt() to avoid popup issues
-        } else {
-            setTimeout(initGoogleSSO, 500);
-        }
-    }
-
-    async function handleGoogleCredential(response) {
-        const id_token = response.credential;
-        
-        try {
-            showToast('🔄 Verifying Google sign-in...', 'info');
-            
-            const res = await fetch(`${API_BASE}/api/auth/google`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id_token })
-            });
-            
-            const data = await res.json();
-            
-            if (data.success) {
-                token = data.token;
-                user = data.user;
-                localStorage.setItem('farmiot_token', token);
-                isLoggedIn = true;
-                updateAuthUI(data.user);
-                
-                if (data.is_new_user) {
-                    showToast('✅ Welcome! Your account has been created with Google.', 'success');
-                } else {
-                    showToast('✅ Welcome back, ' + data.user.name + '!', 'success');
-                }
-                
-                loadConfiguredDevices();
-                scanForHubs();
-            } else {
-                showToast('❌ ' + (data.error || 'Login failed'), 'error');
-            }
-        } catch (error) {
-            console.error('Google auth error:', error);
-            showToast('❌ Error: ' + error.message, 'error');
-        }
-    }
-
-    // ==========================================
     // AUTH UI TOGGLE
     // ==========================================
     function setAuthMode(mode) {
@@ -590,13 +506,13 @@
             registerBtn.classList.remove('active');
             confirmInput.style.display = 'none';
             actionBtn.textContent = 'Sign In';
-            hint.textContent = '💡 New user? Switch to Register above or use Google.';
+            hint.textContent = '💡 New user? Switch to Register above.';
         } else {
             registerBtn.classList.add('active');
             loginBtn.classList.remove('active');
             confirmInput.style.display = 'block';
             actionBtn.textContent = 'Register';
-            hint.textContent = '💡 Already have an account? Switch to Sign In above or use Google.';
+            hint.textContent = '💡 Already have an account? Switch to Sign In above.';
         }
     }
 
@@ -630,6 +546,10 @@
     }
 
     async function registerUser(email, password) {
+        const btn = document.getElementById('authActionBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Creating account...';
+        
         try {
             showToast('🔄 Creating account...', 'info');
             
@@ -655,11 +575,19 @@
                 showToast('❌ ' + (data.error || 'Registration failed'), 'error');
             }
         } catch (error) {
+            console.error('Registration error:', error);
             showToast('❌ Error: ' + error.message, 'error');
         }
+        
+        btn.disabled = false;
+        btn.innerHTML = authMode === 'register' ? 'Register' : 'Sign In';
     }
 
     async function loginUser(email, password) {
+        const btn = document.getElementById('authActionBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Signing in...';
+        
         try {
             showToast('🔄 Signing in...', 'info');
             
@@ -685,8 +613,12 @@
                 showToast('❌ ' + (data.error || 'Login failed'), 'error');
             }
         } catch (error) {
+            console.error('Login error:', error);
             showToast('❌ Error: ' + error.message, 'error');
         }
+        
+        btn.disabled = false;
+        btn.innerHTML = authMode === 'register' ? 'Register' : 'Sign In';
     }
 
     function clearAuthForm() {
@@ -1170,10 +1102,6 @@
     // ==========================================
     // INIT
     // ==========================================
-    window.onload = function() {
-        initGoogleSSO();
-    };
-    
     checkSession();
     updateTime();
     setInterval(updateTime, 1000);
