@@ -43,17 +43,90 @@
             align-items: center;
         }
         
-        /* Auth Buttons */
+        /* Auth Section */
         .auth-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        .auth-row {
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-wrap: wrap;
         }
         .user-info {
             color: #6b7280;
             font-size: 14px;
         }
         .user-info strong { color: #e5e7eb; }
+        
+        /* Auth Toggle */
+        .auth-toggle {
+            display: flex;
+            gap: 4px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            padding: 3px;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        .auth-toggle button {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: transparent;
+            color: #6b7280;
+            font-family: inherit;
+        }
+        .auth-toggle button.active {
+            background: rgba(74, 222, 128, 0.1);
+            color: #4ade80;
+        }
+        .auth-toggle button:hover { color: #e5e7eb; }
+        
+        /* Auth Forms */
+        .auth-forms {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        .auth-forms input {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.04);
+            color: #e5e7eb;
+            font-size: 13px;
+            font-family: inherit;
+            min-width: 140px;
+        }
+        .auth-forms input:focus {
+            outline: none;
+            border-color: #4ade80;
+        }
+        .auth-forms input::placeholder {
+            color: #4b5563;
+        }
+        .auth-divider {
+            color: #374151;
+            font-size: 12px;
+            padding: 0 4px;
+        }
+        .auth-hint {
+            font-size: 12px;
+            color: #4b5563;
+            margin-top: 4px;
+        }
         
         /* Tabs */
         .tabs {
@@ -352,6 +425,12 @@
             margin-bottom: 12px;
         }
         
+        .auth-hint {
+            font-size: 12px;
+            color: #4b5563;
+            margin-top: 4px;
+        }
+        
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
             .tabs { flex-direction: column; }
@@ -359,7 +438,13 @@
             .card-header { flex-direction: column; align-items: flex-start; }
             .btn-group { width: 100%; }
             .btn-group .btn { flex: 1; justify-content: center; }
-            .auth-section { flex-wrap: wrap; }
+            .auth-section { align-items: flex-start; width: 100%; }
+            .auth-row { width: 100%; flex-direction: column; }
+            .auth-forms { width: 100%; flex-direction: column; }
+            .auth-forms input { width: 100%; min-width: unset; }
+            .auth-forms .btn { width: 100%; justify-content: center; }
+            .auth-toggle { width: 100%; }
+            .auth-toggle button { flex: 1; text-align: center; }
         }
     </style>
 </head>
@@ -374,15 +459,37 @@
         </div>
         <div class="header-actions">
             <div class="auth-section" id="authSection">
-                <button class="btn btn-google" id="loginBtn" onclick="loginWithGoogle()">
-                    🔐 Sign in with Google
-                </button>
-                <div id="userInfo" style="display:none;" class="user-info">
-                    👋 <strong id="userName">User</strong>
-                    <button class="btn btn-logout" onclick="logout()">Sign Out</button>
+                <!-- Logged Out State -->
+                <div id="loggedOutState">
+                    <div class="auth-row">
+                        <!-- Auth Mode Toggle -->
+                        <div class="auth-toggle">
+                            <button class="active" id="loginModeBtn" onclick="setAuthMode('login')">Sign In</button>
+                            <button id="registerModeBtn" onclick="setAuthMode('register')">Register</button>
+                        </div>
+                        <button class="btn btn-google" onclick="loginWithGoogle()">
+                            🔐 Google SSO
+                        </button>
+                        <span class="auth-divider">or</span>
+                        <div class="auth-forms" id="authForms">
+                            <input type="email" id="emailInput" placeholder="Email" autocomplete="email">
+                            <input type="password" id="passwordInput" placeholder="Password (min 6 chars)" autocomplete="current-password">
+                            <input type="password" id="confirmPasswordInput" placeholder="Confirm Password" style="display:none;" autocomplete="new-password">
+                            <button class="btn btn-primary" id="authActionBtn" onclick="handleAuthAction()">Sign In</button>
+                        </div>
+                    </div>
+                    <div class="auth-hint" id="authHint">💡 Already have an account? Sign in above. New user? Switch to Register.</div>
+                </div>
+                
+                <!-- Logged In State -->
+                <div id="loggedInState" style="display:none;">
+                    <div class="auth-row">
+                        <span class="user-info">👋 <strong id="userName">User</strong></span>
+                        <button class="btn btn-logout" onclick="logout()">Sign Out</button>
+                        <button class="btn btn-primary" onclick="scanForHubs()">🔍 Scan</button>
+                    </div>
                 </div>
             </div>
-            <button class="btn btn-primary" onclick="scanForHubs()">🔍 Scan</button>
         </div>
     </div>
 
@@ -465,7 +572,7 @@
     const SUPABASE_URL = 'https://adxaifphothopomwutcg.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkeGFpZnBob3Rob3BvbXd1dGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxOTM4NTEsImV4cCI6MjA5Nzc2OTg1MX0.uMbkFZP4kPnjJamcaVwgMhcgDbJkkDg1JYbz0HVDfYk';
     
-    // Create Supabase client - FIX: use a different variable name or check if exists
+    // Create Supabase client
     let supabaseClient;
     if (typeof window.supabaseClient === 'undefined') {
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -484,10 +591,39 @@
     let isReconfigure = false;
     let isLoggedIn = false;
     let currentUser = null;
+    let authMode = 'login'; // 'login' or 'register'
+
+    // ==========================================
+    // AUTH UI TOGGLE
+    // ==========================================
+    function setAuthMode(mode) {
+        authMode = mode;
+        const loginBtn = document.getElementById('loginModeBtn');
+        const registerBtn = document.getElementById('registerModeBtn');
+        const confirmInput = document.getElementById('confirmPasswordInput');
+        const actionBtn = document.getElementById('authActionBtn');
+        const hint = document.getElementById('authHint');
+        
+        if (mode === 'login') {
+            loginBtn.classList.add('active');
+            registerBtn.classList.remove('active');
+            confirmInput.style.display = 'none';
+            actionBtn.textContent = 'Sign In';
+            hint.textContent = '💡 New user? Switch to Register above to create an account.';
+        } else {
+            registerBtn.classList.add('active');
+            loginBtn.classList.remove('active');
+            confirmInput.style.display = 'block';
+            actionBtn.textContent = 'Register';
+            hint.textContent = '💡 Already have an account? Switch to Sign In above.';
+        }
+    }
 
     // ==========================================
     // AUTH FUNCTIONS
     // ==========================================
+
+    // Google SSO
     async function loginWithGoogle() {
         try {
             const { data, error } = await supabaseClient.auth.signInWithOAuth({
@@ -502,6 +638,108 @@
         }
     }
 
+    // Handle Register or Login based on mode
+    async function handleAuthAction() {
+        const email = document.getElementById('emailInput').value.trim();
+        const password = document.getElementById('passwordInput').value.trim();
+        const confirmPassword = document.getElementById('confirmPasswordInput').value.trim();
+        
+        if (!email || !password) {
+            showToast('❌ Please enter email and password', 'error');
+            return;
+        }
+        
+        if (password.length < 6) {
+            showToast('❌ Password must be at least 6 characters', 'error');
+            return;
+        }
+        
+        if (authMode === 'register') {
+            if (password !== confirmPassword) {
+                showToast('❌ Passwords do not match', 'error');
+                return;
+            }
+            await registerUser(email, password);
+        } else {
+            await loginUser(email, password);
+        }
+    }
+
+    // Register New User
+    async function registerUser(email, password) {
+        try {
+            showToast('🔄 Creating account...', 'info');
+            
+            const { data, error } = await supabaseClient.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        full_name: email.split('@')[0]
+                    }
+                }
+            });
+            
+            if (error) {
+                if (error.message.includes('User already registered')) {
+                    showToast('❌ Account already exists. Please sign in instead.', 'error');
+                } else {
+                    throw error;
+                }
+                return;
+            }
+            
+            if (data?.user) {
+                showToast('✅ Account created successfully! You are now signed in.', 'success');
+                updateAuthUI(data.user);
+                loadConfiguredDevices();
+                scanForHubs();
+                clearAuthForm();
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            showToast('❌ Registration failed: ' + error.message, 'error');
+        }
+    }
+
+    // Login Existing User
+    async function loginUser(email, password) {
+        try {
+            showToast('🔄 Signing in...', 'info');
+            
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+            
+            if (error) {
+                if (error.message.includes('Invalid login credentials')) {
+                    showToast('❌ Invalid email or password. Please try again.', 'error');
+                } else {
+                    throw error;
+                }
+                return;
+            }
+            
+            if (data?.user) {
+                showToast('✅ Welcome back, ' + (data.user.user_metadata?.full_name || data.user.email) + '!', 'success');
+                updateAuthUI(data.user);
+                loadConfiguredDevices();
+                scanForHubs();
+                clearAuthForm();
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            showToast('❌ Login failed: ' + error.message, 'error');
+        }
+    }
+
+    function clearAuthForm() {
+        document.getElementById('emailInput').value = '';
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('confirmPasswordInput').value = '';
+    }
+
     async function logout() {
         try {
             await supabaseClient.auth.signOut();
@@ -514,7 +752,7 @@
                 <div class="empty-state">
                     <div class="icon">🔐</div>
                     <div class="text">Please sign in to view your devices</div>
-                    <div class="sub">Click "Sign in with Google" above</div>
+                    <div class="sub">Sign in with Google or use email/password</div>
                 </div>
             `;
         } catch (error) {
@@ -523,23 +761,24 @@
     }
 
     function updateAuthUI(user) {
-        const loginBtn = document.getElementById('loginBtn');
-        const userInfo = document.getElementById('userInfo');
+        const loggedOutState = document.getElementById('loggedOutState');
+        const loggedInState = document.getElementById('loggedInState');
         const userName = document.getElementById('userName');
         
         if (user) {
-            loginBtn.style.display = 'none';
-            userInfo.style.display = 'block';
+            loggedOutState.style.display = 'none';
+            loggedInState.style.display = 'block';
             userName.textContent = user.user_metadata?.full_name || user.email || 'User';
             isLoggedIn = true;
             currentUser = user;
             localStorage.setItem('supabase_token', user.access_token || '');
         } else {
-            loginBtn.style.display = 'inline-block';
-            userInfo.style.display = 'none';
+            loggedOutState.style.display = 'block';
+            loggedInState.style.display = 'none';
             isLoggedIn = false;
             currentUser = null;
             localStorage.removeItem('supabase_token');
+            setAuthMode('login'); // Reset to login mode
         }
     }
 
@@ -558,7 +797,7 @@
                     <div class="empty-state">
                         <div class="icon">🔐</div>
                         <div class="text">Please sign in to view your devices</div>
-                        <div class="sub">Click "Sign in with Google" above</div>
+                        <div class="sub">Sign in with Google or use email/password</div>
                     </div>
                 `;
             }
@@ -572,11 +811,32 @@
     supabaseClient.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
             updateAuthUI(session.user);
-            showToast('✅ Welcome, ' + (session.user.user_metadata?.full_name || 'User') + '!', 'success');
+            showToast('✅ Welcome, ' + (session.user.user_metadata?.full_name || session.user.email) + '!', 'success');
             loadConfiguredDevices();
             scanForHubs();
         } else if (event === 'SIGNED_OUT') {
             updateAuthUI(null);
+        }
+    });
+
+    // Enter key support for auth form
+    document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            if (authMode === 'register') {
+                document.getElementById('confirmPasswordInput').focus();
+            } else {
+                handleAuthAction();
+            }
+        }
+    });
+    document.getElementById('confirmPasswordInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleAuthAction();
+        }
+    });
+    document.getElementById('emailInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('passwordInput').focus();
         }
     });
 
@@ -595,7 +855,6 @@
             const response = await fetch(url, { ...options, headers });
             
             if (response.status === 401) {
-                // Token expired or invalid
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 if (session?.access_token) {
                     localStorage.setItem('supabase_token', session.access_token);
