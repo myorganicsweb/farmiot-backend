@@ -1,5 +1,5 @@
 // ==========================================
-// FARM IOT SERVER - WITH BODY-PARSER
+// FARM IOT SERVER - COMPLETE WORKING VERSION
 // ==========================================
 
 const express = require('express');
@@ -30,25 +30,21 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // ==========================================
-// MIDDLEWARE - WITH BODY-PARSER
+// MIDDLEWARE
 // ==========================================
 app.use(cors({
   origin: '*',
   credentials: true
 }));
 
-// Use body-parser explicitly
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// Debug middleware - log EVERYTHING
+// Debug middleware
 app.use((req, res, next) => {
-  console.log('========================================');
   console.log(`📥 ${req.method} ${req.url}`);
-  console.log('📋 Headers:', JSON.stringify(req.headers, null, 2));
-  console.log('📦 Body:', req.body);
-  console.log('========================================');
+  console.log('Body:', req.body);
   next();
 });
 
@@ -93,29 +89,33 @@ async function authenticate(req, res, next) {
 // AUTH ROUTES
 // ==========================================
 
-// REGISTER NEW USER - SIMPLIFIED
+// REGISTER NEW USER
 app.post('/api/auth/register', async (req, res) => {
   console.log('📥 Registration request received');
   console.log('📦 Body:', req.body);
-  console.log('📦 Body type:', typeof req.body);
-  console.log('📦 Body keys:', Object.keys(req.body));
   
   try {
     const { email, password, name } = req.body;
     
-    // Validate input
+    // Validate email
     if (!email) {
-      console.log('❌ Missing email');
       return res.status(400).json({ error: 'Email is required' });
     }
     
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        error: 'Invalid email format. Please use a valid email address (e.g., user@example.com)' 
+      });
+    }
+    
+    // Validate password
     if (!password) {
-      console.log('❌ Missing password');
       return res.status(400).json({ error: 'Password is required' });
     }
     
     if (password.length < 6) {
-      console.log('❌ Password too short');
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
     
@@ -194,7 +194,6 @@ app.post('/api/auth/register', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Registration error:', error);
-    console.error('Stack:', error.stack);
     res.status(500).json({ 
       error: error.message,
       details: 'Failed to register user'
@@ -202,7 +201,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// EMAIL/PASSWORD LOGIN - SIMPLIFIED
+// EMAIL/PASSWORD LOGIN
 app.post('/api/auth/login', async (req, res) => {
   console.log('📥 Login request received');
   console.log('📦 Body:', req.body);
