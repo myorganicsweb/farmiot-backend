@@ -23,6 +23,7 @@ const JWT_SECRET = process.env.JWT_SECRET || '8X9kLp2mNv5qRt7wYz3bC6eFh1jM4oP8sU
 // Check required variables
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('❌ Missing Supabase credentials!');
+  console.error('   Set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables');
   process.exit(1);
 }
 
@@ -92,7 +93,7 @@ async function authenticate(req, res, next) {
 }
 
 // ==========================================
-// GOOGLE SSO - Handles BOTH Login AND Registration
+// GOOGLE SSO ROUTE
 // ==========================================
 app.post('/api/auth/google', async (req, res) => {
   console.log('📥 Google auth request received');
@@ -117,13 +118,14 @@ app.post('/api/auth/google', async (req, res) => {
     
     console.log(`👤 Google user: ${email} (${google_id})`);
     
-    // Check if user exists in profiles
+    // Check if user exists in profiles by google_id
     let { data: existingUser, error: fetchError } = await supabase
       .from('profiles')
       .select('*')
       .eq('google_id', google_id)
       .single();
     
+    // If not found by google_id, check by email
     if (!existingUser) {
       console.log('🔍 Checking by email...');
       const { data: userByEmail, error: emailError } = await supabase
@@ -429,9 +431,32 @@ app.post('/api/auth/logout', authenticate, async (req, res) => {
 });
 
 // ==========================================
+// GOOGLE OAUTH CALLBACK ROUTE
+// ==========================================
+app.get('/auth/v1/callback', async (req, res) => {
+  const { code } = req.query;
+  
+  if (!code) {
+    return res.status(400).send('Missing authorization code');
+  }
+  
+  try {
+    const { tokens } = await googleClient.getToken(code);
+    const id_token = tokens.id_token;
+    
+    // Redirect back to frontend with token
+    res.redirect(`/?token=${id_token}`);
+  } catch (error) {
+    console.error('Callback error:', error);
+    res.status(500).send('Authentication failed: ' + error.message);
+  }
+});
+
+// ==========================================
 // API: HUBS
 // ==========================================
 
+// Get all hubs for user
 app.get('/api/hubs', authenticate, async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -447,6 +472,7 @@ app.get('/api/hubs', authenticate, async (req, res) => {
   }
 });
 
+// Get single hub
 app.get('/api/hubs/:hubId', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
@@ -466,6 +492,7 @@ app.get('/api/hubs/:hubId', authenticate, async (req, res) => {
   }
 });
 
+// Delete hub
 app.delete('/api/hubs/:hubId', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
@@ -483,6 +510,7 @@ app.delete('/api/hubs/:hubId', authenticate, async (req, res) => {
   }
 });
 
+// Get hub config
 app.get('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
@@ -511,6 +539,7 @@ app.get('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   }
 });
 
+// Set hub config
 app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   const { hubId } = req.params;
   const { ssid, password, mqtt_server, mqtt_port, device_name } = req.body;
@@ -580,9 +609,7 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   }
 });
 
-// ==========================================
-// HUB REGISTRATION (Called by ESP32)
-// ==========================================
+// Register hub (called by ESP32)
 app.post('/api/hubs/register', async (req, res) => {
   const { hub_id, ip_address, mac_address, status, device_name } = req.body;
   
@@ -651,9 +678,7 @@ app.post('/api/hubs/register', async (req, res) => {
   }
 });
 
-// ==========================================
-// REBOOT HUB
-// ==========================================
+// Reboot hub
 app.post('/api/hubs/:hubId/reboot', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
@@ -689,9 +714,7 @@ app.post('/api/hubs/:hubId/reboot', authenticate, async (req, res) => {
   }
 });
 
-// ==========================================
-// DISCOVER HUBS
-// ==========================================
+// Discovery - get hubs in discovery mode
 app.get('/api/discover', authenticate, async (req, res) => {
   try {
     const cutoffTime = new Date(Date.now() - 120000).toISOString();
