@@ -1,9 +1,10 @@
 // ==========================================
-// FARM IOT SERVER - COMPLETE FIXED VERSION
+// FARM IOT SERVER - WITH BODY-PARSER
 // ==========================================
 
 const express = require('express');
 const cors = require('cors');
+const bodyParser = require('body-parser');
 const { createClient } = require('@supabase/supabase-js');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
@@ -20,7 +21,6 @@ const JWT_SECRET = process.env.JWT_SECRET || '8X9kLp2mNv5qRt7wYz3bC6eFh1jM4oP8sU
 // Check required variables
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('❌ Missing Supabase credentials!');
-  console.error('   Set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables');
   process.exit(1);
 }
 
@@ -30,36 +30,27 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // ==========================================
-// MIDDLEWARE - FIXED
+// MIDDLEWARE - WITH BODY-PARSER
 // ==========================================
 app.use(cors({
   origin: '*',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  credentials: true
 }));
 
-// IMPORTANT: Raw body parser for debugging
-app.use(express.json({ 
-  limit: '10mb',
-  verify: (req, res, buf) => {
-    req.rawBody = buf.toString();
-  }
-}));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Use body-parser explicitly
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// Debug middleware - logs all requests
+// Debug middleware - log EVERYTHING
 app.use((req, res, next) => {
+  console.log('========================================');
   console.log(`📥 ${req.method} ${req.url}`);
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
-  console.log('Raw body:', req.rawBody);
+  console.log('📋 Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('📦 Body:', req.body);
+  console.log('========================================');
   next();
 });
-
-// Handle preflight requests
-app.options('*', cors());
 
 // ==========================================
 // AUTH MIDDLEWARE
@@ -102,36 +93,34 @@ async function authenticate(req, res, next) {
 // AUTH ROUTES
 // ==========================================
 
-// REGISTER NEW USER
+// REGISTER NEW USER - SIMPLIFIED
 app.post('/api/auth/register', async (req, res) => {
   console.log('📥 Registration request received');
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
-  console.log('Raw body:', req.rawBody);
-  
-  const { email, password, name } = req.body;
-  
-  // Validate input
-  if (!email || !password) {
-    console.log('❌ Missing email or password');
-    console.log('email:', email);
-    console.log('password:', password);
-    console.log('body:', req.body);
-    return res.status(400).json({ 
-      error: 'Email and password required',
-      received: { email: !!email, password: !!password, body: req.body }
-    });
-  }
-  
-  if (password.length < 6) {
-    console.log('❌ Password too short');
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
-  }
+  console.log('📦 Body:', req.body);
+  console.log('📦 Body type:', typeof req.body);
+  console.log('📦 Body keys:', Object.keys(req.body));
   
   try {
-    // Check if user already exists in profiles
-    console.log('🔍 Checking if user exists...');
-    const { data: existingUser, error: checkError } = await supabase
+    const { email, password, name } = req.body;
+    
+    // Validate input
+    if (!email) {
+      console.log('❌ Missing email');
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    
+    if (!password) {
+      console.log('❌ Missing password');
+      return res.status(400).json({ error: 'Password is required' });
+    }
+    
+    if (password.length < 6) {
+      console.log('❌ Password too short');
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+    
+    console.log(`🔍 Checking if user exists: ${email}`);
+    const { data: existingUser } = await supabase
       .from('profiles')
       .select('email')
       .eq('email', email)
@@ -142,7 +131,6 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'User already exists' });
     }
     
-    // Create user in Supabase Auth
     console.log('📝 Creating user in Supabase Auth...');
     const { data: authUser, error: signUpError } = await supabase.auth.signUp({
       email: email,
@@ -158,13 +146,12 @@ app.post('/api/auth/register', async (req, res) => {
     }
     
     if (!authUser.user) {
-      console.error('❌ No user returned from signup');
+      console.error('❌ No user returned');
       return res.status(500).json({ error: 'Failed to create user' });
     }
     
     console.log(`✅ Auth user created: ${authUser.user.id}`);
     
-    // Create profile
     console.log('📝 Creating profile...');
     const { data: newProfile, error: createError } = await supabase
       .from('profiles')
@@ -184,7 +171,6 @@ app.post('/api/auth/register', async (req, res) => {
     
     console.log(`✅ Profile created: ${newProfile.id}`);
     
-    // Create JWT session token
     const sessionToken = jwt.sign(
       { 
         user_id: newProfile.id,
@@ -216,10 +202,10 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// EMAIL/PASSWORD LOGIN
+// EMAIL/PASSWORD LOGIN - SIMPLIFIED
 app.post('/api/auth/login', async (req, res) => {
   console.log('📥 Login request received');
-  console.log('Body:', req.body);
+  console.log('📦 Body:', req.body);
   
   const { email, password } = req.body;
   
@@ -242,7 +228,6 @@ app.post('/api/auth/login', async (req, res) => {
     
     console.log(`✅ Auth successful: ${authData.user.id}`);
     
-    // Get or create profile
     let { data: user, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -268,14 +253,12 @@ app.post('/api/auth/login', async (req, res) => {
       }
       user = newProfile;
     } else {
-      // Update last_login
       await supabase
         .from('profiles')
         .update({ last_login: new Date().toISOString() })
         .eq('id', user.id);
     }
     
-    // Create JWT session token
     const sessionToken = jwt.sign(
       { 
         user_id: user.id,
@@ -618,6 +601,4 @@ const PORT = process.env.PORT || 443;
 app.listen(PORT, () => {
   console.log(`✅ FarmIOT Server running on port ${PORT}`);
   console.log(`📡 Server URL: ${process.env.SERVER_URL || 'https://farm-iot.onrender.com'}`);
-  console.log(`🔐 JWT Secret: ${process.env.JWT_SECRET ? '✅ Set' : '⚠️ Using default'}`);
-  console.log(`📊 Using 'profiles' table for user data`);
 });
