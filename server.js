@@ -314,6 +314,23 @@ app.post('/api/devices/register', async (req, res) => {
   }
 });
 
+app.delete('/api/hubs/:hubId', authenticate, async (req, res) => {
+  const { hubId } = req.params;
+  
+  try {
+    const { error } = await supabase
+      .from('hubs')
+      .delete()
+      .eq('hub_id', hubId)
+      .eq('user_id', req.user.id);
+    
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==========================================
 // SERVE DASHBOARD
 // ==========================================

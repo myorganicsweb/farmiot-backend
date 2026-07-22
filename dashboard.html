@@ -9,25 +9,80 @@
         body {
             background: #0a0e17;
             color: #e5e7eb;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width: 700px; margin: 0 auto; }
-        h1 {
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header-left h1 {
             font-size: 28px;
-            margin-bottom: 8px;
             background: linear-gradient(135deg, #4ade80, #22d3ee);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-align: center;
         }
-        .subtitle {
-            text-align: center;
+        .header-left .subtitle {
             color: #6b7280;
             font-size: 14px;
-            margin-bottom: 20px;
         }
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        .tab {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: transparent;
+            color: #6b7280;
+            font-family: inherit;
+            flex: 1;
+            text-align: center;
+        }
+        .tab:hover { color: #e5e7eb; }
+        .tab.active {
+            background: rgba(74, 222, 128, 0.1);
+            color: #4ade80;
+        }
+        .tab .badge {
+            display: inline-block;
+            background: rgba(251,191,36,0.15);
+            color: #fbbf24;
+            padding: 1px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-left: 6px;
+        }
+        .tab .badge.online { background: rgba(74,222,128,0.15); color: #4ade80; }
+        
+        /* Cards */
         .card {
             background: rgba(17, 24, 39, 0.9);
             padding: 20px;
@@ -37,36 +92,84 @@
             transition: all 0.3s;
         }
         .card:hover { border-color: rgba(74,222,128,0.15); }
-        .card p {
-            margin: 0 0 8px 0;
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-subtitle {
             font-size: 13px;
             color: #6b7280;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        }
+        
+        /* Status Badges */
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
             font-weight: 600;
         }
-        .online { color: #4ade80; }
-        .offline { color: #f87171; }
-        .discovering { color: #fbbf24; }
-        .status-indicator {
-            font-size: 24px;
-            font-weight: 700;
+        .badge-status.online {
+            background: rgba(74,222,128,0.1);
+            color: #4ade80;
+            border: 1px solid rgba(74,222,128,0.15);
         }
+        .badge-status.offline {
+            background: rgba(248,113,113,0.1);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.15);
+        }
+        .badge-status.discovering {
+            background: rgba(251,191,36,0.1);
+            color: #fbbf24;
+            border: 1px solid rgba(251,191,36,0.15);
+        }
+        .badge-status .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .badge-status.online .dot { background: #4ade80; animation: pulse 1.5s infinite; }
+        .badge-status.offline .dot { background: #f87171; }
+        .badge-status.discovering .dot { background: #fbbf24; animation: pulse 1.5s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        
+        /* Buttons */
         .btn {
-            padding: 10px 20px;
+            padding: 8px 16px;
             border: none;
             border-radius: 10px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
         .btn-primary {
             background: linear-gradient(135deg, #4ade80, #22d3ee);
             color: #0a0e17;
         }
-        .btn-primary:hover { transform: translateY(-2px); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(74,222,128,0.2); }
         .btn-secondary {
             background: rgba(255,255,255,0.05);
             color: #9ca3af;
@@ -79,23 +182,95 @@
             border: 1px solid rgba(74,222,128,0.15);
         }
         .btn-success:hover { background: rgba(74,222,128,0.2); }
-        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-        .btn-group .btn { flex: 1; min-width: 80px; text-align: center; }
-        .status-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 6px;
-            animation: pulse 2s infinite;
+        .btn-danger {
+            background: rgba(248,113,113,0.1);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.15);
         }
-        .status-dot.online { background: #4ade80; }
-        .status-dot.offline { background: #f87171; }
-        .status-dot.discovering { background: #fbbf24; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        .btn-danger:hover { background: rgba(248,113,113,0.2); }
+        .btn-icon {
+            padding: 6px 10px;
+            font-size: 16px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.3s;
         }
+        .btn-icon:hover {
+            background: rgba(255,255,255,0.08);
+            color: #e5e7eb;
+        }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        
+        /* Discovery Card */
+        .discovery-card {
+            background: rgba(251,191,36,0.03);
+            border: 1px solid rgba(251,191,36,0.1);
+        }
+        .discovery-card:hover { border-color: rgba(251,191,36,0.2); }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #1a1f2e;
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 450px;
+            width: 90%;
+            border: 1px solid rgba(255,255,255,0.06);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-content h2 { margin-bottom: 16px; font-size: 22px; }
+        .modal-content .form-group { margin-bottom: 14px; }
+        .modal-content label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #9ca3af;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            color: #e5e7eb;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .modal-content input:focus {
+            outline: none;
+            border-color: #4ade80;
+        }
+        .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+        .modal-actions .btn { flex: 1; justify-content: center; }
+        .modal .device-info {
+            background: rgba(255,255,255,0.03);
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .modal .device-info strong { color: #e5e7eb; }
+        
+        /* Toast */
         .toast {
             position: fixed;
             bottom: 24px;
@@ -110,91 +285,137 @@
             opacity: 0;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 2000;
+            max-width: 90%;
         }
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.success { border-left: 3px solid #4ade80; }
         .toast.error { border-left: 3px solid #f87171; }
         .toast.info { border-left: 3px solid #60a5fa; }
+        .toast.warning { border-left: 3px solid #fbbf24; }
+        
         .spinner {
             display: inline-block;
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             border: 2px solid rgba(255,255,255,0.1);
             border-top-color: #4ade80;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .server-info {
+        
+        .empty-state {
             text-align: center;
+            padding: 40px 20px;
+            color: #6b7280;
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state .text { font-size: 16px; }
+        .empty-state .sub { font-size: 13px; margin-top: 4px; }
+        
+        .reconfigure-btn {
+            background: rgba(59,130,246,0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(59,130,246,0.15);
+            padding: 4px 10px;
+            border-radius: 6px;
             font-size: 12px;
-            color: #4b5563;
-            margin-top: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
         }
-        .server-info a { color: #4ade80; text-decoration: none; }
-        .discovery-badge {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            background: rgba(251,191,36,0.15);
-            color: #fbbf24;
+        .reconfigure-btn:hover {
+            background: rgba(59,130,246,0.2);
         }
-        .status-text {
-            font-size: 14px;
-            margin-top: 4px;
-        }
-        @media (max-width: 480px) {
-            .container { padding: 0 4px; }
-            .card { padding: 16px; }
-            .btn-group .btn { min-width: 60px; font-size: 12px; padding: 8px 12px; }
+        
+        @media (max-width: 600px) {
+            .header { flex-direction: column; align-items: flex-start; }
+            .tabs { flex-direction: column; }
+            .tab { flex: none; }
+            .card-header { flex-direction: column; align-items: flex-start; }
+            .btn-group { width: 100%; }
+            .btn-group .btn { flex: 1; justify-content: center; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🚜 FarmIOT</h1>
-    <div class="subtitle" id="liveTime">Scanning for devices...</div>
-
-    <!-- Hub Card -->
-    <div class="card">
-        <span class="icon">📡</span>
-        <p>Hub</p>
-        <div id="hubStatus" class="status-indicator offline">
-            <span class="status-dot offline"></span> SCANNING
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <h1>🚜 FarmIOT</h1>
+            <div class="subtitle" id="liveTime">--:--:--</div>
         </div>
-        <div id="hubInfo" class="status-text">Looking for hubs on your network...</div>
-        <div class="btn-group">
-            <button class="btn btn-primary" onclick="scanForHubs()">🔍 Scan</button>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="scanForHubs()">🔍 Scan for Devices</button>
         </div>
     </div>
 
-    <!-- Discovered Hubs -->
-    <div id="discoveredHubs"></div>
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" id="tabDevices" onclick="switchTab('devices')">
+            📡 My Devices <span class="badge online" id="deviceCount">0</span>
+        </button>
+        <button class="tab" id="tabDiscovery" onclick="switchTab('discovery')">
+            🔍 Discovery <span class="badge" id="discoveryCount">0</span>
+        </button>
+    </div>
 
-    <!-- Sensor Card -->
-    <div class="card">
-        <span class="icon">🌱</span>
-        <p>Sensor</p>
-        <div id="sensorStatus" class="status-indicator offline">
-            <span class="status-dot offline"></span> OFFLINE
+    <!-- Tab Content: My Devices -->
+    <div id="devicesTab">
+        <div id="devicesList">
+            <div class="empty-state">
+                <div class="icon">📡</div>
+                <div class="text">No devices configured yet</div>
+                <div class="sub">Go to the Discovery tab to find and configure your hubs</div>
+            </div>
         </div>
-        <div id="sensorInfo" class="status-text">No sensor connected</div>
     </div>
 
-    <!-- Soil Card -->
-    <div class="card">
-        <span class="icon">💧</span>
-        <p>Soil Moisture</p>
-        <div id="soilDisplay" class="soil-value" style="font-size:40px;font-weight:700;color:#fbbf24;">—</div>
-        <div class="soil-label">ADC</div>
-        <div id="soilLastUpdated" class="status-text">Waiting for data...</div>
+    <!-- Tab Content: Discovery -->
+    <div id="discoveryTab" style="display:none;">
+        <div id="discoveryList">
+            <div class="empty-state">
+                <div class="icon">🔍</div>
+                <div class="text">Scanning for devices...</div>
+                <div class="sub">Click "Scan for Devices" to find hubs in discovery mode</div>
+            </div>
+        </div>
     </div>
+</div>
 
-    <div class="server-info">
-        🔗 <a href="https://farm-iot.onrender.com" target="_blank">farm-iot.onrender.com</a>
+<!-- Config Modal -->
+<div class="modal" id="configModal">
+    <div class="modal-content">
+        <h2 id="configModalTitle">⚙️ Configure Device</h2>
+        <div class="device-info" id="configDeviceInfo">
+            Device: <strong id="configDeviceId">—</strong><br>
+            Status: <span id="configDeviceStatus">—</span>
+        </div>
+        <div class="form-group">
+            <label>WiFi SSID</label>
+            <input type="text" id="configSSID" placeholder="Enter WiFi name">
+        </div>
+        <div class="form-group">
+            <label>WiFi Password</label>
+            <input type="password" id="configPassword" placeholder="Enter WiFi password">
+        </div>
+        <div class="form-group">
+            <label>Device Name</label>
+            <input type="text" id="configDeviceName" placeholder="My Hub" value="farmiot-hub">
+        </div>
+        <div class="form-group">
+            <label>MQTT Server</label>
+            <input type="text" id="configMQTT" placeholder="broker.hivemq.com" value="broker.hivemq.com">
+        </div>
+        <div class="form-group">
+            <label>MQTT Port</label>
+            <input type="number" id="configMQTTPort" placeholder="1883" value="1883">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
+            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()">💾 Save & Configure</button>
+        </div>
     </div>
 </div>
 
@@ -203,10 +424,14 @@
 
 <script>
     const API_BASE = window.location.origin;
-    const DEVICE_ID = 'FarmIOT_Hub_001';
     let discoveredDevices = [];
-    let startTime = Date.now();
+    let configuredDevices = [];
+    let currentConfigDevice = null;
+    let isReconfigure = false;
 
+    // ==========================================
+    // TOAST
+    // ==========================================
     function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
         toast.textContent = message;
@@ -216,14 +441,39 @@
     }
 
     // ==========================================
-    // SCAN FOR HUBS (No AP connection needed!)
+    // TABS
+    // ==========================================
+    function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('devicesTab').style.display = tab === 'devices' ? 'block' : 'none';
+        document.getElementById('discoveryTab').style.display = tab === 'discovery' ? 'block' : 'none';
+        document.getElementById('tabDevices').classList.toggle('active', tab === 'devices');
+        document.getElementById('tabDiscovery').classList.toggle('active', tab === 'discovery');
+        
+        if (tab === 'discovery') scanForHubs();
+    }
+
+    // ==========================================
+    // MODAL
+    // ==========================================
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // Close modal on backdrop click
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.classList.remove('active');
+        });
+    });
+
+    // ==========================================
+    // SCAN FOR HUBS (Discovery Mode)
     // ==========================================
     async function scanForHubs() {
-        showToast('🔍 Scanning for hubs...', 'info');
+        showToast('🔍 Scanning for devices...', 'info');
         
         try {
-            // Try mDNS discovery first (if browser supports it)
-            // Fallback: call server API
+            // Try to fetch from server API
             const response = await fetch(`${API_BASE}/api/discover`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
@@ -232,21 +482,27 @@
             
             if (response.ok) {
                 const hubs = await response.json();
-                discoveredDevices = hubs;
-                renderDiscoveredHubs(hubs);
+                // Filter: only show hubs in discovery mode or not yet configured
+                const discovering = hubs.filter(h => 
+                    h.status === 'discovering' || 
+                    h.status === 'offline' || 
+                    !h.user_id
+                );
+                discoveredDevices = discovering;
+                renderDiscoveryList(discovering);
                 
-                if (hubs.length === 0) {
-                    showToast('🔍 No hubs found. Make sure ESP32 is powered on.', 'info');
+                if (discovering.length === 0) {
+                    showToast('🔍 No devices in discovery mode found', 'info');
                 } else {
-                    showToast(`✅ Found ${hubs.length} hub(s)!`, 'success');
+                    showToast(`✅ Found ${discovering.length} device(s) in discovery mode`, 'success');
                 }
             } else {
-                // If auth fails, try without auth (discovery mode)
+                // If auth fails, try public endpoint
                 const publicResponse = await fetch(`${API_BASE}/api/discover/public`);
                 if (publicResponse.ok) {
                     const hubs = await publicResponse.json();
                     discoveredDevices = hubs;
-                    renderDiscoveredHubs(hubs);
+                    renderDiscoveryList(hubs);
                 }
             }
         } catch (error) {
@@ -255,91 +511,176 @@
         }
     }
 
-    function renderDiscoveredHubs(hubs) {
-        const container = document.getElementById('discoveredHubs');
+    // ==========================================
+    // RENDER DISCOVERY LIST
+    // ==========================================
+    function renderDiscoveryList(devices) {
+        const container = document.getElementById('discoveryList');
+        const count = document.getElementById('discoveryCount');
+        count.textContent = devices.length;
         
-        if (hubs.length === 0) {
+        if (devices.length === 0) {
             container.innerHTML = `
-                <div class="card" style="border-color: rgba(251,191,36,0.2);">
-                    <p>🔍 No hubs discovered</p>
-                    <div style="color:#6b7280;font-size:14px;">
-                        Make sure your ESP32 is powered on and on the same network.
-                        <br>It will auto-discover via mDNS at <strong>farmiot-hub.local</strong>
-                    </div>
+                <div class="empty-state">
+                    <div class="icon">🔍</div>
+                    <div class="text">No devices in discovery mode</div>
+                    <div class="sub">Make sure your ESP32 is powered on and in AP mode</div>
+                    <button class="btn btn-primary" style="margin-top:12px;" onclick="scanForHubs()">🔄 Scan Again</button>
                 </div>
             `;
             return;
         }
 
-        container.innerHTML = hubs.map(hub => `
-            <div class="card" style="border-color: rgba(74,222,128,0.2);">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
+        container.innerHTML = devices.map(device => `
+            <div class="card discovery-card">
+                <div class="card-header">
                     <div>
-                        <span style="font-weight:600;">📡 ${hub.name || hub.hub_id}</span>
-                        <span class="discovery-badge" style="margin-left:8px;">${hub.status || 'discovering'}</span>
+                        <div class="card-title">
+                            📡 ${device.name || device.device_id}
+                            <span class="badge-status discovering">
+                                <span class="dot"></span> DISCOVERING
+                            </span>
+                        </div>
+                        <div class="card-subtitle">
+                            ID: ${device.device_id} · IP: ${device.ip_address || 'Unknown'} · ${device.mac_address || 'MAC unknown'}
+                        </div>
                     </div>
-                    <span style="color:#6b7280;font-size:12px;">${hub.ip_address || 'IP unknown'}</span>
+                    <div class="btn-group">
+                        <button class="btn btn-success" onclick="openConfigForDevice('${device.device_id}', false)">
+                            ⚙️ Configure
+                        </button>
+                    </div>
                 </div>
-                <div style="font-size:13px;color:#6b7280;margin-top:4px;">
-                    ID: ${hub.hub_id} · ${hub.mac_address || 'MAC unknown'}
-                </div>
-                <div class="btn-group">
-                    <button class="btn btn-success" onclick="connectHub('${hub.hub_id}')">🔗 Connect to Account</button>
-                    <button class="btn btn-secondary" onclick="configureHub('${hub.hub_id}')">⚙️ Configure</button>
+                <div style="margin-top:8px;font-size:12px;color:#6b7280;">
+                    💡 Click "Configure" to set up WiFi and add to your devices
                 </div>
             </div>
         `).join('');
     }
 
     // ==========================================
-    // CONNECT HUB TO USER ACCOUNT
+    // RENDER CONFIGURED DEVICES
     // ==========================================
-    async function connectHub(hubId) {
-        showToast('🔗 Connecting hub...', 'info');
+    function renderConfiguredDevices(devices) {
+        const container = document.getElementById('devicesList');
+        const count = document.getElementById('deviceCount');
+        count.textContent = devices.length;
         
+        if (devices.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">📡</div>
+                    <div class="text">No devices configured yet</div>
+                    <div class="sub">Go to the Discovery tab to find and configure your hubs</div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = devices.map(device => `
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">
+                            📡 ${device.name || device.device_id}
+                            <span class="badge-status ${device.status === 'online' ? 'online' : 'offline'}">
+                                <span class="dot"></span> ${device.status === 'online' ? 'ONLINE' : 'OFFLINE'}
+                            </span>
+                        </div>
+                        <div class="card-subtitle">
+                            ID: ${device.device_id} · IP: ${device.ip_address || 'Unknown'}
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn-icon" onclick="openConfigForDevice('${device.device_id}', true)" title="Reconfigure">
+                            ⚙️
+                        </button>
+                        <button class="btn-icon" onclick="rebootDevice('${device.device_id}')" title="Reboot">
+                            🔄
+                        </button>
+                        <button class="btn-icon" onclick="removeDevice('${device.device_id}')" title="Remove" style="color:#f87171;">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+                ${device.latest_soil ? `
+                    <div style="margin-top:8px;display:flex;gap:16px;font-size:13px;color:#6b7280;">
+                        <span>🌱 Soil: <strong style="color:#fbbf24;">${device.latest_soil}</strong></span>
+                        <span>📅 Last seen: ${device.last_seen ? new Date(device.last_seen).toLocaleTimeString() : 'Never'}</span>
+                    </div>
+                ` : ''}
+            </div>
+        `).join('');
+    }
+
+    // ==========================================
+    // OPEN CONFIG MODAL
+    // ==========================================
+    function openConfigForDevice(deviceId, isReconfig) {
+        isReconfigure = isReconfig;
+        currentConfigDevice = deviceId;
+        
+        document.getElementById('configModalTitle').textContent = isReconfig ? '⚙️ Reconfigure Device' : '⚙️ Configure Device';
+        document.getElementById('configDeviceId').textContent = deviceId;
+        document.getElementById('configDeviceStatus').textContent = isReconfig ? 'Configured' : 'Discovery Mode';
+        document.getElementById('configSSID').value = '';
+        document.getElementById('configPassword').value = '';
+        document.getElementById('configDeviceName').value = 'farmiot-hub';
+        document.getElementById('configMQTT').value = 'broker.hivemq.com';
+        document.getElementById('configMQTTPort').value = '1883';
+        
+        // If reconfiguring, try to load existing config
+        if (isReconfig) {
+            fetchConfig(deviceId);
+        }
+        
+        openModal('configModal');
+    }
+
+    // ==========================================
+    // FETCH EXISTING CONFIG (for reconfigure)
+    // ==========================================
+    async function fetchConfig(deviceId) {
         try {
-            const response = await fetch(`${API_BASE}/api/hubs/register`, {
-                method: 'POST',
+            const response = await fetch(`${API_BASE}/api/hubs/${deviceId}/config`, {
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-                },
-                body: JSON.stringify({
-                    hub_id: hubId,
-                    status: 'online'
-                })
+                }
             });
-            
             if (response.ok) {
-                showToast('✅ Hub connected to your account!', 'success');
-                setTimeout(scanForHubs, 2000);
-            } else {
-                const error = await response.json();
-                showToast('❌ ' + (error.error || 'Failed to connect'), 'error');
+                const data = await response.json();
+                document.getElementById('configSSID').value = data.ssid || '';
+                document.getElementById('configDeviceName').value = data.device_name || 'farmiot-hub';
+                document.getElementById('configMQTT').value = data.mqtt_server || 'broker.hivemq.com';
+                document.getElementById('configMQTTPort').value = data.mqtt_port || 1883;
             }
         } catch (error) {
-            showToast('❌ Error: ' + error.message, 'error');
+            console.error('Error fetching config:', error);
         }
     }
 
     // ==========================================
-    // CONFIGURE HUB (WiFi Setup)
+    // SAVE CONFIG
     // ==========================================
-    function configureHub(hubId) {
-        // Open a modal or prompt for WiFi credentials
-        const ssid = prompt('Enter WiFi SSID:');
-        if (!ssid) return;
-        
-        const password = prompt('Enter WiFi Password:');
-        
-        saveConfig(hubId, ssid, password);
-    }
+    async function saveConfig() {
+        const deviceId = currentConfigDevice;
+        const ssid = document.getElementById('configSSID').value.trim();
+        const password = document.getElementById('configPassword').value.trim();
+        const name = document.getElementById('configDeviceName').value.trim() || 'farmiot-hub';
+        const mqtt = document.getElementById('configMQTT').value.trim() || 'broker.hivemq.com';
+        const port = parseInt(document.getElementById('configMQTTPort').value) || 1883;
 
-    async function saveConfig(hubId, ssid, password) {
-        showToast('💾 Saving configuration...', 'info');
-        
+        if (!ssid) {
+            showToast('❌ WiFi SSID is required', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('configSaveBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Saving...';
+
         try {
-            const response = await fetch(`${API_BASE}/api/hubs/${hubId}/config`, {
+            const response = await fetch(`${API_BASE}/api/hubs/${deviceId}/config`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -347,18 +688,77 @@
                 },
                 body: JSON.stringify({
                     ssid: ssid,
-                    password: password || '',
-                    mqtt_server: 'broker.hivemq.com',
-                    mqtt_port: 1883
+                    password: password,
+                    mqtt_server: mqtt,
+                    mqtt_port: port,
+                    device_name: name
                 })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('✅ Config saved! Device will reboot and connect.', 'success');
+                closeModal('configModal');
+                
+                // If this was a discovery device, remove it from discovery list
+                if (!isReconfigure) {
+                    discoveredDevices = discoveredDevices.filter(d => d.device_id !== deviceId);
+                    renderDiscoveryList(discoveredDevices);
+                    document.getElementById('discoveryCount').textContent = discoveredDevices.length;
+                }
+                
+                // Refresh devices list
+                setTimeout(loadConfiguredDevices, 3000);
+            } else {
+                showToast('❌ ' + (result.error || 'Failed to save'), 'error');
+            }
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '💾 Save & Configure';
+    }
+
+    // ==========================================
+    // LOAD CONFIGURED DEVICES
+    // ==========================================
+    async function loadConfiguredDevices() {
+        try {
+            const response = await fetch(`${API_BASE}/api/hubs`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                }
             });
             
             if (response.ok) {
-                showToast('✅ Config saved! ESP32 will reboot.', 'success');
-                setTimeout(scanForHubs, 5000);
-            } else {
-                const error = await response.json();
-                showToast('❌ ' + (error.error || 'Failed to save'), 'error');
+                const hubs = await response.json();
+                configuredDevices = hubs;
+                renderConfiguredDevices(hubs);
+            }
+        } catch (error) {
+            console.error('Error loading devices:', error);
+        }
+    }
+
+    // ==========================================
+    // REBOOT DEVICE
+    // ==========================================
+    async function rebootDevice(deviceId) {
+        if (!confirm(`Reboot ${deviceId}?`)) return;
+        
+        showToast('🔄 Rebooting device...', 'info');
+        try {
+            const response = await fetch(`${API_BASE}/api/hubs/${deviceId}/reboot`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                }
+            });
+            if (response.ok) {
+                showToast('✅ Reboot command sent', 'success');
+                setTimeout(loadConfiguredDevices, 5000);
             }
         } catch (error) {
             showToast('❌ Error: ' + error.message, 'error');
@@ -366,19 +766,47 @@
     }
 
     // ==========================================
-    // AUTO-SCAN EVERY 30 SECONDS
+    // REMOVE DEVICE
+    // ==========================================
+    async function removeDevice(deviceId) {
+        if (!confirm(`Remove ${deviceId} from your devices?`)) return;
+        
+        try {
+            const response = await fetch(`${API_BASE}/api/hubs/${deviceId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                }
+            });
+            if (response.ok) {
+                showToast('✅ Device removed', 'success');
+                loadConfiguredDevices();
+            }
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        }
+    }
+
+    // ==========================================
+    // UPDATE TIME
     // ==========================================
     function updateTime() {
         const now = new Date();
-        const time = now.toLocaleTimeString('en-US', { hour12: false });
-        document.getElementById('liveTime').textContent = time + ' | Scanning for devices...';
+        document.getElementById('liveTime').textContent = now.toLocaleTimeString('en-US', { hour12: false });
     }
 
-    // Initial scan
-    scanForHubs();
-    setInterval(scanForHubs, 30000);
-    setInterval(updateTime, 1000);
+    // ==========================================
+    // INIT
+    // ==========================================
+    loadConfiguredDevices();
     updateTime();
+    setInterval(updateTime, 1000);
+    setInterval(loadConfiguredDevices, 30000);
+
+    // Auto-scan discovery tab when switching to it
+    document.getElementById('tabDiscovery').addEventListener('click', () => {
+        setTimeout(scanForHubs, 300);
+    });
 </script>
 </body>
 </html>
