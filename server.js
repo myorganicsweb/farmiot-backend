@@ -12,10 +12,18 @@ const axios = require('axios');
 const app = express();
 
 // ==========================================
-// SUPABASE CONFIG (SERVER ONLY)
+// SUPABASE CONFIG - FROM ENVIRONMENT VARIABLES
 // ==========================================
-const supabaseUrl = process.env.SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'your-service-role-key';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+// Check if credentials are set
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Missing Supabase credentials!');
+  console.error('   Set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables');
+  process.exit(1);
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ==========================================
@@ -333,5 +341,6 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 443;
 app.listen(PORT, () => {
   console.log(`✅ FarmIOT Server running on port ${PORT}`);
-  console.log(`📡 ESP32 connects to: https://farm-iot.onrender.com`);
+  console.log(`📡 ESP32 connects to: ${process.env.SERVER_URL || 'https://farm-iot.onrender.com'}`);
+  console.log(`🗄️  Supabase: ${supabaseUrl}`);
 });

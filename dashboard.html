@@ -215,9 +215,8 @@
 
 <div class="container">
     <h1>🚜 FarmIOT</h1>
-    <div class="subtitle" id="liveTime">22:07:11 | 0 Sensors</div>
+    <div class="subtitle" id="liveTime">--:--:-- | 0 Sensors</div>
 
-    <!-- Hub Card -->
     <div class="card">
         <span class="icon">📡</span>
         <p>Hub</p>
@@ -231,7 +230,6 @@
         </div>
     </div>
 
-    <!-- Sensor Card -->
     <div class="card">
         <span class="icon">🌱</span>
         <p>Sensor</p>
@@ -241,7 +239,6 @@
         <div id="sensorLastSeen" class="last-updated">—</div>
     </div>
 
-    <!-- Soil Card -->
     <div class="card">
         <span class="icon">💧</span>
         <p>Soil Moisture</p>
@@ -250,14 +247,13 @@
         <div id="soilLastUpdated" class="last-updated">Waiting for data...</div>
     </div>
 
-    <!-- System Card -->
     <div class="card">
         <span class="icon">📊</span>
         <p>System</p>
         <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px;">
             <div style="display:flex;justify-content:space-between;font-size:13px;">
                 <span style="color:#6b7280;">Uptime</span>
-                <span style="color:#e5e7eb;font-weight:500;" id="uptime">1s</span>
+                <span style="color:#e5e7eb;font-weight:500;" id="uptime">0s</span>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:13px;">
                 <span style="color:#6b7280;">Requests</span>
@@ -318,9 +314,6 @@
     let startTime = Date.now();
     let requestCount = 0;
 
-    // ==========================================
-    // TOAST NOTIFICATIONS
-    // ==========================================
     function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
         toast.textContent = message;
@@ -329,9 +322,6 @@
         toast._hide = setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    // ==========================================
-    // MODAL
-    // ==========================================
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
@@ -340,9 +330,6 @@
         openModal('configModal');
     }
 
-    // ==========================================
-    // FETCH: CONFIG
-    // ==========================================
     async function fetchConfig() {
         try {
             const response = await fetch(`${API_BASE}/api/hubs/${DEVICE_ID}/config`);
@@ -358,9 +345,6 @@
         }
     }
 
-    // ==========================================
-    // SAVE: CONFIG
-    // ==========================================
     async function saveConfig() {
         const ssid = document.getElementById('configSSID').value.trim();
         const password = document.getElementById('configPassword').value.trim();
@@ -406,9 +390,6 @@
         btn.innerHTML = '💾 Save';
     }
 
-    // ==========================================
-    // REBOOT HUB
-    // ==========================================
     async function rebootHub() {
         showToast('🔄 Rebooting hub...', 'info');
         try {
@@ -426,9 +407,6 @@
         }
     }
 
-    // ==========================================
-    // FETCH: STATUS
-    // ==========================================
     async function fetchStatus() {
         try {
             const response = await fetch(`${API_BASE}/api/hubs/${DEVICE_ID}/config`);
@@ -448,9 +426,6 @@
         }
     }
 
-    // ==========================================
-    // UPDATE: TIME & UPTIME
-    // ==========================================
     function updateTime() {
         const now = new Date();
         const time = now.toLocaleTimeString('en-US', { hour12: false });
@@ -466,15 +441,11 @@
         document.getElementById('uptime').textContent = display;
     }
 
-    // ==========================================
-    // INIT
-    // ==========================================
     fetchStatus();
     setInterval(fetchStatus, 15000);
     setInterval(updateTime, 1000);
     updateTime();
 
-    // Close modals on backdrop click
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.classList.remove('active');
