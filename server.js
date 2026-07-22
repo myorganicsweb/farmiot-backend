@@ -34,10 +34,16 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 // ==========================================
 app.use(cors({
   origin: '*',
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
+
+// Handle preflight requests
+app.options('*', cors());
 
 // ==========================================
 // AUTH MIDDLEWARE
