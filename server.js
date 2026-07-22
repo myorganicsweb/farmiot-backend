@@ -1,10 +1,9 @@
 // ==========================================
-// FARM IOT SERVER - COMPLETE WORKING VERSION
+// FARM IOT SERVER - WITH RAW BODY PARSING
 // ==========================================
 
 const express = require('express');
 const cors = require('cors');
-const bodyParser = require('body-parser');
 const { createClient } = require('@supabase/supabase-js');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
@@ -30,21 +29,42 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // ==========================================
-// MIDDLEWARE
+// MIDDLEWARE - RAW BODY PARSING
 // ==========================================
 app.use(cors({
   origin: '*',
   credentials: true
 }));
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// Parse raw body first
+app.use((req, res, next) => {
+  let data = '';
+  req.on('data', chunk => {
+    data += chunk;
+  });
+  req.on('end', () => {
+    req.rawBody = data;
+    // Try to parse JSON
+    try {
+      if (data) {
+        req.body = JSON.parse(data);
+      } else {
+        req.body = {};
+      }
+    } catch (e) {
+      req.body = {};
+    }
+    next();
+  });
+});
+
 app.use(express.static(__dirname));
 
 // Debug middleware
 app.use((req, res, next) => {
   console.log(`📥 ${req.method} ${req.url}`);
-  console.log('Body:', req.body);
+  console.log('Raw body:', req.rawBody);
+  console.log('Parsed body:', req.body);
   next();
 });
 
@@ -89,13 +109,36 @@ async function authenticate(req, res, next) {
 // AUTH ROUTES
 // ==========================================
 
-// REGISTER NEW USER
+// REGISTER NEW USER - RAW BODY
 app.post('/api/auth/register', async (req, res) => {
   console.log('📥 Registration request received');
-  console.log('📦 Body:', req.body);
+  console.log('Raw body:', req.rawBody);
+  console.log('Parsed body:', req.body);
   
   try {
-    const { email, password, name } = req.body;
+    // Try to parse body if not already parsed
+    let email, password, name;
+    
+    if (req.body && typeof req.body === 'object') {
+      email = req.body.email;
+      password = req.body.password;
+      name = req.body.name;
+    }
+    
+    // If body is empty, try to parse raw body
+    if (!email && req.rawBody) {
+      try {
+        const parsed = JSON.parse(req.rawBody);
+        email = parsed.email;
+        password = parsed.password;
+        name = parsed.name;
+      } catch (e) {
+        console.log('Failed to parse raw body');
+      }
+    }
+    
+    console.log('Email:', email);
+    console.log('Password length:', password ? password.length : 0);
     
     // Validate email
     if (!email) {
@@ -204,9 +247,23 @@ app.post('/api/auth/register', async (req, res) => {
 // EMAIL/PASSWORD LOGIN
 app.post('/api/auth/login', async (req, res) => {
   console.log('📥 Login request received');
-  console.log('📦 Body:', req.body);
+  console.log('Raw body:', req.rawBody);
+  console.log('Parsed body:', req.body);
   
-  const { email, password } = req.body;
+  let email, password;
+  
+  if (req.body && typeof req.body === 'object') {
+    email = req.body.email;
+    password = req.body.password;
+  }
+  
+  if (!email && req.rawBody) {
+    try {
+      const parsed = JSON.parse(req.rawBody);
+      email = parsed.email;
+      password = parsed.password;
+    } catch (e) {}
+  }
   
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password required' });
