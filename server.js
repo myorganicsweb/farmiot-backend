@@ -1,5 +1,5 @@
 // ==========================================
-// FARM IOT SERVER - COMPLETE WORKING VERSION
+// FARM IOT SERVER - COMPLETE FIXED VERSION
 // ==========================================
 
 const express = require('express');
@@ -30,7 +30,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // ==========================================
-// MIDDLEWARE - CRITICAL: MUST BE BEFORE ROUTES
+// MIDDLEWARE - FIXED
 // ==========================================
 app.use(cors({
   origin: '*',
@@ -39,10 +39,24 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// IMPORTANT: These MUST be before any route handlers
-app.use(express.json({ limit: '10mb' }));
+// IMPORTANT: Raw body parser for debugging
+app.use(express.json({ 
+  limit: '10mb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString();
+  }
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(__dirname));
+
+// Debug middleware - logs all requests
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('Raw body:', req.rawBody);
+  next();
+});
 
 // Handle preflight requests
 app.options('*', cors());
@@ -93,21 +107,16 @@ app.post('/api/auth/register', async (req, res) => {
   console.log('📥 Registration request received');
   console.log('Headers:', req.headers);
   console.log('Body:', req.body);
-  
-  // Log raw body for debugging
-  let rawBody = '';
-  req.on('data', chunk => {
-    rawBody += chunk;
-  });
-  req.on('end', () => {
-    console.log('Raw body:', rawBody);
-  });
+  console.log('Raw body:', req.rawBody);
   
   const { email, password, name } = req.body;
   
   // Validate input
   if (!email || !password) {
     console.log('❌ Missing email or password');
+    console.log('email:', email);
+    console.log('password:', password);
+    console.log('body:', req.body);
     return res.status(400).json({ 
       error: 'Email and password required',
       received: { email: !!email, password: !!password, body: req.body }
