@@ -15,12 +15,26 @@ const supabase = createClient(
 );
 
 // ==========================================
-// MIDDLEWARE - THIS WORKS
+// MIDDLEWARE - FIXED FOR RENDER
 // ==========================================
 app.use(cors());
-app.use(express.json());
+
+// IMPORTANT: Use raw body parser for Render
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString();
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
+
+// Debug middleware
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.url}`);
+  console.log('Body:', req.body);
+  console.log('Raw:', req.rawBody);
+  next();
+});
 
 // ==========================================
 // AUTH MIDDLEWARE
@@ -44,16 +58,45 @@ async function authenticate(req, res, next) {
 }
 
 // ==========================================
-// REGISTER - SIMPLE
+// REGISTER - WITH RAW BODY FALLBACK
 // ==========================================
 app.post('/api/auth/register', async (req, res) => {
-  console.log('📥 Register:', req.body);
+  console.log('📥 Register request received');
   
-  const { email, password } = req.body;
+  // Try to get body from multiple sources
+  let email, password;
   
-  // Validate
+  // 1. Try req.body (parsed JSON)
+  if (req.body && typeof req.body === 'object') {
+    email = req.body.email;
+    password = req.body.password;
+  }
+  
+  // 2. If empty, try raw body
+  if (!email && req.rawBody) {
+    try {
+      const parsed = JSON.parse(req.rawBody);
+      email = parsed.email;
+      password = parsed.password;
+    } catch (e) {
+      console.log('Raw parse failed');
+    }
+  }
+  
+  // 3. If still empty, try query string
+  if (!email && req.query) {
+    email = req.query.email;
+    password = req.query.password;
+  }
+  
+  console.log('Email:', email);
+  console.log('Password length:', password ? password.length : 0);
+  
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password required' });
+    return res.status(400).json({ 
+      error: 'Email and password required',
+      received: { email: !!email, password: !!password }
+    });
   }
   
   if (password.length < 6) {
@@ -115,12 +158,27 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // ==========================================
-// LOGIN - SIMPLE
+// LOGIN
 // ==========================================
 app.post('/api/auth/login', async (req, res) => {
-  console.log('📥 Login:', req.body);
+  console.log('📥 Login request received');
   
-  const { email, password } = req.body;
+  let email, password;
+  
+  if (req.body && typeof req.body === 'object') {
+    email = req.body.email;
+    password = req.body.password;
+  }
+  
+  if (!email && req.rawBody) {
+    try {
+      const parsed = JSON.parse(req.rawBody);
+      email = parsed.email;
+      password = parsed.password;
+    } catch (e) {}
+  }
+  
+  console.log('Email:', email);
   
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password required' });
@@ -136,7 +194,6 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    // Get or create profile
     let { data: profile } = await supabase
       .from('profiles')
       .select('*')
@@ -191,94 +248,369 @@ app.post('/api/auth/logout', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// HUBS API (SIMPLE)
+// HUB API (ALL ENDPOINTS)
 // ==========================================
+
+// Get all hubs for user
 app.get('/api/hubs', authenticate, async (req, res) => {
-  const { data } = await supabase
-    .from('hubs')
-    .select('*')
-    .eq('user_id', req.user.id);
-  res.json(data || []);
+  try {
+    const { data, error } = await supabase
+      .from('hubs')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
+// Get single hub
+app.get('/api/hubs/:hubId', authenticate, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('hubs')
+      .select('*')
+      .eq('hub_id', req.params.hubId)
+      .eq('user_id', req.user.id)
+      .single();
+    
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete hub
+app.delete('/api/hubs/:hubId', authenticate, async (req, res) => {
+  try {
+    await supabase
+      .from('hubs')
+      .delete()
+      .eq('hub_id', req.params.hubId)
+      .eq('user_id', req.user.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get hub config
 app.get('/api/hubs/:hubId/config', authenticate, async (req, res) => {
-  const { data } = await supabase
-    .from('hub_configs')
-    .select('*')
-    .eq('hub_id', req.params.hubId)
-    .single();
-  res.json(data || {});
+  try {
+    const { data, error } = await supabase
+      .from('hub_configs')
+      .select('*')
+      .eq('hub_id', req.params.hubId)
+      .single();
+    
+    if (error) throw error;
+    
+    const { data: hub } = await supabase
+      .from('hubs')
+      .select('ip_address, status')
+      .eq('hub_id', req.params.hubId)
+      .single();
+    
+    res.json({
+      ...data,
+      ip_address: hub?.ip_address || null,
+      status: hub?.status || 'offline'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
+// Set hub config
 app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
+  const { hubId } = req.params;
   const { ssid, password, mqtt_server, mqtt_port, device_name } = req.body;
   
-  await supabase
-    .from('hub_configs')
-    .update({
-      ssid,
-      password: password || '',
-      mqtt_server: mqtt_server || 'broker.hivemq.com',
-      mqtt_port: mqtt_port || 1883,
-      device_name: device_name || req.params.hubId,
-      updated_at: new Date().toISOString()
-    })
-    .eq('hub_id', req.params.hubId);
+  if (!ssid) {
+    return res.status(400).json({ error: 'SSID is required' });
+  }
   
-  res.json({ success: true });
+  try {
+    await supabase
+      .from('hub_configs')
+      .update({
+        ssid,
+        password: password || '',
+        mqtt_server: mqtt_server || 'broker.hivemq.com',
+        mqtt_port: mqtt_port || 1883,
+        device_name: device_name || hubId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('hub_id', hubId);
+    
+    await supabase
+      .from('hubs')
+      .update({
+        name: device_name || hubId,
+        status: 'configuring',
+        last_seen: new Date().toISOString()
+      })
+      .eq('hub_id', hubId);
+    
+    const { data: hub } = await supabase
+      .from('hubs')
+      .select('ip_address, status')
+      .eq('hub_id', hubId)
+      .single();
+    
+    let esp32Response = null;
+    if (hub?.ip_address && hub?.status === 'online') {
+      try {
+        const axios = require('axios');
+        const response = await axios.post(
+          `http://${hub.ip_address}/api/config`,
+          new URLSearchParams({
+            ssid,
+            password: password || '',
+            mqtt: mqtt_server || 'broker.hivemq.com',
+            port: String(mqtt_port || 1883)
+          }),
+          {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            timeout: 5000
+          }
+        );
+        esp32Response = response.data;
+      } catch (error) {
+        esp32Response = { error: 'ESP32 not reachable' };
+      }
+    }
+    
+    res.json({
+      success: true,
+      saved_to_supabase: true,
+      pushed_to_esp32: esp32Response
+    });
+    
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
+// Register hub (called by ESP32)
 app.post('/api/hubs/register', async (req, res) => {
-  const { hub_id, ip_address, status, device_name } = req.body;
+  const { hub_id, ip_address, mac_address, status, device_name } = req.body;
   
   if (!hub_id) {
     return res.status(400).json({ error: 'hub_id required' });
   }
   
-  const { data: existing } = await supabase
-    .from('hubs')
-    .select('hub_id')
-    .eq('hub_id', hub_id)
-    .single();
-  
-  if (!existing) {
-    await supabase.from('hubs').insert({
-      hub_id,
-      name: device_name || hub_id,
-      status: status || 'discovering',
-      ip_address: ip_address || null,
-      last_seen: new Date().toISOString()
-    });
+  try {
+    const { data: existing } = await supabase
+      .from('hubs')
+      .select('hub_id, user_id')
+      .eq('hub_id', hub_id)
+      .single();
     
-    await supabase.from('hub_configs').insert({
-      hub_id,
-      ssid: '',
-      password: '',
-      mqtt_server: 'broker.hivemq.com',
-      mqtt_port: 1883,
-      device_name: device_name || hub_id
-    });
+    if (existing && existing.user_id) {
+      await supabase
+        .from('hubs')
+        .update({
+          status: status || 'online',
+          ip_address: ip_address || null,
+          last_seen: new Date().toISOString()
+        })
+        .eq('hub_id', hub_id);
+      
+      return res.json({ success: true, hub_id });
+    }
+    
+    if (existing) {
+      await supabase
+        .from('hubs')
+        .update({
+          user_id: null,
+          status: status || 'online',
+          ip_address: ip_address || null,
+          name: device_name || hub_id,
+          last_seen: new Date().toISOString()
+        })
+        .eq('hub_id', hub_id);
+    } else {
+      await supabase
+        .from('hubs')
+        .insert({
+          hub_id,
+          user_id: null,
+          name: device_name || hub_id,
+          status: status || 'discovering',
+          ip_address: ip_address || null,
+          last_seen: new Date().toISOString()
+        });
+      
+      await supabase
+        .from('hub_configs')
+        .insert({
+          hub_id,
+          ssid: '',
+          password: '',
+          mqtt_server: 'broker.hivemq.com',
+          mqtt_port: 1883,
+          device_name: device_name || hub_id
+        });
+    }
+    
+    res.json({ success: true, hub_id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reboot hub
+app.post('/api/hubs/:hubId/reboot', authenticate, async (req, res) => {
+  try {
+    const { data: hub } = await supabase
+      .from('hubs')
+      .select('ip_address')
+      .eq('hub_id', req.params.hubId)
+      .eq('user_id', req.user.id)
+      .single();
+    
+    if (!hub) {
+      return res.status(404).json({ error: 'Hub not found' });
+    }
+    
+    await supabase
+      .from('hubs')
+      .update({ 
+        status: 'discovering',
+        last_seen: new Date().toISOString()
+      })
+      .eq('hub_id', req.params.hubId);
+    
+    if (hub.ip_address) {
+      try {
+        const axios = require('axios');
+        await axios.post(`http://${hub.ip_address}/api/reboot`);
+      } catch (error) {}
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Discovery - get hubs in discovery mode
+app.get('/api/discover', authenticate, async (req, res) => {
+  try {
+    const cutoffTime = new Date(Date.now() - 120000).toISOString();
+    
+    const { data, error } = await supabase
+      .from('hubs')
+      .select('*')
+      .or(`status.eq.discovering,status.eq.offline,user_id.is.null`)
+      .gte('last_seen', cutoffTime)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    const filtered = (data || []).filter(h => h.user_id !== req.user.id);
+    res.json(filtered);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// DEVICE (SENSOR) API
+// ==========================================
+
+// Register device (sensor)
+app.post('/api/devices/register', async (req, res) => {
+  const { hub_id, device_id } = req.body;
+  
+  if (!hub_id || !device_id) {
+    return res.status(400).json({ error: 'hub_id and device_id required' });
   }
   
-  res.json({ success: true, hub_id });
+  try {
+    await supabase
+      .from('devices')
+      .upsert({
+        hub_id,
+        device_id,
+        name: device_id,
+        status: 'online',
+        last_seen: new Date().toISOString()
+      }, { onConflict: 'hub_id, device_id' });
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.post('/api/hubs/:hubId/reboot', authenticate, async (req, res) => {
-  await supabase
-    .from('hubs')
-    .update({ status: 'discovering', last_seen: new Date().toISOString() })
-    .eq('hub_id', req.params.hubId);
-  res.json({ success: true });
+// Get devices for a hub
+app.get('/api/hubs/:hubId/devices', authenticate, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('devices')
+      .select('*')
+      .eq('hub_id', req.params.hubId);
+    
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.get('/api/discover', authenticate, async (req, res) => {
-  const cutoff = new Date(Date.now() - 120000).toISOString();
-  const { data } = await supabase
-    .from('hubs')
-    .select('*')
-    .or(`status.eq.discovering,status.eq.offline,user_id.is.null`)
-    .gte('last_seen', cutoff);
-  res.json(data || []);
+// ==========================================
+// SOIL READINGS API
+// ==========================================
+
+// Add soil reading
+app.post('/api/soil', async (req, res) => {
+  const { device_id, value } = req.body;
+  
+  if (!device_id || value === undefined) {
+    return res.status(400).json({ error: 'device_id and value required' });
+  }
+  
+  try {
+    await supabase
+      .from('soil_readings')
+      .insert({
+        device_id,
+        value: parseInt(value),
+        timestamp: new Date().toISOString()
+      });
+    
+    await supabase
+      .from('devices')
+      .update({ latest_soil: parseInt(value), last_seen: new Date().toISOString() })
+      .eq('device_id', device_id);
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get latest soil reading
+app.get('/api/soil/latest', authenticate, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('soil_readings')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .limit(1);
+    
+    if (error) throw error;
+    res.json(data?.[0] || {});
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ==========================================
@@ -292,5 +624,5 @@ app.get('/', (req, res) => {
 // START
 // ==========================================
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`✅ FarmIOT Server running on port ${PORT}`);
 });
