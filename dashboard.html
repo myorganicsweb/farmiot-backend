@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FarmIOT - Dashboard</title>
+    <!-- Google Identity Services SDK -->
+    <script src="https://accounts.google.com/gsi/client"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -14,8 +16,6 @@
             padding: 20px;
         }
         .container { max-width: 900px; margin: 0 auto; }
-        
-        /* Header */
         .header {
             display: flex;
             justify-content: space-between;
@@ -32,37 +32,19 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .header-left .subtitle {
-            color: #6b7280;
-            font-size: 14px;
-        }
-        .header-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
+        .header-left .subtitle { color: #6b7280; font-size: 14px; }
+        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
         
-        /* Auth Section */
         .auth-section {
             display: flex;
             flex-direction: column;
             gap: 8px;
             align-items: flex-end;
         }
-        .auth-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .user-info {
-            color: #6b7280;
-            font-size: 14px;
-        }
+        .auth-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .user-info { color: #6b7280; font-size: 14px; }
         .user-info strong { color: #e5e7eb; }
         
-        /* Auth Toggle */
         .auth-toggle {
             display: flex;
             gap: 4px;
@@ -89,7 +71,6 @@
         }
         .auth-toggle button:hover { color: #e5e7eb; }
         
-        /* Auth Forms */
         .auth-forms {
             display: flex;
             gap: 8px;
@@ -110,25 +91,62 @@
             font-family: inherit;
             min-width: 140px;
         }
-        .auth-forms input:focus {
-            outline: none;
-            border-color: #4ade80;
-        }
-        .auth-forms input::placeholder {
-            color: #4b5563;
-        }
-        .auth-divider {
-            color: #374151;
-            font-size: 12px;
-            padding: 0 4px;
-        }
-        .auth-hint {
-            font-size: 12px;
-            color: #4b5563;
-            margin-top: 4px;
-        }
+        .auth-forms input:focus { outline: none; border-color: #4ade80; }
+        .auth-forms input::placeholder { color: #4b5563; }
+        .auth-divider { color: #374151; font-size: 12px; padding: 0 4px; }
+        .auth-hint { font-size: 12px; color: #4b5563; margin-top: 4px; }
         
-        /* Tabs */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4ade80, #22d3ee);
+            color: #0a0e17;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(74,222,128,0.2); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: #9ca3af;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.08); }
+        .btn-success {
+            background: rgba(74,222,128,0.1);
+            color: #4ade80;
+            border: 1px solid rgba(74,222,128,0.15);
+        }
+        .btn-success:hover { background: rgba(74,222,128,0.2); }
+        .btn-danger {
+            background: rgba(248,113,113,0.1);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.15);
+        }
+        .btn-danger:hover { background: rgba(248,113,113,0.2); }
+        .btn-google {
+            background: #ffffff;
+            color: #1a1a2e;
+            padding: 8px 20px;
+        }
+        .btn-google:hover { background: #e8e8e8; transform: translateY(-2px); }
+        .btn-logout {
+            background: rgba(248,113,113,0.1);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.15);
+            padding: 4px 12px;
+            font-size: 12px;
+        }
+        .btn-logout:hover { background: rgba(248,113,113,0.2); }
+        
         .tabs {
             display: flex;
             gap: 4px;
@@ -168,7 +186,6 @@
         }
         .tab .badge.online { background: rgba(74,222,128,0.15); color: #4ade80; }
         
-        /* Cards */
         .card {
             background: rgba(17, 24, 39, 0.9);
             padding: 20px;
@@ -192,12 +209,8 @@
             align-items: center;
             gap: 8px;
         }
-        .card-subtitle {
-            font-size: 13px;
-            color: #6b7280;
-        }
+        .card-subtitle { font-size: 13px; color: #6b7280; }
         
-        /* Status Badges */
         .badge-status {
             display: inline-flex;
             align-items: center;
@@ -237,81 +250,12 @@
             50% { opacity: 0.4; }
         }
         
-        /* Buttons */
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-family: inherit;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #4ade80, #22d3ee);
-            color: #0a0e17;
-        }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(74,222,128,0.2); }
-        .btn-secondary {
-            background: rgba(255,255,255,0.05);
-            color: #9ca3af;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .btn-secondary:hover { background: rgba(255,255,255,0.08); }
-        .btn-success {
-            background: rgba(74,222,128,0.1);
-            color: #4ade80;
-            border: 1px solid rgba(74,222,128,0.15);
-        }
-        .btn-success:hover { background: rgba(74,222,128,0.2); }
-        .btn-danger {
-            background: rgba(248,113,113,0.1);
-            color: #f87171;
-            border: 1px solid rgba(248,113,113,0.15);
-        }
-        .btn-danger:hover { background: rgba(248,113,113,0.2); }
-        .btn-icon {
-            padding: 6px 10px;
-            font-size: 16px;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 8px;
-            color: #6b7280;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .btn-icon:hover {
-            background: rgba(255,255,255,0.08);
-            color: #e5e7eb;
-        }
-        .btn-google {
-            background: #ffffff;
-            color: #1a1a2e;
-            padding: 8px 20px;
-        }
-        .btn-google:hover { background: #e8e8e8; transform: translateY(-2px); }
-        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-        .btn-logout {
-            background: rgba(248,113,113,0.1);
-            color: #f87171;
-            border: 1px solid rgba(248,113,113,0.15);
-            padding: 4px 12px;
-            font-size: 12px;
-        }
-        .btn-logout:hover { background: rgba(248,113,113,0.2); }
-        
-        /* Discovery Card */
         .discovery-card {
             background: rgba(251,191,36,0.03);
             border: 1px solid rgba(251,191,36,0.1);
         }
         .discovery-card:hover { border-color: rgba(251,191,36,0.2); }
         
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -354,10 +298,7 @@
             font-size: 14px;
             font-family: inherit;
         }
-        .modal-content input:focus {
-            outline: none;
-            border-color: #4ade80;
-        }
+        .modal-content input:focus { outline: none; border-color: #4ade80; }
         .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
         .modal-actions .btn { flex: 1; justify-content: center; }
         .modal .device-info {
@@ -370,7 +311,6 @@
         }
         .modal .device-info strong { color: #e5e7eb; }
         
-        /* Toast */
         .toast {
             position: fixed;
             bottom: 24px;
@@ -425,10 +365,15 @@
             margin-bottom: 12px;
         }
         
-        .auth-hint {
-            font-size: 12px;
-            color: #4b5563;
-            margin-top: 4px;
+        .g_id_signin {
+            display: flex !important;
+            align-items: center;
+        }
+        .g_id_signin .gsi-material-button {
+            min-height: 36px !important;
+            min-width: 120px !important;
+            padding: 0 16px !important;
+            border-radius: 10px !important;
         }
         
         @media (max-width: 600px) {
@@ -451,7 +396,6 @@
 <body>
 
 <div class="container">
-    <!-- Header -->
     <div class="header">
         <div class="header-left">
             <h1>🚜 FarmIOT</h1>
@@ -459,21 +403,17 @@
         </div>
         <div class="header-actions">
             <div class="auth-section" id="authSection">
-                <!-- Logged Out State -->
                 <div id="loggedOutState">
                     <div class="auth-row">
-                        <!-- Auth Mode Toggle -->
                         <div class="auth-toggle">
                             <button class="active" id="loginModeBtn" onclick="setAuthMode('login')">Sign In</button>
                             <button id="registerModeBtn" onclick="setAuthMode('register')">Register</button>
                         </div>
-                        <button class="btn btn-google" onclick="loginWithGoogle()">
-                            🔐 Google SSO
-                        </button>
+                        <div id="googleBtn"></div>
                         <span class="auth-divider">or</span>
                         <div class="auth-forms" id="authForms">
                             <input type="email" id="emailInput" placeholder="Email" autocomplete="email">
-                            <input type="password" id="passwordInput" placeholder="Password (min 6 chars)" autocomplete="current-password">
+                            <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
                             <input type="password" id="confirmPasswordInput" placeholder="Confirm Password" style="display:none;" autocomplete="new-password">
                             <button class="btn btn-primary" id="authActionBtn" onclick="handleAuthAction()">Sign In</button>
                         </div>
@@ -481,7 +421,6 @@
                     <div class="auth-hint" id="authHint">💡 Already have an account? Sign in above. New user? Switch to Register.</div>
                 </div>
                 
-                <!-- Logged In State -->
                 <div id="loggedInState" style="display:none;">
                     <div class="auth-row">
                         <span class="user-info">👋 <strong id="userName">User</strong></span>
@@ -493,7 +432,6 @@
         </div>
     </div>
 
-    <!-- Tabs -->
     <div class="tabs">
         <button class="tab active" id="tabDevices" onclick="switchTab('devices')">
             📡 My Devices <span class="badge online" id="deviceCount">0</span>
@@ -503,7 +441,6 @@
         </button>
     </div>
 
-    <!-- Tab Content: My Devices -->
     <div id="devicesTab">
         <div id="devicesList">
             <div class="loading-overlay">
@@ -513,7 +450,6 @@
         </div>
     </div>
 
-    <!-- Tab Content: Discovery -->
     <div id="discoveryTab" style="display:none;">
         <div id="discoveryList">
             <div class="empty-state">
@@ -559,39 +495,81 @@
     </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
-
-<!-- Supabase JS SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
     // ==========================================
-    // SUPABASE CONFIG
-    // ==========================================
-    const SUPABASE_URL = 'https://adxaifphothopomwutcg.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkeGFpZnBob3Rob3BvbXd1dGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxOTM4NTEsImV4cCI6MjA5Nzc2OTg1MX0.uMbkFZP4kPnjJamcaVwgMhcgDbJkkDg1JYbz0HVDfYk';
-    
-    // Create Supabase client
-    let supabaseClient;
-    if (typeof window.supabaseClient === 'undefined') {
-        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        window.supabaseClient = supabaseClient;
-    } else {
-        supabaseClient = window.supabaseClient;
-    }
-
-    // ==========================================
-    // GLOBALS
+    // CONFIG - NO KEYS! All handled by server
     // ==========================================
     const API_BASE = window.location.origin;
+    let token = localStorage.getItem('farmiot_token') || null;
+    let user = null;
+    let isLoggedIn = false;
+    let authMode = 'login';
     let discoveredDevices = [];
     let configuredDevices = [];
     let currentConfigDevice = null;
     let isReconfigure = false;
-    let isLoggedIn = false;
-    let currentUser = null;
-    let authMode = 'login'; // 'login' or 'register'
+
+    // ==========================================
+    // GOOGLE SSO - Using Google Identity Services
+    // ==========================================
+    function initGoogleSSO() {
+        if (typeof google !== 'undefined') {
+            google.accounts.id.initialize({
+                client_id: '472048491207-hofjvaisdj9vnaglutb9kd23ci948jc5.apps.googleusercontent.com',
+                callback: handleGoogleCredential,
+                cancel_on_tap_outside: false,
+                auto_select: true
+            });
+            google.accounts.id.renderButton(
+                document.getElementById('googleBtn'),
+                {
+                    theme: 'outline',
+                    size: 'medium',
+                    text: 'signin_with',
+                    shape: 'pill',
+                    logo_alignment: 'left'
+                }
+            );
+            google.accounts.id.prompt();
+        } else {
+            console.log('Google SDK not loaded yet');
+            setTimeout(initGoogleSSO, 500);
+        }
+    }
+
+    // Google token callback - sends to server
+    async function handleGoogleCredential(response) {
+        const id_token = response.credential;
+        
+        try {
+            showToast('🔄 Verifying Google sign-in...', 'info');
+            
+            const res = await fetch(`${API_BASE}/api/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_token })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                token = data.token;
+                user = data.user;
+                localStorage.setItem('farmiot_token', token);
+                isLoggedIn = true;
+                updateAuthUI(data.user);
+                showToast('✅ Welcome, ' + data.user.name + '!', 'success');
+                loadConfiguredDevices();
+                scanForHubs();
+            } else {
+                showToast('❌ ' + (data.error || 'Login failed'), 'error');
+            }
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        }
+    }
 
     // ==========================================
     // AUTH UI TOGGLE
@@ -620,25 +598,8 @@
     }
 
     // ==========================================
-    // AUTH FUNCTIONS
+    // EMAIL/PASSWORD AUTH (via server)
     // ==========================================
-
-    // Google SSO
-    async function loginWithGoogle() {
-        try {
-            const { data, error } = await supabaseClient.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: window.location.origin
-                }
-            });
-            if (error) throw error;
-        } catch (error) {
-            showToast('❌ Login failed: ' + error.message, 'error');
-        }
-    }
-
-    // Handle Register or Login based on mode
     async function handleAuthAction() {
         const email = document.getElementById('emailInput').value.trim();
         const password = document.getElementById('passwordInput').value.trim();
@@ -665,72 +626,63 @@
         }
     }
 
-    // Register New User
     async function registerUser(email, password) {
         try {
             showToast('🔄 Creating account...', 'info');
             
-            const { data, error } = await supabaseClient.auth.signUp({
-                email: email,
-                password: password,
-                options: {
-                    data: {
-                        full_name: email.split('@')[0]
-                    }
-                }
+            const res = await fetch(`${API_BASE}/api/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
             });
             
-            if (error) {
-                if (error.message.includes('User already registered')) {
-                    showToast('❌ Account already exists. Please sign in instead.', 'error');
-                } else {
-                    throw error;
-                }
-                return;
-            }
+            const data = await res.json();
             
-            if (data?.user) {
-                showToast('✅ Account created successfully! You are now signed in.', 'success');
+            if (data.success) {
+                token = data.token;
+                user = data.user;
+                localStorage.setItem('farmiot_token', token);
+                isLoggedIn = true;
                 updateAuthUI(data.user);
+                showToast('✅ Account created! Welcome!', 'success');
                 loadConfiguredDevices();
                 scanForHubs();
                 clearAuthForm();
+            } else {
+                showToast('❌ ' + (data.error || 'Registration failed'), 'error');
             }
         } catch (error) {
-            console.error('Registration error:', error);
-            showToast('❌ Registration failed: ' + error.message, 'error');
+            showToast('❌ Error: ' + error.message, 'error');
         }
     }
 
-    // Login Existing User
     async function loginUser(email, password) {
         try {
             showToast('🔄 Signing in...', 'info');
             
-            const { data, error } = await supabaseClient.auth.signInWithPassword({
-                email: email,
-                password: password
+            const res = await fetch(`${API_BASE}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
             });
             
-            if (error) {
-                if (error.message.includes('Invalid login credentials')) {
-                    showToast('❌ Invalid email or password. Please try again.', 'error');
-                } else {
-                    throw error;
-                }
-                return;
-            }
+            const data = await res.json();
             
-            if (data?.user) {
-                showToast('✅ Welcome back, ' + (data.user.user_metadata?.full_name || data.user.email) + '!', 'success');
+            if (data.success) {
+                token = data.token;
+                user = data.user;
+                localStorage.setItem('farmiot_token', token);
+                isLoggedIn = true;
                 updateAuthUI(data.user);
+                showToast('✅ Welcome back, ' + data.user.name + '!', 'success');
                 loadConfiguredDevices();
                 scanForHubs();
                 clearAuthForm();
+            } else {
+                showToast('❌ ' + (data.error || 'Login failed'), 'error');
             }
         } catch (error) {
-            console.error('Login error:', error);
-            showToast('❌ Login failed: ' + error.message, 'error');
+            showToast('❌ Error: ' + error.message, 'error');
         }
     }
 
@@ -742,138 +694,97 @@
 
     async function logout() {
         try {
-            await supabaseClient.auth.signOut();
-            localStorage.removeItem('supabase_token');
-            isLoggedIn = false;
-            currentUser = null;
-            updateAuthUI(null);
-            showToast('✅ Logged out', 'success');
-            document.getElementById('devicesList').innerHTML = `
-                <div class="empty-state">
-                    <div class="icon">🔐</div>
-                    <div class="text">Please sign in to view your devices</div>
-                    <div class="sub">Sign in with Google or use email/password</div>
-                </div>
-            `;
-        } catch (error) {
-            showToast('❌ Logout failed: ' + error.message, 'error');
-        }
+            await fetch(`${API_BASE}/api/auth/logout`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        } catch (e) {}
+        
+        token = null;
+        user = null;
+        isLoggedIn = false;
+        localStorage.removeItem('farmiot_token');
+        updateAuthUI(null);
+        showToast('✅ Logged out', 'success');
     }
 
-    function updateAuthUI(user) {
+    function updateAuthUI(userData) {
         const loggedOutState = document.getElementById('loggedOutState');
         const loggedInState = document.getElementById('loggedInState');
         const userName = document.getElementById('userName');
         
-        if (user) {
+        if (userData) {
             loggedOutState.style.display = 'none';
             loggedInState.style.display = 'block';
-            userName.textContent = user.user_metadata?.full_name || user.email || 'User';
+            userName.textContent = userData.name || userData.email || 'User';
             isLoggedIn = true;
-            currentUser = user;
-            localStorage.setItem('supabase_token', user.access_token || '');
         } else {
             loggedOutState.style.display = 'block';
             loggedInState.style.display = 'none';
             isLoggedIn = false;
-            currentUser = null;
-            localStorage.removeItem('supabase_token');
-            setAuthMode('login'); // Reset to login mode
+            setAuthMode('login');
         }
     }
-
-    async function checkSession() {
-        try {
-            const { data: { session }, error } = await supabaseClient.auth.getSession();
-            if (error) throw error;
-            
-            if (session?.user) {
-                updateAuthUI(session.user);
-                await loadConfiguredDevices();
-                await scanForHubs();
-            } else {
-                updateAuthUI(null);
-                document.getElementById('devicesList').innerHTML = `
-                    <div class="empty-state">
-                        <div class="icon">🔐</div>
-                        <div class="text">Please sign in to view your devices</div>
-                        <div class="sub">Sign in with Google or use email/password</div>
-                    </div>
-                `;
-            }
-        } catch (error) {
-            console.error('Session check failed:', error);
-            updateAuthUI(null);
-        }
-    }
-
-    // Listen for auth changes
-    supabaseClient.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-            updateAuthUI(session.user);
-            showToast('✅ Welcome, ' + (session.user.user_metadata?.full_name || session.user.email) + '!', 'success');
-            loadConfiguredDevices();
-            scanForHubs();
-        } else if (event === 'SIGNED_OUT') {
-            updateAuthUI(null);
-        }
-    });
-
-    // Enter key support for auth form
-    document.getElementById('passwordInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            if (authMode === 'register') {
-                document.getElementById('confirmPasswordInput').focus();
-            } else {
-                handleAuthAction();
-            }
-        }
-    });
-    document.getElementById('confirmPasswordInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            handleAuthAction();
-        }
-    });
-    document.getElementById('emailInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            document.getElementById('passwordInput').focus();
-        }
-    });
 
     // ==========================================
     // FETCH WITH AUTH
     // ==========================================
     async function fetchWithAuth(url, options = {}) {
-        const token = localStorage.getItem('supabase_token');
         const headers = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             ...options.headers
         };
         
+        const response = await fetch(url, { ...options, headers });
+        
+        if (response.status === 401) {
+            token = null;
+            localStorage.removeItem('farmiot_token');
+            isLoggedIn = false;
+            updateAuthUI(null);
+            showToast('⚠️ Session expired. Please sign in again.', 'warning');
+            throw new Error('Unauthorized');
+        }
+        
+        return response;
+    }
+
+    // ==========================================
+    // CHECK SESSION
+    // ==========================================
+    async function checkSession() {
+        if (!token) {
+            updateAuthUI(null);
+            return;
+        }
+        
         try {
-            const response = await fetch(url, { ...options, headers });
+            const res = await fetch(`${API_BASE}/api/auth/verify`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             
-            if (response.status === 401) {
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                if (session?.access_token) {
-                    localStorage.setItem('supabase_token', session.access_token);
-                    headers['Authorization'] = `Bearer ${session.access_token}`;
-                    const retryResponse = await fetch(url, { ...options, headers });
-                    if (retryResponse.ok) return retryResponse;
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    user = data.user;
+                    isLoggedIn = true;
+                    updateAuthUI(data.user);
+                    loadConfiguredDevices();
+                    scanForHubs();
+                    return;
                 }
-                showToast('⚠️ Please sign in again', 'warning');
-                await supabaseClient.auth.signOut();
-                localStorage.removeItem('supabase_token');
-                updateAuthUI(null);
-                throw new Error('Unauthorized');
             }
             
-            return response;
+            // Token invalid
+            token = null;
+            localStorage.removeItem('farmiot_token');
+            updateAuthUI(null);
         } catch (error) {
-            if (error.message === 'Unauthorized') throw error;
-            console.error('Fetch error:', error);
-            throw error;
+            console.error('Session check error:', error);
+            token = null;
+            localStorage.removeItem('farmiot_token');
+            updateAuthUI(null);
         }
     }
 
@@ -1224,6 +1135,29 @@
     }
 
     // ==========================================
+    // ENTER KEY SUPPORT
+    // ==========================================
+    document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            if (authMode === 'register') {
+                document.getElementById('confirmPasswordInput').focus();
+            } else {
+                handleAuthAction();
+            }
+        }
+    });
+    document.getElementById('confirmPasswordInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleAuthAction();
+        }
+    });
+    document.getElementById('emailInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('passwordInput').focus();
+        }
+    });
+
+    // ==========================================
     // UPDATE TIME
     // ==========================================
     function updateTime() {
@@ -1234,6 +1168,11 @@
     // ==========================================
     // INIT
     // ==========================================
+    // Initialize Google SSO
+    window.onload = function() {
+        initGoogleSSO();
+    };
+    
     checkSession();
     updateTime();
     setInterval(updateTime, 1000);
@@ -1241,7 +1180,6 @@
         if (isLoggedIn) loadConfiguredDevices();
     }, 30000);
 
-    // Auto-scan discovery tab when switching to it
     document.getElementById('tabDiscovery').addEventListener('click', () => {
         if (isLoggedIn) {
             setTimeout(scanForHubs, 300);

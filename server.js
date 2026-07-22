@@ -1,39 +1,46 @@
-// ==========================================
-// FARM IOT SERVER
-// ESP32 ONLY TALKS TO THIS SERVER
-// Server handles all Supabase communication
-// ==========================================
+// server.js - Complete with Auth Routes
 
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const axios = require('axios');
+const { OAuth2Client } = require('google-auth-library');
 
 const app = express();
 
 // ==========================================
-// SUPABASE CONFIG - FROM ENVIRONMENT VARIABLES
+// SUPABASE CONFIG (SERVER ONLY)
 // ==========================================
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('❌ Missing Supabase credentials!');
-  console.error('   Set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables');
   process.exit(1);
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ==========================================
+// GOOGLE OAuth CONFIG (SERVER ONLY)
+// ==========================================
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET
+);
+
+// ==========================================
 // MIDDLEWARE
 // ==========================================
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.static(__dirname));
 
 // ==========================================
-// AUTH MIDDLEWARE
+// AUTH MIDDLEWARE (for protected routes)
 // ==========================================
 async function authenticate(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
@@ -55,10 +62,302 @@ async function authenticate(req, res, next) {
 }
 
 // ==========================================
-// API: HUBS (GET all hubs for user)
+// AUTH ROUTES
 // ==========================================
 
-// GET /api/hubs - Get all hubs for the authenticated user
+// Google SSO - Server handles token verification
+app.post('/api/auth/google', async (req, res) => {
+  const { id_token } = req.body;
+  
+  if (!id_token) {
+    return res.status(400).json({ error: 'id_token required' });
+  }
+  
+  try {
+    // Verify Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: id_token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    
+    const payload = ticket.getPayload();
+    const { sub: google_id, email, name, picture } = payload;
+    
+    // Check if user exists in Supabase
+    let { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('google_id', google_id)
+      .single();
+    
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      throw fetchError;
+    }
+    
+    let user;
+    
+    if (!existingUser) {
+      // Create new user
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert({
+          google_id: google_id,
+          email: email,
+          name: name || email.split('@')[0],
+          picture: picture || null
+        })
+        .select()
+        .single();
+      
+      if (createError) throw createError;
+      user = newUser;
+    } else {
+      // Update existing user
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update({
+          name: name || existingUser.name,
+          picture: picture || existingUser.picture,
+          last_login: new Date().toISOString()
+        })
+        .eq('google_id', google_id)
+        .select()
+        .single();
+      
+      if (updateError) throw updateError;
+      user = updatedUser;
+    }
+    
+    // Create a session token (JWT)
+    const jwt = require('jsonwebtoken');
+    const sessionToken = jwt.sign(
+      { 
+        user_id: user.id,
+        email: user.email,
+        google_id: user.google_id
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+    
+    res.json({
+      success: true,
+      token: sessionToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture
+      }
+    });
+    
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Email/Password Login
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+  
+  try {
+    // Check if user exists in our users table
+    let { data: user, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+    
+    // Try Supabase auth if user doesn't exist in our table
+    if (!user) {
+      const { data: authUser, error: authError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+      
+      if (authError) {
+        // Try to create user if doesn't exist
+        if (authError.message.includes('Invalid login credentials')) {
+          const { data: newAuthUser, error: signUpError } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+              data: { full_name: email.split('@')[0] }
+            }
+          });
+          
+          if (signUpError) throw signUpError;
+          
+          // Create user in our users table
+          const { data: newUser, error: createError } = await supabase
+            .from('users')
+            .insert({
+              google_id: null,
+              email: email,
+              name: email.split('@')[0],
+              password_hash: 'managed_by_supabase'
+            })
+            .select()
+            .single();
+          
+          if (createError) throw createError;
+          user = newUser;
+        } else {
+          throw authError;
+        }
+      } else {
+        // User exists in Supabase auth but not in our table
+        const { data: newUser, error: createError } = await supabase
+          .from('users')
+          .insert({
+            google_id: null,
+            email: email,
+            name: authUser.user.user_metadata?.full_name || email.split('@')[0],
+            password_hash: 'managed_by_supabase'
+          })
+          .select()
+          .single();
+        
+        if (createError) throw createError;
+        user = newUser;
+      }
+    }
+    
+    // Create session token
+    const jwt = require('jsonwebtoken');
+    const sessionToken = jwt.sign(
+      { 
+        user_id: user.id,
+        email: user.email
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+    
+    res.json({
+      success: true,
+      token: sessionToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    });
+    
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Register new user
+app.post('/api/auth/register', async (req, res) => {
+  const { email, password, name } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+  
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  }
+  
+  try {
+    // Check if user already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', email)
+      .single();
+    
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+    
+    // Create user in Supabase Auth
+    const { data: authUser, error: signUpError } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: {
+        data: { full_name: name || email.split('@')[0] }
+      }
+    });
+    
+    if (signUpError) throw signUpError;
+    
+    // Create user in our users table
+    const { data: newUser, error: createError } = await supabase
+      .from('users')
+      .insert({
+        google_id: null,
+        email: email,
+        name: name || email.split('@')[0],
+        password_hash: 'managed_by_supabase'
+      })
+      .select()
+      .single();
+    
+    if (createError) throw createError;
+    
+    // Create session token
+    const jwt = require('jsonwebtoken');
+    const sessionToken = jwt.sign(
+      { 
+        user_id: newUser.id,
+        email: newUser.email
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+    
+    res.json({
+      success: true,
+      token: sessionToken,
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name
+      }
+    });
+    
+  } catch (error) {
+    console.error('Register error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Verify token
+app.get('/api/auth/verify', authenticate, async (req, res) => {
+  res.json({
+    success: true,
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      name: req.user.user_metadata?.full_name || req.user.email
+    }
+  });
+});
+
+// Logout
+app.post('/api/auth/logout', authenticate, async (req, res) => {
+  try {
+    await supabase.auth.signOut();
+    res.json({ success: true, message: 'Logged out' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// API: HUBS (Protected)
+// ==========================================
+
+// Get all hubs for authenticated user
 app.get('/api/hubs', authenticate, async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -74,7 +373,7 @@ app.get('/api/hubs', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/hubs/:hubId - Get single hub
+// Get single hub
 app.get('/api/hubs/:hubId', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
@@ -88,51 +387,31 @@ app.get('/api/hubs/:hubId', authenticate, async (req, res) => {
     
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Hub not found' });
-    
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// DELETE /api/hubs/:hubId - Remove hub from user's account
+// Delete hub
 app.delete('/api/hubs/:hubId', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
   try {
-    // Check if hub belongs to user
-    const { data: hub, error: checkError } = await supabase
-      .from('hubs')
-      .select('user_id')
-      .eq('hub_id', hubId)
-      .single();
-    
-    if (checkError || !hub) {
-      return res.status(404).json({ error: 'Hub not found' });
-    }
-    
-    if (hub.user_id !== req.user.id) {
-      return res.status(403).json({ error: 'Not authorized to delete this hub' });
-    }
-    
-    // Delete hub (cascades to configs and devices)
     const { error } = await supabase
       .from('hubs')
       .delete()
-      .eq('hub_id', hubId);
+      .eq('hub_id', hubId)
+      .eq('user_id', req.user.id);
     
     if (error) throw error;
-    res.json({ success: true, message: 'Hub removed' });
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// ==========================================
-// API: HUB CONFIG
-// ==========================================
-
-// GET /api/hubs/:hubId/config - Get hub config
+// Get hub config
 app.get('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
@@ -161,7 +440,7 @@ app.get('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   }
 });
 
-// POST /api/hubs/:hubId/config - Set hub config (push to ESP32)
+// Set hub config
 app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   const { hubId } = req.params;
   const { ssid, password, mqtt_server, mqtt_port, device_name } = req.body;
@@ -171,8 +450,7 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   }
   
   try {
-    // 1. SAVE TO SUPABASE
-    const { error: updateError } = await supabase
+    await supabase
       .from('hub_configs')
       .update({
         ssid: ssid,
@@ -184,9 +462,6 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
       })
       .eq('hub_id', hubId);
     
-    if (updateError) throw updateError;
-    
-    // 2. UPDATE HUB NAME
     await supabase
       .from('hubs')
       .update({
@@ -196,18 +471,15 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
       })
       .eq('hub_id', hubId);
     
-    // 3. GET HUB IP ADDRESS
-    const { data: hub, error: hubError } = await supabase
+    // Get hub IP to push config
+    const { data: hub } = await supabase
       .from('hubs')
       .select('ip_address, status')
       .eq('hub_id', hubId)
       .single();
     
-    if (hubError) throw hubError;
-    
-    // 4. PUSH TO ESP32 (if online)
     let esp32Response = null;
-    if (hub.ip_address && hub.status === 'online') {
+    if (hub?.ip_address && hub?.status === 'online') {
       try {
         const response = await axios.post(
           `http://${hub.ip_address}/api/config`,
@@ -224,18 +496,14 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
         );
         esp32Response = response.data;
       } catch (error) {
-        console.log('⚠️ ESP32 not reachable, config saved in Supabase');
-        esp32Response = { error: 'ESP32 not reachable, config will be pulled later' };
+        esp32Response = { error: 'ESP32 not reachable' };
       }
-    } else {
-      esp32Response = { message: 'ESP32 offline, config saved in Supabase' };
     }
     
     res.json({
       success: true,
       saved_to_supabase: true,
-      pushed_to_esp32: esp32Response,
-      message: 'Config saved. ESP32 will receive it when online.'
+      pushed_to_esp32: esp32Response
     });
     
   } catch (error) {
@@ -243,10 +511,7 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   }
 });
 
-// ==========================================
-// API: HUB REGISTRATION (called by ESP32)
-// ==========================================
-
+// Register hub (called by ESP32)
 app.post('/api/hubs/register', async (req, res) => {
   const { hub_id, ip_address, mac_address, status, device_name } = req.body;
   
@@ -255,7 +520,6 @@ app.post('/api/hubs/register', async (req, res) => {
   }
   
   try {
-    // Check if hub exists
     const { data: existing } = await supabase
       .from('hubs')
       .select('hub_id, user_id')
@@ -263,7 +527,6 @@ app.post('/api/hubs/register', async (req, res) => {
       .single();
     
     if (existing && existing.user_id) {
-      // Hub already belongs to someone - just update status
       await supabase
         .from('hubs')
         .update({
@@ -273,20 +536,14 @@ app.post('/api/hubs/register', async (req, res) => {
         })
         .eq('hub_id', hub_id);
       
-      return res.json({ 
-        success: true, 
-        hub_id: hub_id,
-        message: 'Hub status updated'
-      });
+      return res.json({ success: true, hub_id: hub_id });
     }
     
     if (existing) {
-      // Hub exists but no user - assign to current user if authenticated
-      const userId = req.user?.id || null;
       await supabase
         .from('hubs')
         .update({
-          user_id: userId,
+          user_id: null,
           status: status || 'online',
           ip_address: ip_address || null,
           name: device_name || hub_id,
@@ -294,19 +551,17 @@ app.post('/api/hubs/register', async (req, res) => {
         })
         .eq('hub_id', hub_id);
     } else {
-      // Create new hub
       await supabase
         .from('hubs')
         .insert({
           hub_id: hub_id,
-          user_id: req.user?.id || null,
+          user_id: null,
           name: device_name || hub_id,
           status: status || 'discovering',
           ip_address: ip_address || null,
           last_seen: new Date().toISOString()
         });
       
-      // Create default config
       await supabase
         .from('hub_configs')
         .insert({
@@ -319,79 +574,25 @@ app.post('/api/hubs/register', async (req, res) => {
         });
     }
     
-    res.json({ 
-      success: true, 
-      hub_id: hub_id,
-      message: 'Hub registered successfully'
-    });
+    res.json({ success: true, hub_id: hub_id });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// ==========================================
-// API: DISCOVERY
-// ==========================================
-
-// GET /api/discover - Get hubs in discovery mode
-app.get('/api/discover', authenticate, async (req, res) => {
-  try {
-    // Get hubs that are either:
-    // - In discovery mode
-    // - Not assigned to any user
-    // - Offline but recently seen
-    const cutoffTime = new Date(Date.now() - 120000).toISOString();
-    
-    const { data, error } = await supabase
-      .from('hubs')
-      .select('*')
-      .or(`status.eq.discovering,status.eq.offline,user_id.is.null`)
-      .gte('last_seen', cutoffTime)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    // Filter out hubs already owned by this user
-    const filtered = (data || []).filter(h => h.user_id !== req.user.id);
-    
-    res.json(filtered);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET /api/discover/public - Public discovery (no auth needed for ESP32)
-app.get('/api/discover/public', async (req, res) => {
-  try {
-    const cutoffTime = new Date(Date.now() - 120000).toISOString();
-    
-    const { data, error } = await supabase
-      .from('hubs')
-      .select('*')
-      .or(`status.eq.discovering,status.eq.offline,user_id.is.null`)
-      .gte('last_seen', cutoffTime)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    res.json(data || []);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// POST /api/hubs/:hubId/reboot - Reboot hub
+// Reboot hub
 app.post('/api/hubs/:hubId/reboot', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
   try {
-    const { data: hub, error: hubError } = await supabase
+    const { data: hub } = await supabase
       .from('hubs')
       .select('ip_address')
       .eq('hub_id', hubId)
       .eq('user_id', req.user.id)
       .single();
     
-    if (hubError || !hub) {
+    if (!hub) {
       return res.status(404).json({ error: 'Hub not found' });
     }
     
@@ -406,106 +607,31 @@ app.post('/api/hubs/:hubId/reboot', authenticate, async (req, res) => {
     if (hub.ip_address) {
       try {
         await axios.post(`http://${hub.ip_address}/api/reboot`);
-      } catch (error) {
-        console.log('Hub reboot sent (or offline)');
-      }
+      } catch (error) {}
     }
     
-    res.json({ 
-      success: true, 
-      message: 'Reboot command sent'
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ==========================================
-// API: DEVICES (Sensors)
-// ==========================================
-
-// POST /api/devices/register - Register a sensor (called by ESP32)
-app.post('/api/devices/register', async (req, res) => {
-  const { hub_id, device_id } = req.body;
-  
-  if (!hub_id || !device_id) {
-    return res.status(400).json({ error: 'hub_id and device_id required' });
-  }
-  
-  try {
-    await supabase
-      .from('devices')
-      .upsert({
-        hub_id: hub_id,
-        device_id: device_id,
-        name: device_id,
-        status: 'online',
-        last_seen: new Date().toISOString()
-      }, { onConflict: 'hub_id, device_id' });
-    
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// GET /api/hubs/:hubId/devices - Get devices for a hub
-app.get('/api/hubs/:hubId/devices', authenticate, async (req, res) => {
-  const { hubId } = req.params;
-  
+// Discovery - get hubs in discovery mode
+app.get('/api/discover', authenticate, async (req, res) => {
   try {
+    const cutoffTime = new Date(Date.now() - 120000).toISOString();
+    
     const { data, error } = await supabase
-      .from('devices')
+      .from('hubs')
       .select('*')
-      .eq('hub_id', hubId);
+      .or(`status.eq.discovering,status.eq.offline,user_id.is.null`)
+      .gte('last_seen', cutoffTime)
+      .order('created_at', { ascending: false });
     
     if (error) throw error;
-    res.json(data || []);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// POST /api/soil - Add soil reading
-app.post('/api/soil', async (req, res) => {
-  const { device_id, value } = req.body;
-  
-  if (!device_id || value === undefined) {
-    return res.status(400).json({ error: 'device_id and value required' });
-  }
-  
-  try {
-    await supabase
-      .from('soil_readings')
-      .insert({
-        device_id: device_id,
-        value: parseInt(value),
-        timestamp: new Date().toISOString()
-      });
     
-    // Update device's latest soil reading
-    await supabase
-      .from('devices')
-      .update({ latest_soil: parseInt(value), last_seen: new Date().toISOString() })
-      .eq('device_id', device_id);
-    
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET /api/soil/latest - Get latest soil reading
-app.get('/api/soil/latest', authenticate, async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('soil_readings')
-      .select('*')
-      .order('timestamp', { ascending: false })
-      .limit(1);
-    
-    if (error) throw error;
-    res.json(data?.[0] || {});
+    const filtered = (data || []).filter(h => h.user_id !== req.user.id);
+    res.json(filtered);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -524,6 +650,5 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 443;
 app.listen(PORT, () => {
   console.log(`✅ FarmIOT Server running on port ${PORT}`);
-  console.log(`📡 ESP32 connects to: https://farm-iot.onrender.com`);
-  console.log(`🗄️  Supabase: ${supabaseUrl}`);
+  console.log(`📡 ESP32 connects to: ${process.env.SERVER_URL || 'https://farm-iot.onrender.com'}`);
 });
