@@ -9,14 +9,11 @@
         body {
             background: #0a0e17;
             color: #e5e7eb;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             padding: 20px;
         }
-        .container { max-width: 500px; width: 100%; }
+        .container { max-width: 700px; margin: 0 auto; }
         h1 {
             font-size: 28px;
             margin-bottom: 8px;
@@ -36,10 +33,10 @@
             padding: 20px;
             border-radius: 16px;
             margin: 12px 0;
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255,255,255,0.06);
             transition: all 0.3s;
         }
-        .card:hover { border-color: rgba(74, 222, 128, 0.15); }
+        .card:hover { border-color: rgba(74,222,128,0.15); }
         .card p {
             margin: 0 0 8px 0;
             font-size: 13px;
@@ -50,22 +47,11 @@
         }
         .online { color: #4ade80; }
         .offline { color: #f87171; }
+        .discovering { color: #fbbf24; }
         .status-indicator {
             font-size: 24px;
             font-weight: 700;
         }
-        .last-updated {
-            font-size: 12px;
-            color: #4b5563;
-            margin-top: 6px;
-        }
-        .icon { font-size: 28px; display: block; margin-bottom: 8px; }
-        .soil-value {
-            font-size: 40px;
-            font-weight: 700;
-            color: #fbbf24;
-        }
-        .soil-label { font-size: 12px; color: #6b7280; }
         .btn {
             padding: 10px 20px;
             border: none;
@@ -87,17 +73,13 @@
             border: 1px solid rgba(255,255,255,0.06);
         }
         .btn-secondary:hover { background: rgba(255,255,255,0.08); }
-        .btn-danger {
-            background: rgba(248,113,113,0.1);
-            color: #f87171;
-            border: 1px solid rgba(248,113,113,0.15);
+        .btn-success {
+            background: rgba(74,222,128,0.1);
+            color: #4ade80;
+            border: 1px solid rgba(74,222,128,0.15);
         }
-        .btn-danger:hover { background: rgba(248,113,113,0.2); }
-        .btn-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
+        .btn-success:hover { background: rgba(74,222,128,0.2); }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
         .btn-group .btn { flex: 1; min-width: 80px; text-align: center; }
         .status-dot {
             display: inline-block;
@@ -109,60 +91,11 @@
         }
         .status-dot.online { background: #4ade80; }
         .status-dot.offline { background: #f87171; }
+        .status-dot.discovering { background: #fbbf24; }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(8px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal.active { display: flex; }
-        .modal-content {
-            background: #1a1f2e;
-            border-radius: 20px;
-            padding: 32px;
-            max-width: 450px;
-            width: 90%;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .modal-content h2 { margin-bottom: 16px; font-size: 22px; }
-        .modal-content .form-group { margin-bottom: 14px; }
-        .modal-content label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: #9ca3af;
-            margin-bottom: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .modal-content input {
-            width: 100%;
-            padding: 10px 14px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 10px;
-            color: #e5e7eb;
-            font-size: 14px;
-            font-family: inherit;
-        }
-        .modal-content input:focus {
-            outline: none;
-            border-color: #4ade80;
-        }
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 18px;
-        }
-        .modal-actions .btn { flex: 1; }
         .toast {
             position: fixed;
             bottom: 24px;
@@ -177,12 +110,10 @@
             opacity: 0;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 2000;
-            font-family: inherit;
         }
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.success { border-left: 3px solid #4ade80; }
         .toast.error { border-left: 3px solid #f87171; }
-        .toast.warning { border-left: 3px solid #fbbf24; }
         .toast.info { border-left: 3px solid #60a5fa; }
         .spinner {
             display: inline-block;
@@ -200,9 +131,19 @@
             color: #4b5563;
             margin-top: 16px;
         }
-        .server-info a {
-            color: #4ade80;
-            text-decoration: none;
+        .server-info a { color: #4ade80; text-decoration: none; }
+        .discovery-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(251,191,36,0.15);
+            color: #fbbf24;
+        }
+        .status-text {
+            font-size: 14px;
+            margin-top: 4px;
         }
         @media (max-width: 480px) {
             .container { padding: 0 4px; }
@@ -215,93 +156,45 @@
 
 <div class="container">
     <h1>🚜 FarmIOT</h1>
-    <div class="subtitle" id="liveTime">--:--:-- | 0 Sensors</div>
+    <div class="subtitle" id="liveTime">Scanning for devices...</div>
 
+    <!-- Hub Card -->
     <div class="card">
         <span class="icon">📡</span>
         <p>Hub</p>
         <div id="hubStatus" class="status-indicator offline">
-            <span class="status-dot offline"></span> OFFLINE
+            <span class="status-dot offline"></span> SCANNING
         </div>
-        <div id="hubLastSeen" class="last-updated">—</div>
-        <div class="btn-group" style="margin-top:12px;">
-            <button class="btn btn-primary" onclick="rebootHub()">🔄 Reboot</button>
-            <button class="btn btn-secondary" onclick="openConfigModal()">⚙️ Configure</button>
+        <div id="hubInfo" class="status-text">Looking for hubs on your network...</div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="scanForHubs()">🔍 Scan</button>
         </div>
     </div>
 
+    <!-- Discovered Hubs -->
+    <div id="discoveredHubs"></div>
+
+    <!-- Sensor Card -->
     <div class="card">
         <span class="icon">🌱</span>
         <p>Sensor</p>
         <div id="sensorStatus" class="status-indicator offline">
             <span class="status-dot offline"></span> OFFLINE
         </div>
-        <div id="sensorLastSeen" class="last-updated">—</div>
+        <div id="sensorInfo" class="status-text">No sensor connected</div>
     </div>
 
+    <!-- Soil Card -->
     <div class="card">
         <span class="icon">💧</span>
         <p>Soil Moisture</p>
-        <div id="soilDisplay" class="soil-value">—</div>
+        <div id="soilDisplay" class="soil-value" style="font-size:40px;font-weight:700;color:#fbbf24;">—</div>
         <div class="soil-label">ADC</div>
-        <div id="soilLastUpdated" class="last-updated">Waiting for data...</div>
-    </div>
-
-    <div class="card">
-        <span class="icon">📊</span>
-        <p>System</p>
-        <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px;">
-            <div style="display:flex;justify-content:space-between;font-size:13px;">
-                <span style="color:#6b7280;">Uptime</span>
-                <span style="color:#e5e7eb;font-weight:500;" id="uptime">0s</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:13px;">
-                <span style="color:#6b7280;">Requests</span>
-                <span style="color:#e5e7eb;font-weight:500;" id="requestCount">0</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:13px;">
-                <span style="color:#6b7280;">Status</span>
-                <span style="color:#4ade80;font-weight:500;">● Live</span>
-            </div>
-        </div>
+        <div id="soilLastUpdated" class="status-text">Waiting for data...</div>
     </div>
 
     <div class="server-info">
         🔗 <a href="https://farm-iot.onrender.com" target="_blank">farm-iot.onrender.com</a>
-    </div>
-</div>
-
-<!-- Config Modal -->
-<div class="modal" id="configModal">
-    <div class="modal-content">
-        <h2>⚙️ Configure Hub</h2>
-        <div style="background:rgba(59,130,246,0.08);padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:13px;color:#60a5fa;">
-            📡 Config is stored on the ESP32. All users see the same config.
-        </div>
-        <div class="form-group">
-            <label>WiFi SSID</label>
-            <input type="text" id="configSSID" placeholder="Enter WiFi name">
-        </div>
-        <div class="form-group">
-            <label>WiFi Password</label>
-            <input type="password" id="configPassword" placeholder="Enter WiFi password">
-        </div>
-        <div class="form-group">
-            <label>Device Name</label>
-            <input type="text" id="configDeviceName" placeholder="farmiot" value="farmiot">
-        </div>
-        <div class="form-group">
-            <label>MQTT Server</label>
-            <input type="text" id="configMQTT" placeholder="broker.hivemq.com" value="broker.hivemq.com">
-        </div>
-        <div class="form-group">
-            <label>MQTT Port</label>
-            <input type="number" id="configMQTTPort" placeholder="1883" value="1883">
-        </div>
-        <div class="modal-actions">
-            <button class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
-            <button class="btn btn-primary" onclick="saveConfig()">💾 Save</button>
-        </div>
     </div>
 </div>
 
@@ -311,8 +204,8 @@
 <script>
     const API_BASE = window.location.origin;
     const DEVICE_ID = 'FarmIOT_Hub_001';
+    let discoveredDevices = [];
     let startTime = Date.now();
-    let requestCount = 0;
 
     function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
@@ -322,135 +215,170 @@
         toast._hide = setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    function openModal(id) { document.getElementById(id).classList.add('active'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
-    function openConfigModal() {
-        fetchConfig();
-        openModal('configModal');
-    }
-
-    async function fetchConfig() {
+    // ==========================================
+    // SCAN FOR HUBS (No AP connection needed!)
+    // ==========================================
+    async function scanForHubs() {
+        showToast('🔍 Scanning for hubs...', 'info');
+        
         try {
-            const response = await fetch(`${API_BASE}/api/hubs/${DEVICE_ID}/config`);
+            // Try mDNS discovery first (if browser supports it)
+            // Fallback: call server API
+            const response = await fetch(`${API_BASE}/api/discover`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                }
+            });
+            
             if (response.ok) {
-                const data = await response.json();
-                document.getElementById('configSSID').value = data.ssid || '';
-                document.getElementById('configDeviceName').value = data.device_name || 'farmiot';
-                document.getElementById('configMQTT').value = data.mqtt_server || 'broker.hivemq.com';
-                document.getElementById('configMQTTPort').value = data.mqtt_port || 1883;
+                const hubs = await response.json();
+                discoveredDevices = hubs;
+                renderDiscoveredHubs(hubs);
+                
+                if (hubs.length === 0) {
+                    showToast('🔍 No hubs found. Make sure ESP32 is powered on.', 'info');
+                } else {
+                    showToast(`✅ Found ${hubs.length} hub(s)!`, 'success');
+                }
+            } else {
+                // If auth fails, try without auth (discovery mode)
+                const publicResponse = await fetch(`${API_BASE}/api/discover/public`);
+                if (publicResponse.ok) {
+                    const hubs = await publicResponse.json();
+                    discoveredDevices = hubs;
+                    renderDiscoveredHubs(hubs);
+                }
             }
         } catch (error) {
-            showToast('❌ Failed to fetch config', 'error');
+            console.error('Scan error:', error);
+            showToast('❌ Scan failed. Check if ESP32 is powered on.', 'error');
         }
     }
 
-    async function saveConfig() {
-        const ssid = document.getElementById('configSSID').value.trim();
-        const password = document.getElementById('configPassword').value.trim();
-        const name = document.getElementById('configDeviceName').value.trim();
-        const mqtt = document.getElementById('configMQTT').value.trim();
-        const port = parseInt(document.getElementById('configMQTTPort').value) || 1883;
-
-        if (!ssid) {
-            showToast('❌ WiFi SSID is required', 'error');
+    function renderDiscoveredHubs(hubs) {
+        const container = document.getElementById('discoveredHubs');
+        
+        if (hubs.length === 0) {
+            container.innerHTML = `
+                <div class="card" style="border-color: rgba(251,191,36,0.2);">
+                    <p>🔍 No hubs discovered</p>
+                    <div style="color:#6b7280;font-size:14px;">
+                        Make sure your ESP32 is powered on and on the same network.
+                        <br>It will auto-discover via mDNS at <strong>farmiot-hub.local</strong>
+                    </div>
+                </div>
+            `;
             return;
         }
 
-        const btn = event.target;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Saving...';
+        container.innerHTML = hubs.map(hub => `
+            <div class="card" style="border-color: rgba(74,222,128,0.2);">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <span style="font-weight:600;">📡 ${hub.name || hub.hub_id}</span>
+                        <span class="discovery-badge" style="margin-left:8px;">${hub.status || 'discovering'}</span>
+                    </div>
+                    <span style="color:#6b7280;font-size:12px;">${hub.ip_address || 'IP unknown'}</span>
+                </div>
+                <div style="font-size:13px;color:#6b7280;margin-top:4px;">
+                    ID: ${hub.hub_id} · ${hub.mac_address || 'MAC unknown'}
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="connectHub('${hub.hub_id}')">🔗 Connect to Account</button>
+                    <button class="btn btn-secondary" onclick="configureHub('${hub.hub_id}')">⚙️ Configure</button>
+                </div>
+            </div>
+        `).join('');
+    }
 
+    // ==========================================
+    // CONNECT HUB TO USER ACCOUNT
+    // ==========================================
+    async function connectHub(hubId) {
+        showToast('🔗 Connecting hub...', 'info');
+        
         try {
-            const response = await fetch(`${API_BASE}/api/hubs/${DEVICE_ID}/config`, {
+            const response = await fetch(`${API_BASE}/api/hubs/register`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                },
                 body: JSON.stringify({
-                    ssid: ssid,
-                    password: password,
-                    mqtt_server: mqtt || 'broker.hivemq.com',
-                    mqtt_port: port,
-                    device_name: name || 'farmiot'
+                    hub_id: hubId,
+                    status: 'online'
                 })
             });
-
-            const result = await response.json();
-            if (result.success) {
-                showToast('✅ Config saved! ESP32 will reboot.', 'success');
-                closeModal('configModal');
-                setTimeout(fetchStatus, 5000);
+            
+            if (response.ok) {
+                showToast('✅ Hub connected to your account!', 'success');
+                setTimeout(scanForHubs, 2000);
             } else {
-                showToast('❌ ' + (result.error || 'Failed to save'), 'error');
+                const error = await response.json();
+                showToast('❌ ' + (error.error || 'Failed to connect'), 'error');
             }
         } catch (error) {
             showToast('❌ Error: ' + error.message, 'error');
         }
-
-        btn.disabled = false;
-        btn.innerHTML = '💾 Save';
     }
 
-    async function rebootHub() {
-        showToast('🔄 Rebooting hub...', 'info');
+    // ==========================================
+    // CONFIGURE HUB (WiFi Setup)
+    // ==========================================
+    function configureHub(hubId) {
+        // Open a modal or prompt for WiFi credentials
+        const ssid = prompt('Enter WiFi SSID:');
+        if (!ssid) return;
+        
+        const password = prompt('Enter WiFi Password:');
+        
+        saveConfig(hubId, ssid, password);
+    }
+
+    async function saveConfig(hubId, ssid, password) {
+        showToast('💾 Saving configuration...', 'info');
+        
         try {
-            const response = await fetch(`${API_BASE}/api/hubs/${DEVICE_ID}/reboot`, {
-                method: 'POST'
+            const response = await fetch(`${API_BASE}/api/hubs/${hubId}/config`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                },
+                body: JSON.stringify({
+                    ssid: ssid,
+                    password: password || '',
+                    mqtt_server: 'broker.hivemq.com',
+                    mqtt_port: 1883
+                })
             });
+            
             if (response.ok) {
-                showToast('✅ Reboot command sent! Hub will enter discovery mode.', 'success');
-                setTimeout(fetchStatus, 5000);
+                showToast('✅ Config saved! ESP32 will reboot.', 'success');
+                setTimeout(scanForHubs, 5000);
             } else {
-                showToast('❌ Failed to reboot hub', 'error');
+                const error = await response.json();
+                showToast('❌ ' + (error.error || 'Failed to save'), 'error');
             }
         } catch (error) {
             showToast('❌ Error: ' + error.message, 'error');
         }
     }
 
-    async function fetchStatus() {
-        try {
-            const response = await fetch(`${API_BASE}/api/hubs/${DEVICE_ID}/config`);
-            if (response.ok) {
-                const data = await response.json();
-                const isOnline = data.status === 'online';
-                const statusEl = document.getElementById('hubStatus');
-                const dot = statusEl.querySelector('.status-dot');
-                statusEl.textContent = isOnline ? ' ONLINE' : ' OFFLINE';
-                statusEl.className = 'status-indicator ' + (isOnline ? 'online' : 'offline');
-                dot.className = 'status-dot ' + (isOnline ? 'online' : 'offline');
-                statusEl.prepend(dot);
-                document.getElementById('hubLastSeen').textContent = data.ip_address ? 'IP: ' + data.ip_address : '—';
-            }
-        } catch (error) {
-            // Silently fail
-        }
-    }
-
+    // ==========================================
+    // AUTO-SCAN EVERY 30 SECONDS
+    // ==========================================
     function updateTime() {
         const now = new Date();
         const time = now.toLocaleTimeString('en-US', { hour12: false });
-        document.getElementById('liveTime').textContent = time + ' | 0 Sensors';
-        
-        const seconds = Math.floor((Date.now() - startTime) / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        let display = '';
-        if (hours > 0) display += hours + 'h ';
-        if (minutes > 0) display += (minutes % 60) + 'm ';
-        display += (seconds % 60) + 's';
-        document.getElementById('uptime').textContent = display;
+        document.getElementById('liveTime').textContent = time + ' | Scanning for devices...';
     }
 
-    fetchStatus();
-    setInterval(fetchStatus, 15000);
+    // Initial scan
+    scanForHubs();
+    setInterval(scanForHubs, 30000);
     setInterval(updateTime, 1000);
     updateTime();
-
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.classList.remove('active');
-        });
-    });
 </script>
 </body>
 </html>

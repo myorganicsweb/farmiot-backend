@@ -1,7 +1,6 @@
 // ==========================================
 // FARM IOT SERVER
-// ESP32 ONLY TALKS TO THIS SERVER
-// Server handles all Supabase communication
+// Supports mDNS discovery from ESP32
 // ==========================================
 
 const express = require('express');
@@ -12,15 +11,13 @@ const axios = require('axios');
 const app = express();
 
 // ==========================================
-// SUPABASE CONFIG - FROM ENVIRONMENT VARIABLES
+// SUPABASE CONFIG
 // ==========================================
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
-// Check if credentials are set
 if (!supabaseUrl || !supabaseKey) {
   console.error('❌ Missing Supabase credentials!');
-  console.error('   Set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables');
   process.exit(1);
 }
 
@@ -56,10 +53,114 @@ async function authenticate(req, res, next) {
 }
 
 // ==========================================
+// API: DISCOVERY
+// ==========================================
+
+// Get hubs in discovery mode (mDNS)
+app.get('/api/discover', authenticate, async (req, res) => {
+  try {
+    // First, check Supabase for hubs that are registered but maybe offline
+    const { data: hubs, error } = await supabase
+      .from('hubs')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    // Also check for hubs in discovery mode (AP mode)
+    const { data: discovering } = await supabase
+      .from('hubs')
+      .select('*')
+      .eq('status', 'discovering')
+      .gte('last_seen', new Date(Date.now() - 120000).toISOString());
+    
+    // Combine and deduplicate
+    const allHubs = [...(hubs || []), ...(discovering || [])];
+    const unique = Array.from(new Map(allHubs.map(h => [h.hub_id, h])).values());
+    
+    res.json(unique);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Register a discovered hub (from mDNS)
+app.post('/api/hubs/register', async (req, res) => {
+  const { hub_id, ip_address, mac_address, status, device_name } = req.body;
+  
+  if (!hub_id) {
+    return res.status(400).json({ error: 'hub_id required' });
+  }
+  
+  try {
+    // Check if hub exists
+    const { data: existing } = await supabase
+      .from('hubs')
+      .select('hub_id, user_id')
+      .eq('hub_id', hub_id)
+      .single();
+    
+    if (existing && existing.user_id) {
+      // Hub already belongs to someone
+      return res.status(403).json({ 
+        error: 'Hub already registered to another user' 
+      });
+    }
+    
+    if (existing) {
+      // Update existing hub
+      await supabase
+        .from('hubs')
+        .update({
+          user_id: req.user?.id || null,
+          status: status || 'online',
+          ip_address: ip_address || null,
+          name: device_name || hub_id,
+          last_seen: new Date().toISOString()
+        })
+        .eq('hub_id', hub_id);
+    } else {
+      // Create new hub
+      await supabase
+        .from('hubs')
+        .insert({
+          hub_id: hub_id,
+          user_id: req.user?.id || null,
+          name: device_name || hub_id,
+          status: status || 'discovering',
+          ip_address: ip_address || null,
+          last_seen: new Date().toISOString()
+        });
+      
+      // Create default config
+      await supabase
+        .from('hub_configs')
+        .insert({
+          hub_id: hub_id,
+          ssid: '',
+          password: '',
+          mqtt_server: 'broker.hivemq.com',
+          mqtt_port: 1883,
+          device_name: device_name || hub_id
+        });
+    }
+    
+    res.json({ 
+      success: true, 
+      hub_id: hub_id,
+      message: 'Hub registered successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
 // API: HUB CONFIG
 // ==========================================
 
-// Get hub config (ESP32 pulls from here)
+// Get hub config
 app.get('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
@@ -87,7 +188,7 @@ app.get('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   }
 });
 
-// Set hub config (UI calls this, server pushes to ESP32)
+// Set hub config (push to ESP32)
 app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   const { hubId } = req.params;
   const { ssid, password, mqtt_server, mqtt_port } = req.body;
@@ -97,8 +198,8 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   }
   
   try {
-    // 1. SAVE TO SUPABASE
-    const { error: updateError } = await supabase
+    // Save to Supabase
+    await supabase
       .from('hub_configs')
       .update({
         ssid: ssid,
@@ -109,20 +210,16 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
       })
       .eq('hub_id', hubId);
     
-    if (updateError) throw updateError;
-    
-    // 2. GET HUB IP ADDRESS
-    const { data: hub, error: hubError } = await supabase
+    // Get hub IP
+    const { data: hub } = await supabase
       .from('hubs')
       .select('ip_address, status')
       .eq('hub_id', hubId)
       .single();
     
-    if (hubError) throw hubError;
-    
-    // 3. PUSH TO ESP32 (if online)
+    // Try to push to ESP32
     let esp32Response = null;
-    if (hub.ip_address && hub.status === 'online') {
+    if (hub?.ip_address && hub?.status === 'online') {
       try {
         const response = await axios.post(
           `http://${hub.ip_address}/api/config`,
@@ -139,18 +236,15 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
         );
         esp32Response = response.data;
       } catch (error) {
-        console.log('⚠️ ESP32 not reachable, config saved in Supabase');
-        esp32Response = { error: 'ESP32 not reachable, config will be pulled later' };
+        console.log('⚠️ ESP32 not reachable');
+        esp32Response = { error: 'ESP32 not reachable' };
       }
-    } else {
-      esp32Response = { message: 'ESP32 offline, config saved in Supabase' };
     }
     
     res.json({
       success: true,
       saved_to_supabase: true,
-      pushed_to_esp32: esp32Response,
-      message: 'Config saved. ESP32 will receive it when online.'
+      pushed_to_esp32: esp32Response
     });
     
   } catch (error) {
@@ -158,71 +252,44 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   }
 });
 
-// ==========================================
-// API: HUB REGISTRATION
-// ==========================================
-
-// Register hub (called by ESP32)
-app.post('/api/hubs/register', async (req, res) => {
-  const { hub_id, ip_address, mac_address, status } = req.body;
-  
-  if (!hub_id) {
-    return res.status(400).json({ error: 'hub_id required' });
-  }
+// Reboot hub
+app.post('/api/hubs/:hubId/reboot', authenticate, async (req, res) => {
+  const { hubId } = req.params;
   
   try {
-    const { data: existing } = await supabase
+    const { data: hub } = await supabase
       .from('hubs')
-      .select('hub_id')
-      .eq('hub_id', hub_id)
+      .select('ip_address')
+      .eq('hub_id', hubId)
       .single();
     
-    if (!existing) {
-      // Hub not found - create it
-      const { error: insertError } = await supabase
-        .from('hubs')
-        .insert({
-          hub_id: hub_id,
-          name: hub_id,
-          status: status || 'online',
-          ip_address: ip_address || null,
-          last_seen: new Date().toISOString()
-        });
-      
-      if (insertError) throw insertError;
-      
-      await supabase
-        .from('hub_configs')
-        .insert({
-          hub_id: hub_id,
-          ssid: '',
-          password: '',
-          mqtt_server: 'broker.hivemq.com',
-          mqtt_port: 1883
-        });
-    } else {
-      // Update existing hub
-      await supabase
-        .from('hubs')
-        .update({
-          status: status || 'online',
-          ip_address: ip_address || null,
-          last_seen: new Date().toISOString()
-        })
-        .eq('hub_id', hub_id);
+    await supabase
+      .from('hubs')
+      .update({ 
+        status: 'discovering',
+        last_seen: new Date().toISOString()
+      })
+      .eq('hub_id', hubId);
+    
+    if (hub?.ip_address) {
+      try {
+        await axios.post(`http://${hub.ip_address}/api/reboot`);
+      } catch (error) {
+        console.log('Hub reboot sent (or offline)');
+      }
     }
     
-    res.json({ success: true, hub_id: hub_id });
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // ==========================================
-// API: DEVICE REGISTRATION
+// API: DEVICES
 // ==========================================
 
-// Register device (called by ESP32 when it discovers a sensor)
+// Register device (sensor)
 app.post('/api/devices/register', async (req, res) => {
   const { hub_id, device_id } = req.body;
   
@@ -248,87 +315,6 @@ app.post('/api/devices/register', async (req, res) => {
 });
 
 // ==========================================
-// API: DISCOVER HUBS
-// ==========================================
-
-// Get hubs in discovery mode
-app.get('/api/discover', authenticate, async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('hubs')
-      .select('*')
-      .eq('status', 'discovering')
-      .gte('last_seen', new Date(Date.now() - 120000).toISOString());
-    
-    if (error) throw error;
-    res.json(data || []);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Reboot hub (puts it into discovery mode)
-app.post('/api/hubs/:hubId/reboot', authenticate, async (req, res) => {
-  const { hubId } = req.params;
-  
-  try {
-    const { data: hub, error: hubError } = await supabase
-      .from('hubs')
-      .select('ip_address')
-      .eq('hub_id', hubId)
-      .eq('user_id', req.user.id)
-      .single();
-    
-    if (hubError || !hub) {
-      return res.status(404).json({ error: 'Hub not found' });
-    }
-    
-    await supabase
-      .from('hubs')
-      .update({ 
-        status: 'discovering',
-        last_seen: new Date().toISOString()
-      })
-      .eq('hub_id', hubId);
-    
-    if (hub.ip_address) {
-      try {
-        await axios.post(`http://${hub.ip_address}/api/reboot`);
-      } catch (error) {
-        console.log('Hub reboot command sent (or hub offline)');
-      }
-    }
-    
-    res.json({ 
-      success: true, 
-      message: 'Reboot command sent. Hub will enter discovery mode.',
-      hub_id: hubId
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ==========================================
-// API: GET HUBS FOR USER
-// ==========================================
-
-app.get('/api/hubs', authenticate, async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('hubs')
-      .select('*')
-      .eq('user_id', req.user.id)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    res.json(data || []);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ==========================================
 // SERVE DASHBOARD
 // ==========================================
 app.get('/', (req, res) => {
@@ -341,6 +327,5 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 443;
 app.listen(PORT, () => {
   console.log(`✅ FarmIOT Server running on port ${PORT}`);
-  console.log(`📡 ESP32 connects to: ${process.env.SERVER_URL || 'https://farm-iot.onrender.com'}`);
-  console.log(`🗄️  Supabase: ${supabaseUrl}`);
+  console.log(`📡 ESP32 connects to: https://farm-iot.onrender.com`);
 });
