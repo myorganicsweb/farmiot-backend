@@ -394,7 +394,7 @@
                             <input type="email" id="emailInput" placeholder="Email" autocomplete="email">
                             <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
                             <input type="password" id="confirmPasswordInput" placeholder="Confirm Password" style="display:none;" autocomplete="new-password">
-                            <button class="btn btn-primary" id="authActionBtn" onclick="handleAuthAction()">Sign In</button>
+                            <button class="btn btn-primary" id="authActionBtn">Sign In</button>
                         </div>
                     </div>
                     <div class="auth-hint" id="authHint">💡 New user? Switch to Register above to create an account.</div>
@@ -517,12 +517,20 @@
     }
 
     // ==========================================
-    // EMAIL/PASSWORD AUTH
+    // EMAIL/PASSWORD AUTH - FIXED: Added event.preventDefault
     // ==========================================
-    async function handleAuthAction() {
+    function handleAuthAction(e) {
+        // Prevent any default form submission
+        if (e) e.preventDefault();
+        
+        console.log('🔄 Auth action triggered');
+        
         const email = document.getElementById('emailInput').value.trim();
         const password = document.getElementById('passwordInput').value.trim();
         const confirmPassword = document.getElementById('confirmPasswordInput').value.trim();
+        
+        console.log('📧 Email:', email);
+        console.log('🔑 Password length:', password.length);
         
         if (!email || !password) {
             showToast('❌ Please enter email and password', 'error');
@@ -539,9 +547,9 @@
                 showToast('❌ Passwords do not match', 'error');
                 return;
             }
-            await registerUser(email, password);
+            registerUser(email, password);
         } else {
-            await loginUser(email, password);
+            loginUser(email, password);
         }
     }
 
@@ -550,16 +558,24 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Creating account...';
         
+        console.log('📝 Registering user:', email);
+        
         try {
             showToast('🔄 Creating account...', 'info');
             
-            const res = await fetch(`${API_BASE}/api/auth/register`, {
+            const url = `${API_BASE}/api/auth/register`;
+            console.log('📍 Sending to:', url);
+            
+            const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
             
+            console.log('📥 Response status:', res.status);
+            
             const data = await res.json();
+            console.log('📦 Response data:', data);
             
             if (data.success) {
                 token = data.token;
@@ -575,7 +591,7 @@
                 showToast('❌ ' + (data.error || 'Registration failed'), 'error');
             }
         } catch (error) {
-            console.error('Registration error:', error);
+            console.error('❌ Registration error:', error);
             showToast('❌ Error: ' + error.message, 'error');
         }
         
@@ -588,16 +604,24 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Signing in...';
         
+        console.log('🔑 Logging in user:', email);
+        
         try {
             showToast('🔄 Signing in...', 'info');
             
-            const res = await fetch(`${API_BASE}/api/auth/login`, {
+            const url = `${API_BASE}/api/auth/login`;
+            console.log('📍 Sending to:', url);
+            
+            const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
             
+            console.log('📥 Response status:', res.status);
+            
             const data = await res.json();
+            console.log('📦 Response data:', data);
             
             if (data.success) {
                 token = data.token;
@@ -613,7 +637,7 @@
                 showToast('❌ ' + (data.error || 'Login failed'), 'error');
             }
         } catch (error) {
-            console.error('Login error:', error);
+            console.error('❌ Login error:', error);
             showToast('❌ Error: ' + error.message, 'error');
         }
         
@@ -1076,13 +1100,13 @@
             if (authMode === 'register') {
                 document.getElementById('confirmPasswordInput').focus();
             } else {
-                handleAuthAction();
+                handleAuthAction(e);
             }
         }
     });
     document.getElementById('confirmPasswordInput').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            handleAuthAction();
+            handleAuthAction(e);
         }
     });
     document.getElementById('emailInput').addEventListener('keypress', function(e) {
@@ -1100,8 +1124,22 @@
     }
 
     // ==========================================
-    // INIT
+    // INIT - FIXED: Added event listener correctly
     // ==========================================
+    // Add click event listener to the auth button
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fix: Use onclick attribute or addEventListener
+        const authBtn = document.getElementById('authActionBtn');
+        authBtn.addEventListener('click', handleAuthAction);
+        
+        // Also ensure the onclick attribute works
+        authBtn.onclick = function(e) {
+            handleAuthAction(e);
+        };
+        
+        console.log('✅ Dashboard loaded - Auth button attached');
+    });
+    
     checkSession();
     updateTime();
     setInterval(updateTime, 1000);
@@ -1114,6 +1152,11 @@
             setTimeout(scanForHubs, 300);
         }
     });
+
+    // Debug: Log when page loads
+    console.log('🚀 FarmIOT Dashboard loaded');
+    console.log('📍 API_BASE:', API_BASE);
+    console.log('🔑 Token exists:', !!token);
 </script>
 </body>
 </html>
