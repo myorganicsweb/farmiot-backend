@@ -1,6 +1,6 @@
 // ==========================================
 // FARM IOT SERVER
-// Secure Auth - Google SSO handles registration too
+// Secure Auth - Using Profiles Table
 // ==========================================
 
 const express = require('express');
@@ -25,10 +25,6 @@ const JWT_SECRET = process.env.JWT_SECRET || '8X9kLp2mNv5qRt7wYz3bC6eFh1jM4oP8sU
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('❌ Missing Supabase credentials!');
   process.exit(1);
-}
-
-if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-  console.warn('⚠️ Google OAuth credentials missing. Google SSO will not work.');
 }
 
 // ==========================================
@@ -67,8 +63,9 @@ async function authenticate(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     
+    // Get user from profiles table
     const { data: user, error } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*')
       .eq('id', decoded.user_id)
       .single();
@@ -115,9 +112,9 @@ app.post('/api/auth/google', async (req, res) => {
     
     console.log(`🔍 Google user: ${email} (${google_id})`);
     
-    // Check if user exists by google_id
+    // Check if user exists by google_id in profiles
     let { data: existingUser, error: fetchError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*')
       .eq('google_id', google_id)
       .single();
@@ -125,7 +122,7 @@ app.post('/api/auth/google', async (req, res) => {
     // If not found by google_id, check by email
     if (!existingUser) {
       const { data: userByEmail, error: emailError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*')
         .eq('email', email)
         .single();
@@ -133,7 +130,7 @@ app.post('/api/auth/google', async (req, res) => {
       if (!emailError && userByEmail) {
         // User exists with this email but no google_id - link the account
         const { data: updatedUser, error: updateError } = await supabase
-          .from('users')
+          .from('profiles')
           .update({
             google_id: google_id,
             picture: picture || userByEmail.picture,
@@ -153,11 +150,31 @@ app.post('/api/auth/google', async (req, res) => {
     
     if (!existingUser) {
       // ✅ NEW USER - AUTO-REGISTER with Google
-      console.log(`📝 Creating new user from Google: ${email}`);
+      console.log(`📝 Creating new profile from Google: ${email}`);
       
+      // First check if user exists in auth.users
+      const { data: authUser, error: authError } = await supabase.auth.admin.getUserByEmail(email);
+      
+      let userId;
+      if (authError || !authUser) {
+        // User doesn't exist in auth - create them
+        const { data: newAuthUser, error: createAuthError } = await supabase.auth.admin.createUser({
+          email: email,
+          email_confirm: true,
+          user_metadata: { full_name: name || email.split('@')[0] }
+        });
+        
+        if (createAuthError) throw createAuthError;
+        userId = newAuthUser.user.id;
+      } else {
+        userId = authUser.user.id;
+      }
+      
+      // Create profile
       const { data: newUser, error: createError } = await supabase
-        .from('users')
+        .from('profiles')
         .insert({
+          id: userId,
           google_id: google_id,
           email: email,
           name: name || email.split('@')[0],
@@ -167,19 +184,15 @@ app.post('/api/auth/google', async (req, res) => {
         .select()
         .single();
       
-      if (createError) {
-        console.error('❌ Failed to create user:', createError);
-        throw createError;
-      }
-      
+      if (createError) throw createError;
       user = newUser;
-      console.log(`✅ New user registered: ${user.id} - ${user.email}`);
+      console.log(`✅ New profile created: ${user.id} - ${user.email}`);
     } else {
       // Existing user - update last_login
       console.log(`✅ Existing user logged in: ${existingUser.id} - ${existingUser.email}`);
       
       const { data: updatedUser, error: updateError } = await supabase
-        .from('users')
+        .from('profiles')
         .update({
           name: name || existingUser.name,
           picture: picture || existingUser.picture,
@@ -234,42 +247,47 @@ app.post('/api/auth/login', async (req, res) => {
   }
   
   try {
-    let { data: user, error: fetchError } = await supabase
-      .from('users')
+    // First, try to sign in with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
+    
+    if (authError) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+    
+    // Get user profile
+    let { data: user, error: profileError } = await supabase
+      .from('profiles')
       .select('*')
-      .eq('email', email)
+      .eq('id', authData.user.id)
       .single();
     
+    // If profile doesn't exist, create it
     if (!user) {
-      // Try Supabase auth
-      const { data: authUser, error: authError } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password
-      });
-      
-      if (authError) {
-        if (authError.message.includes('Invalid login credentials')) {
-          return res.status(401).json({ error: 'Invalid email or password' });
-        }
-        throw authError;
-      }
-      
-      // Create user in our table
-      const { data: newUser, error: createError } = await supabase
-        .from('users')
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
         .insert({
-          google_id: null,
+          id: authData.user.id,
           email: email,
-          name: authUser.user.user_metadata?.full_name || email.split('@')[0],
-          password_hash: 'managed_by_supabase'
+          name: authData.user.user_metadata?.full_name || email.split('@')[0],
+          last_login: new Date().toISOString()
         })
         .select()
         .single();
       
       if (createError) throw createError;
-      user = newUser;
+      user = newProfile;
+    } else {
+      // Update last_login
+      await supabase
+        .from('profiles')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', user.id);
     }
     
+    // Create JWT session token
     const sessionToken = jwt.sign(
       { 
         user_id: user.id,
@@ -308,16 +326,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
   
   try {
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('email')
-      .eq('email', email)
-      .single();
-    
-    if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
-    }
-    
+    // Create user in Supabase Auth
     const { data: authUser, error: signUpError } = await supabase.auth.signUp({
       email: email,
       password: password,
@@ -328,23 +337,25 @@ app.post('/api/auth/register', async (req, res) => {
     
     if (signUpError) throw signUpError;
     
-    const { data: newUser, error: createError } = await supabase
-      .from('users')
+    // Create profile
+    const { data: newProfile, error: createError } = await supabase
+      .from('profiles')
       .insert({
-        google_id: null,
+        id: authUser.user.id,
         email: email,
         name: name || email.split('@')[0],
-        password_hash: 'managed_by_supabase'
+        last_login: new Date().toISOString()
       })
       .select()
       .single();
     
     if (createError) throw createError;
     
+    // Create JWT session token
     const sessionToken = jwt.sign(
       { 
-        user_id: newUser.id,
-        email: newUser.email
+        user_id: newProfile.id,
+        email: newProfile.email
       },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -354,9 +365,9 @@ app.post('/api/auth/register', async (req, res) => {
       success: true,
       token: sessionToken,
       user: {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name
+        id: newProfile.id,
+        email: newProfile.email,
+        name: newProfile.name
       }
     });
     
@@ -675,4 +686,5 @@ app.listen(PORT, () => {
   console.log(`📡 Server URL: ${process.env.SERVER_URL || 'https://farm-iot.onrender.com'}`);
   console.log(`🔐 JWT Secret: ${process.env.JWT_SECRET ? '✅ Set' : '⚠️ Using default'}`);
   console.log(`🅶 Google SSO: ${GOOGLE_CLIENT_ID ? '✅ Enabled' : '❌ Disabled'}`);
+  console.log(`📊 Using 'profiles' table for user data`);
 });
