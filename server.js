@@ -1,6 +1,5 @@
 // ==========================================
-// FARM IOT SERVER
-// Secure Auth - Using Profiles Table
+// FARM IOT SERVER - COMPLETE WORKING VERSION
 // ==========================================
 
 const express = require('express');
@@ -42,7 +41,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 const googleClient = new OAuth2Client(
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
-  'postmessage'  // Important for Google One Tap
+  'postmessage'
 );
 
 // ==========================================
@@ -93,10 +92,8 @@ async function authenticate(req, res, next) {
 }
 
 // ==========================================
-// AUTH ROUTES
+// GOOGLE SSO - Handles BOTH Login AND Registration
 // ==========================================
-
-// Google SSO - Using Google One Tap
 app.post('/api/auth/google', async (req, res) => {
   console.log('📥 Google auth request received');
   
@@ -110,7 +107,6 @@ app.post('/api/auth/google', async (req, res) => {
   try {
     console.log('🔍 Verifying Google token...');
     
-    // Verify Google token
     const ticket = await googleClient.verifyIdToken({
       idToken: id_token,
       audience: GOOGLE_CLIENT_ID
@@ -121,14 +117,13 @@ app.post('/api/auth/google', async (req, res) => {
     
     console.log(`👤 Google user: ${email} (${google_id})`);
     
-    // Check if user exists in profiles by google_id
+    // Check if user exists in profiles
     let { data: existingUser, error: fetchError } = await supabase
       .from('profiles')
       .select('*')
       .eq('google_id', google_id)
       .single();
     
-    // If not found by google_id, check by email
     if (!existingUser) {
       console.log('🔍 Checking by email...');
       const { data: userByEmail, error: emailError } = await supabase
@@ -161,7 +156,7 @@ app.post('/api/auth/google', async (req, res) => {
     if (!existingUser) {
       console.log('📝 Creating new user from Google');
       
-      // Check if user exists in auth.users
+      // Try to find user in auth.users
       const { data: authUsers, error: authError } = await supabase
         .from('auth.users')
         .select('id')
@@ -171,7 +166,6 @@ app.post('/api/auth/google', async (req, res) => {
       let userId;
       
       if (authError || !authUsers) {
-        // User doesn't exist in auth - create them via admin
         try {
           const { data: newAuthUser, error: createAuthError } = await supabase.auth.admin.createUser({
             email: email,
@@ -185,7 +179,6 @@ app.post('/api/auth/google', async (req, res) => {
           }
           userId = newAuthUser.user.id;
         } catch (adminError) {
-          // If admin create fails, try regular signup
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email: email,
             password: Math.random().toString(36).slice(-12),
@@ -278,7 +271,9 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 
-// Email/Password Login
+// ==========================================
+// EMAIL/PASSWORD LOGIN
+// ==========================================
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   
@@ -348,7 +343,9 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Register new user
+// ==========================================
+// REGISTER NEW USER
+// ==========================================
 app.post('/api/auth/register', async (req, res) => {
   const { email, password, name } = req.body;
   
@@ -409,7 +406,9 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Verify token
+// ==========================================
+// VERIFY TOKEN
+// ==========================================
 app.get('/api/auth/verify', authenticate, async (req, res) => {
   res.json({
     success: true,
@@ -417,7 +416,9 @@ app.get('/api/auth/verify', authenticate, async (req, res) => {
   });
 });
 
-// Logout
+// ==========================================
+// LOGOUT
+// ==========================================
 app.post('/api/auth/logout', authenticate, async (req, res) => {
   try {
     await supabase.auth.signOut();
@@ -428,7 +429,7 @@ app.post('/api/auth/logout', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// API: HUBS (Protected)
+// API: HUBS
 // ==========================================
 
 app.get('/api/hubs', authenticate, async (req, res) => {
@@ -579,6 +580,9 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   }
 });
 
+// ==========================================
+// HUB REGISTRATION (Called by ESP32)
+// ==========================================
 app.post('/api/hubs/register', async (req, res) => {
   const { hub_id, ip_address, mac_address, status, device_name } = req.body;
   
@@ -647,6 +651,9 @@ app.post('/api/hubs/register', async (req, res) => {
   }
 });
 
+// ==========================================
+// REBOOT HUB
+// ==========================================
 app.post('/api/hubs/:hubId/reboot', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
@@ -682,6 +689,9 @@ app.post('/api/hubs/:hubId/reboot', authenticate, async (req, res) => {
   }
 });
 
+// ==========================================
+// DISCOVER HUBS
+// ==========================================
 app.get('/api/discover', authenticate, async (req, res) => {
   try {
     const cutoffTime = new Date(Date.now() - 120000).toISOString();

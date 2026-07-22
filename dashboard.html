@@ -518,7 +518,7 @@
                 client_id: '472048491207-hofjvaisdj9vnaglutb9kd23ci948jc5.apps.googleusercontent.com',
                 callback: handleGoogleCredential,
                 cancel_on_tap_outside: false,
-                auto_select: true
+                auto_select: false  // Changed to false to avoid issues
             });
             google.accounts.id.renderButton(
                 document.getElementById('googleBtn'),
@@ -530,7 +530,7 @@
                     logo_alignment: 'left'
                 }
             );
-            google.accounts.id.prompt();
+            // Removed prompt() to avoid popup issues
         } else {
             setTimeout(initGoogleSSO, 500);
         }
@@ -569,6 +569,7 @@
                 showToast('❌ ' + (data.error || 'Login failed'), 'error');
             }
         } catch (error) {
+            console.error('Google auth error:', error);
             showToast('❌ Error: ' + error.message, 'error');
         }
     }
@@ -589,13 +590,13 @@
             registerBtn.classList.remove('active');
             confirmInput.style.display = 'none';
             actionBtn.textContent = 'Sign In';
-            hint.textContent = '💡 New user? Switch to Register above or use Google SSO.';
+            hint.textContent = '💡 New user? Switch to Register above or use Google.';
         } else {
             registerBtn.classList.add('active');
             loginBtn.classList.remove('active');
             confirmInput.style.display = 'block';
             actionBtn.textContent = 'Register';
-            hint.textContent = '💡 Already have an account? Switch to Sign In above or use Google SSO.';
+            hint.textContent = '💡 Already have an account? Switch to Sign In above or use Google.';
         }
     }
 
