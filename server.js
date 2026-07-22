@@ -1,6 +1,6 @@
 // ==========================================
 // FARM IOT SERVER
-// Secure Auth - All Supabase keys on server only
+// Secure Auth - Google SSO handles registration too
 // ==========================================
 
 const express = require('express');
@@ -13,7 +13,7 @@ const jwt = require('jsonwebtoken');
 const app = express();
 
 // ==========================================
-// ENVIRONMENT VARIABLES CHECK
+// ENVIRONMENT VARIABLES
 // ==========================================
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -21,10 +21,9 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const JWT_SECRET = process.env.JWT_SECRET || '8X9kLp2mNv5qRt7wYz3bC6eFh1jM4oP8sU2vX6yZ9aB3cD5eF7gH1jK4mN6pQ8rS2t';
 
-// Check if required variables are set
+// Check required variables
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('❌ Missing Supabase credentials!');
-  console.error('   Set SUPABASE_URL and SUPABASE_SERVICE_KEY');
   process.exit(1);
 }
 
@@ -32,17 +31,13 @@ if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
   console.warn('⚠️ Google OAuth credentials missing. Google SSO will not work.');
 }
 
-if (!process.env.JWT_SECRET) {
-  console.warn('⚠️ JWT_SECRET not set. Using default (not secure for production!)');
-}
-
 // ==========================================
-// SUPABASE CLIENT (SERVER ONLY)
+// SUPABASE CLIENT
 // ==========================================
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // ==========================================
-// GOOGLE OAuth CLIENT (SERVER ONLY)
+// GOOGLE OAuth CLIENT
 // ==========================================
 const googleClient = new OAuth2Client(
   GOOGLE_CLIENT_ID,
@@ -70,10 +65,8 @@ async function authenticate(req, res, next) {
   }
   
   try {
-    // Verify JWT token
     const decoded = jwt.verify(token, JWT_SECRET);
     
-    // Get user from Supabase
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
@@ -102,7 +95,7 @@ async function authenticate(req, res, next) {
 // AUTH ROUTES
 // ==========================================
 
-// Google SSO
+// Google SSO - Handles BOTH Login AND Registration
 app.post('/api/auth/google', async (req, res) => {
   const { id_token } = req.body;
   
@@ -120,36 +113,71 @@ app.post('/api/auth/google', async (req, res) => {
     const payload = ticket.getPayload();
     const { sub: google_id, email, name, picture } = payload;
     
-    // Check if user exists
+    console.log(`🔍 Google user: ${email} (${google_id})`);
+    
+    // Check if user exists by google_id
     let { data: existingUser, error: fetchError } = await supabase
       .from('users')
       .select('*')
       .eq('google_id', google_id)
       .single();
     
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      throw fetchError;
+    // If not found by google_id, check by email
+    if (!existingUser) {
+      const { data: userByEmail, error: emailError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
+      
+      if (!emailError && userByEmail) {
+        // User exists with this email but no google_id - link the account
+        const { data: updatedUser, error: updateError } = await supabase
+          .from('users')
+          .update({
+            google_id: google_id,
+            picture: picture || userByEmail.picture,
+            last_login: new Date().toISOString()
+          })
+          .eq('id', userByEmail.id)
+          .select()
+          .single();
+        
+        if (!updateError) {
+          existingUser = updatedUser;
+        }
+      }
     }
     
     let user;
     
     if (!existingUser) {
-      // Create new user
+      // ✅ NEW USER - AUTO-REGISTER with Google
+      console.log(`📝 Creating new user from Google: ${email}`);
+      
       const { data: newUser, error: createError } = await supabase
         .from('users')
         .insert({
           google_id: google_id,
           email: email,
           name: name || email.split('@')[0],
-          picture: picture || null
+          picture: picture || null,
+          last_login: new Date().toISOString()
         })
         .select()
         .single();
       
-      if (createError) throw createError;
+      if (createError) {
+        console.error('❌ Failed to create user:', createError);
+        throw createError;
+      }
+      
       user = newUser;
+      console.log(`✅ New user registered: ${user.id} - ${user.email}`);
     } else {
-      // Update existing user
+      // Existing user - update last_login
+      console.log(`✅ Existing user logged in: ${existingUser.id} - ${existingUser.email}`);
+      
       const { data: updatedUser, error: updateError } = await supabase
         .from('users')
         .update({
@@ -157,12 +185,15 @@ app.post('/api/auth/google', async (req, res) => {
           picture: picture || existingUser.picture,
           last_login: new Date().toISOString()
         })
-        .eq('google_id', google_id)
+        .eq('id', existingUser.id)
         .select()
         .single();
       
-      if (updateError) throw updateError;
-      user = updatedUser;
+      if (!updateError) {
+        user = updatedUser;
+      } else {
+        user = existingUser;
+      }
     }
     
     // Create JWT session token
@@ -184,11 +215,12 @@ app.post('/api/auth/google', async (req, res) => {
         email: user.email,
         name: user.name,
         picture: user.picture
-      }
+      },
+      is_new_user: !existingUser
     });
     
   } catch (error) {
-    console.error('Google auth error:', error);
+    console.error('❌ Google auth error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -202,15 +234,14 @@ app.post('/api/auth/login', async (req, res) => {
   }
   
   try {
-    // Check if user exists
     let { data: user, error: fetchError } = await supabase
       .from('users')
       .select('*')
       .eq('email', email)
       .single();
     
-    // Try Supabase auth
     if (!user) {
+      // Try Supabase auth
       const { data: authUser, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
@@ -239,7 +270,6 @@ app.post('/api/auth/login', async (req, res) => {
       user = newUser;
     }
     
-    // Create JWT session token
     const sessionToken = jwt.sign(
       { 
         user_id: user.id,
@@ -265,7 +295,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Register new user
+// Register new user (email/password)
 app.post('/api/auth/register', async (req, res) => {
   const { email, password, name } = req.body;
   
@@ -278,7 +308,6 @@ app.post('/api/auth/register', async (req, res) => {
   }
   
   try {
-    // Check if user already exists
     const { data: existingUser } = await supabase
       .from('users')
       .select('email')
@@ -289,7 +318,6 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'User already exists' });
     }
     
-    // Create user in Supabase Auth
     const { data: authUser, error: signUpError } = await supabase.auth.signUp({
       email: email,
       password: password,
@@ -300,7 +328,6 @@ app.post('/api/auth/register', async (req, res) => {
     
     if (signUpError) throw signUpError;
     
-    // Create user in our table
     const { data: newUser, error: createError } = await supabase
       .from('users')
       .insert({
@@ -314,7 +341,6 @@ app.post('/api/auth/register', async (req, res) => {
     
     if (createError) throw createError;
     
-    // Create JWT session token
     const sessionToken = jwt.sign(
       { 
         user_id: newUser.id,
@@ -362,7 +388,6 @@ app.post('/api/auth/logout', authenticate, async (req, res) => {
 // API: HUBS (Protected)
 // ==========================================
 
-// Get all hubs for user
 app.get('/api/hubs', authenticate, async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -378,7 +403,6 @@ app.get('/api/hubs', authenticate, async (req, res) => {
   }
 });
 
-// Get single hub
 app.get('/api/hubs/:hubId', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
@@ -398,7 +422,6 @@ app.get('/api/hubs/:hubId', authenticate, async (req, res) => {
   }
 });
 
-// Delete hub
 app.delete('/api/hubs/:hubId', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
@@ -416,7 +439,6 @@ app.delete('/api/hubs/:hubId', authenticate, async (req, res) => {
   }
 });
 
-// Get hub config
 app.get('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
@@ -445,7 +467,6 @@ app.get('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   }
 });
 
-// Set hub config
 app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   const { hubId } = req.params;
   const { ssid, password, mqtt_server, mqtt_port, device_name } = req.body;
@@ -476,7 +497,6 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
       })
       .eq('hub_id', hubId);
     
-    // Get hub IP to push config
     const { data: hub } = await supabase
       .from('hubs')
       .select('ip_address, status')
@@ -516,7 +536,6 @@ app.post('/api/hubs/:hubId/config', authenticate, async (req, res) => {
   }
 });
 
-// Register hub (called by ESP32)
 app.post('/api/hubs/register', async (req, res) => {
   const { hub_id, ip_address, mac_address, status, device_name } = req.body;
   
@@ -585,7 +604,6 @@ app.post('/api/hubs/register', async (req, res) => {
   }
 });
 
-// Reboot hub
 app.post('/api/hubs/:hubId/reboot', authenticate, async (req, res) => {
   const { hubId } = req.params;
   
@@ -621,7 +639,6 @@ app.post('/api/hubs/:hubId/reboot', authenticate, async (req, res) => {
   }
 });
 
-// Discovery - get hubs in discovery mode
 app.get('/api/discover', authenticate, async (req, res) => {
   try {
     const cutoffTime = new Date(Date.now() - 120000).toISOString();
@@ -657,4 +674,5 @@ app.listen(PORT, () => {
   console.log(`✅ FarmIOT Server running on port ${PORT}`);
   console.log(`📡 Server URL: ${process.env.SERVER_URL || 'https://farm-iot.onrender.com'}`);
   console.log(`🔐 JWT Secret: ${process.env.JWT_SECRET ? '✅ Set' : '⚠️ Using default'}`);
+  console.log(`🅶 Google SSO: ${GOOGLE_CLIENT_ID ? '✅ Enabled' : '❌ Disabled'}`);
 });
