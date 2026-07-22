@@ -27,6 +27,10 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   process.exit(1);
 }
 
+if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+  console.warn('⚠️ Google OAuth credentials missing. Google SSO will not work.');
+}
+
 // ==========================================
 // SUPABASE CLIENT
 // ==========================================
@@ -37,7 +41,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 // ==========================================
 const googleClient = new OAuth2Client(
   GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET
+  GOOGLE_CLIENT_SECRET,
+  'postmessage'  // Important for Google One Tap
 );
 
 // ==========================================
@@ -63,7 +68,6 @@ async function authenticate(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     
-    // Get user from profiles table
     const { data: user, error } = await supabase
       .from('profiles')
       .select('*')
@@ -92,15 +96,20 @@ async function authenticate(req, res, next) {
 // AUTH ROUTES
 // ==========================================
 
-// Google SSO - Handles BOTH Login AND Registration
+// Google SSO - Using Google One Tap
 app.post('/api/auth/google', async (req, res) => {
+  console.log('📥 Google auth request received');
+  
   const { id_token } = req.body;
   
   if (!id_token) {
+    console.log('❌ No id_token provided');
     return res.status(400).json({ error: 'id_token required' });
   }
   
   try {
+    console.log('🔍 Verifying Google token...');
+    
     // Verify Google token
     const ticket = await googleClient.verifyIdToken({
       idToken: id_token,
@@ -110,9 +119,9 @@ app.post('/api/auth/google', async (req, res) => {
     const payload = ticket.getPayload();
     const { sub: google_id, email, name, picture } = payload;
     
-    console.log(`🔍 Google user: ${email} (${google_id})`);
+    console.log(`👤 Google user: ${email} (${google_id})`);
     
-    // Check if user exists by google_id in profiles
+    // Check if user exists in profiles by google_id
     let { data: existingUser, error: fetchError } = await supabase
       .from('profiles')
       .select('*')
@@ -121,6 +130,7 @@ app.post('/api/auth/google', async (req, res) => {
     
     // If not found by google_id, check by email
     if (!existingUser) {
+      console.log('🔍 Checking by email...');
       const { data: userByEmail, error: emailError } = await supabase
         .from('profiles')
         .select('*')
@@ -128,7 +138,7 @@ app.post('/api/auth/google', async (req, res) => {
         .single();
       
       if (!emailError && userByEmail) {
-        // User exists with this email but no google_id - link the account
+        console.log('📝 Linking Google account to existing email');
         const { data: updatedUser, error: updateError } = await supabase
           .from('profiles')
           .update({
@@ -149,25 +159,46 @@ app.post('/api/auth/google', async (req, res) => {
     let user;
     
     if (!existingUser) {
-      // ✅ NEW USER - AUTO-REGISTER with Google
-      console.log(`📝 Creating new profile from Google: ${email}`);
+      console.log('📝 Creating new user from Google');
       
-      // First check if user exists in auth.users
-      const { data: authUser, error: authError } = await supabase.auth.admin.getUserByEmail(email);
+      // Check if user exists in auth.users
+      const { data: authUsers, error: authError } = await supabase
+        .from('auth.users')
+        .select('id')
+        .eq('email', email)
+        .single();
       
       let userId;
-      if (authError || !authUser) {
-        // User doesn't exist in auth - create them
-        const { data: newAuthUser, error: createAuthError } = await supabase.auth.admin.createUser({
-          email: email,
-          email_confirm: true,
-          user_metadata: { full_name: name || email.split('@')[0] }
-        });
-        
-        if (createAuthError) throw createAuthError;
-        userId = newAuthUser.user.id;
+      
+      if (authError || !authUsers) {
+        // User doesn't exist in auth - create them via admin
+        try {
+          const { data: newAuthUser, error: createAuthError } = await supabase.auth.admin.createUser({
+            email: email,
+            email_confirm: true,
+            user_metadata: { full_name: name || email.split('@')[0] }
+          });
+          
+          if (createAuthError) {
+            console.error('❌ Auth create error:', createAuthError);
+            throw createAuthError;
+          }
+          userId = newAuthUser.user.id;
+        } catch (adminError) {
+          // If admin create fails, try regular signup
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: email,
+            password: Math.random().toString(36).slice(-12),
+            options: {
+              data: { full_name: name || email.split('@')[0] }
+            }
+          });
+          
+          if (signUpError) throw signUpError;
+          userId = signUpData.user.id;
+        }
       } else {
-        userId = authUser.user.id;
+        userId = authUsers.id;
       }
       
       // Create profile
@@ -184,11 +215,14 @@ app.post('/api/auth/google', async (req, res) => {
         .select()
         .single();
       
-      if (createError) throw createError;
+      if (createError) {
+        console.error('❌ Profile create error:', createError);
+        throw createError;
+      }
+      
       user = newUser;
       console.log(`✅ New profile created: ${user.id} - ${user.email}`);
     } else {
-      // Existing user - update last_login
       console.log(`✅ Existing user logged in: ${existingUser.id} - ${existingUser.email}`);
       
       const { data: updatedUser, error: updateError } = await supabase
@@ -220,6 +254,8 @@ app.post('/api/auth/google', async (req, res) => {
       { expiresIn: '7d' }
     );
     
+    console.log('✅ Auth successful');
+    
     res.json({
       success: true,
       token: sessionToken,
@@ -234,7 +270,11 @@ app.post('/api/auth/google', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Google auth error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Error details:', error.message);
+    res.status(500).json({ 
+      error: error.message,
+      details: 'Failed to authenticate with Google'
+    });
   }
 });
 
@@ -247,7 +287,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
   
   try {
-    // First, try to sign in with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: email,
       password: password
@@ -257,14 +296,12 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
     
-    // Get user profile
     let { data: user, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', authData.user.id)
       .single();
     
-    // If profile doesn't exist, create it
     if (!user) {
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
@@ -280,14 +317,12 @@ app.post('/api/auth/login', async (req, res) => {
       if (createError) throw createError;
       user = newProfile;
     } else {
-      // Update last_login
       await supabase
         .from('profiles')
         .update({ last_login: new Date().toISOString() })
         .eq('id', user.id);
     }
     
-    // Create JWT session token
     const sessionToken = jwt.sign(
       { 
         user_id: user.id,
@@ -313,7 +348,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Register new user (email/password)
+// Register new user
 app.post('/api/auth/register', async (req, res) => {
   const { email, password, name } = req.body;
   
@@ -326,7 +361,6 @@ app.post('/api/auth/register', async (req, res) => {
   }
   
   try {
-    // Create user in Supabase Auth
     const { data: authUser, error: signUpError } = await supabase.auth.signUp({
       email: email,
       password: password,
@@ -337,7 +371,6 @@ app.post('/api/auth/register', async (req, res) => {
     
     if (signUpError) throw signUpError;
     
-    // Create profile
     const { data: newProfile, error: createError } = await supabase
       .from('profiles')
       .insert({
@@ -351,7 +384,6 @@ app.post('/api/auth/register', async (req, res) => {
     
     if (createError) throw createError;
     
-    // Create JWT session token
     const sessionToken = jwt.sign(
       { 
         user_id: newProfile.id,
