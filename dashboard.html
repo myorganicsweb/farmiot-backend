@@ -641,13 +641,6 @@
             debugLog(`📥 Response received in ${elapsed}ms`, 'info');
             debugLog(`📥 Status: ${res.status} ${res.statusText}`, 'info');
             
-            // Log all response headers
-            const headers = {};
-            res.headers.forEach((value, key) => {
-                headers[key] = value;
-            });
-            debugLog(`📥 Headers: ${JSON.stringify(headers)}`, 'info');
-            
             const data = await res.json();
             debugLog(`📦 Response body: ${JSON.stringify(data, null, 2)}`, 'info');
             
