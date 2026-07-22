@@ -1,7 +1,6 @@
 {
   "name": "farmiot-server",
   "version": "1.0.0",
-  "description": "FarmIOT Server",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
