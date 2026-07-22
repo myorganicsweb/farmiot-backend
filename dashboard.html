@@ -357,6 +357,23 @@
             margin-bottom: 12px;
         }
         
+        .debug-log {
+            background: rgba(0,0,0,0.5);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #4ade80;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .debug-log .error { color: #f87171; }
+        .debug-log .info { color: #60a5fa; }
+        .debug-log .success { color: #4ade80; }
+        .debug-log .warning { color: #fbbf24; }
+        
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
             .tabs { flex-direction: column; }
@@ -437,6 +454,17 @@
             </div>
         </div>
     </div>
+    
+    <!-- Debug Console -->
+    <div class="card" style="margin-top:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <p style="margin:0;">🐛 Debug Log</p>
+            <button class="btn btn-secondary" onclick="document.getElementById('debugLog').innerHTML = ''" style="padding:4px 12px;font-size:11px;">Clear</button>
+        </div>
+        <div class="debug-log" id="debugLog">
+            <div class="info">⏳ Waiting for actions...</div>
+        </div>
+    </div>
 </div>
 
 <!-- Config Modal -->
@@ -478,6 +506,27 @@
 
 <script>
     // ==========================================
+    // DEBUG LOGGING
+    // ==========================================
+    function debugLog(message, type = 'info') {
+        const logEl = document.getElementById('debugLog');
+        const timestamp = new Date().toLocaleTimeString();
+        const colors = {
+            info: '#60a5fa',
+            success: '#4ade80',
+            error: '#f87171',
+            warning: '#fbbf24'
+        };
+        const entry = document.createElement('div');
+        entry.className = type;
+        entry.style.color = colors[type] || '#e5e7eb';
+        entry.textContent = `[${timestamp}] ${message}`;
+        logEl.appendChild(entry);
+        logEl.scrollTop = logEl.scrollHeight;
+        console.log(`[${timestamp}] ${message}`);
+    }
+
+    // ==========================================
     // CONFIG
     // ==========================================
     const API_BASE = window.location.origin;
@@ -489,6 +538,10 @@
     let configuredDevices = [];
     let currentConfigDevice = null;
     let isReconfigure = false;
+
+    debugLog('🚀 FarmIOT Dashboard loaded', 'info');
+    debugLog(`📍 API_BASE: ${API_BASE}`, 'info');
+    debugLog(`🔑 Token exists: ${!!token}`, 'info');
 
     // ==========================================
     // AUTH UI TOGGLE
@@ -507,48 +560,54 @@
             confirmInput.style.display = 'none';
             actionBtn.textContent = 'Sign In';
             hint.textContent = '💡 New user? Switch to Register above.';
+            debugLog('🔄 Switched to Login mode', 'info');
         } else {
             registerBtn.classList.add('active');
             loginBtn.classList.remove('active');
             confirmInput.style.display = 'block';
             actionBtn.textContent = 'Register';
             hint.textContent = '💡 Already have an account? Switch to Sign In above.';
+            debugLog('🔄 Switched to Register mode', 'info');
         }
     }
 
     // ==========================================
-    // EMAIL/PASSWORD AUTH - FIXED: Added event.preventDefault
+    // EMAIL/PASSWORD AUTH
     // ==========================================
     function handleAuthAction(e) {
-        // Prevent any default form submission
         if (e) e.preventDefault();
         
-        console.log('🔄 Auth action triggered');
+        debugLog('🔄 Auth action triggered', 'info');
         
         const email = document.getElementById('emailInput').value.trim();
         const password = document.getElementById('passwordInput').value.trim();
         const confirmPassword = document.getElementById('confirmPasswordInput').value.trim();
         
-        console.log('📧 Email:', email);
-        console.log('🔑 Password length:', password.length);
+        debugLog(`📧 Email: ${email}`, 'info');
+        debugLog(`🔑 Password length: ${password.length}`, 'info');
         
         if (!email || !password) {
+            debugLog('❌ Missing email or password', 'error');
             showToast('❌ Please enter email and password', 'error');
             return;
         }
         
         if (password.length < 6) {
+            debugLog('❌ Password too short (min 6 chars)', 'error');
             showToast('❌ Password must be at least 6 characters', 'error');
             return;
         }
         
         if (authMode === 'register') {
             if (password !== confirmPassword) {
+                debugLog('❌ Passwords do not match', 'error');
                 showToast('❌ Passwords do not match', 'error');
                 return;
             }
+            debugLog('📝 Registering user...', 'info');
             registerUser(email, password);
         } else {
+            debugLog('🔑 Logging in user...', 'info');
             loginUser(email, password);
         }
     }
@@ -558,24 +617,39 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Creating account...';
         
-        console.log('📝 Registering user:', email);
+        debugLog(`📝 Sending registration for: ${email}`, 'info');
+        debugLog(`📦 Request body: ${JSON.stringify({ email, password })}`, 'info');
         
         try {
-            showToast('🔄 Creating account...', 'info');
-            
             const url = `${API_BASE}/api/auth/register`;
-            console.log('📍 Sending to:', url);
+            debugLog(`📍 POST ${url}`, 'info');
             
+            const startTime = Date.now();
             const res = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    email: email, 
+                    password: password 
+                })
             });
+            const elapsed = Date.now() - startTime;
             
-            console.log('📥 Response status:', res.status);
+            debugLog(`📥 Response received in ${elapsed}ms`, 'info');
+            debugLog(`📥 Status: ${res.status} ${res.statusText}`, 'info');
+            
+            // Log all response headers
+            const headers = {};
+            res.headers.forEach((value, key) => {
+                headers[key] = value;
+            });
+            debugLog(`📥 Headers: ${JSON.stringify(headers)}`, 'info');
             
             const data = await res.json();
-            console.log('📦 Response data:', data);
+            debugLog(`📦 Response body: ${JSON.stringify(data, null, 2)}`, 'info');
             
             if (data.success) {
                 token = data.token;
@@ -583,16 +657,19 @@
                 localStorage.setItem('farmiot_token', token);
                 isLoggedIn = true;
                 updateAuthUI(data.user);
+                debugLog('✅ Registration successful!', 'success');
                 showToast('✅ Account created! Welcome!', 'success');
                 loadConfiguredDevices();
                 scanForHubs();
                 clearAuthForm();
             } else {
+                debugLog(`❌ Registration failed: ${data.error || 'Unknown error'}`, 'error');
                 showToast('❌ ' + (data.error || 'Registration failed'), 'error');
             }
         } catch (error) {
-            console.error('❌ Registration error:', error);
-            showToast('❌ Error: ' + error.message, 'error');
+            debugLog(`❌ Network error: ${error.message}`, 'error');
+            console.error('Full error:', error);
+            showToast('❌ Network error: ' + error.message, 'error');
         }
         
         btn.disabled = false;
@@ -604,24 +681,32 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Signing in...';
         
-        console.log('🔑 Logging in user:', email);
+        debugLog(`🔑 Sending login for: ${email}`, 'info');
+        debugLog(`📦 Request body: ${JSON.stringify({ email, password })}`, 'info');
         
         try {
-            showToast('🔄 Signing in...', 'info');
-            
             const url = `${API_BASE}/api/auth/login`;
-            console.log('📍 Sending to:', url);
+            debugLog(`📍 POST ${url}`, 'info');
             
+            const startTime = Date.now();
             const res = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    email: email, 
+                    password: password 
+                })
             });
+            const elapsed = Date.now() - startTime;
             
-            console.log('📥 Response status:', res.status);
+            debugLog(`📥 Response received in ${elapsed}ms`, 'info');
+            debugLog(`📥 Status: ${res.status} ${res.statusText}`, 'info');
             
             const data = await res.json();
-            console.log('📦 Response data:', data);
+            debugLog(`📦 Response body: ${JSON.stringify(data, null, 2)}`, 'info');
             
             if (data.success) {
                 token = data.token;
@@ -629,16 +714,19 @@
                 localStorage.setItem('farmiot_token', token);
                 isLoggedIn = true;
                 updateAuthUI(data.user);
+                debugLog('✅ Login successful!', 'success');
                 showToast('✅ Welcome back, ' + data.user.name + '!', 'success');
                 loadConfiguredDevices();
                 scanForHubs();
                 clearAuthForm();
             } else {
+                debugLog(`❌ Login failed: ${data.error || 'Unknown error'}`, 'error');
                 showToast('❌ ' + (data.error || 'Login failed'), 'error');
             }
         } catch (error) {
-            console.error('❌ Login error:', error);
-            showToast('❌ Error: ' + error.message, 'error');
+            debugLog(`❌ Network error: ${error.message}`, 'error');
+            console.error('Full error:', error);
+            showToast('❌ Network error: ' + error.message, 'error');
         }
         
         btn.disabled = false;
@@ -652,6 +740,7 @@
     }
 
     async function logout() {
+        debugLog('🔓 Logging out...', 'info');
         try {
             await fetch(`${API_BASE}/api/auth/logout`, {
                 method: 'POST',
@@ -664,6 +753,7 @@
         isLoggedIn = false;
         localStorage.removeItem('farmiot_token');
         updateAuthUI(null);
+        debugLog('✅ Logged out', 'success');
         showToast('✅ Logged out', 'success');
     }
 
@@ -677,11 +767,13 @@
             loggedInState.style.display = 'block';
             userName.textContent = userData.name || userData.email || 'User';
             isLoggedIn = true;
+            debugLog(`👤 User logged in: ${userData.email}`, 'success');
         } else {
             loggedOutState.style.display = 'block';
             loggedInState.style.display = 'none';
             isLoggedIn = false;
             setAuthMode('login');
+            debugLog('👤 User logged out', 'info');
         }
     }
 
@@ -695,9 +787,12 @@
             ...options.headers
         };
         
+        debugLog(`🔐 Fetching: ${url}`, 'info');
+        
         const response = await fetch(url, { ...options, headers });
         
         if (response.status === 401) {
+            debugLog('⚠️ Session expired', 'warning');
             token = null;
             localStorage.removeItem('farmiot_token');
             isLoggedIn = false;
@@ -718,6 +813,8 @@
             return;
         }
         
+        debugLog('🔍 Checking session...', 'info');
+        
         try {
             const res = await fetch(`${API_BASE}/api/auth/verify`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -729,17 +826,19 @@
                     user = data.user;
                     isLoggedIn = true;
                     updateAuthUI(data.user);
+                    debugLog('✅ Session valid', 'success');
                     loadConfiguredDevices();
                     scanForHubs();
                     return;
                 }
             }
             
+            debugLog('⚠️ Session invalid', 'warning');
             token = null;
             localStorage.removeItem('farmiot_token');
             updateAuthUI(null);
         } catch (error) {
-            console.error('Session check error:', error);
+            debugLog(`❌ Session check error: ${error.message}`, 'error');
             token = null;
             localStorage.removeItem('farmiot_token');
             updateAuthUI(null);
@@ -793,6 +892,7 @@
             return;
         }
         
+        debugLog('🔍 Scanning for hubs...', 'info');
         showToast('🔍 Scanning for devices...', 'info');
         
         try {
@@ -800,6 +900,7 @@
             if (response.ok) {
                 const hubs = await response.json();
                 discoveredDevices = hubs.filter(h => h.status === 'discovering' || h.status === 'offline');
+                debugLog(`✅ Found ${discoveredDevices.length} device(s) in discovery mode`, 'success');
                 renderDiscoveryList(discoveredDevices);
                 
                 if (discoveredDevices.length === 0) {
@@ -809,7 +910,7 @@
                 }
             }
         } catch (error) {
-            console.error('Scan error:', error);
+            debugLog(`❌ Scan error: ${error.message}`, 'error');
             showToast('❌ Scan failed', 'error');
         }
     }
@@ -958,7 +1059,7 @@
                 document.getElementById('configMQTTPort').value = data.mqtt_port || 1883;
             }
         } catch (error) {
-            console.error('Error fetching config:', error);
+            debugLog(`❌ Error fetching config: ${error.message}`, 'error');
         }
     }
 
@@ -1039,7 +1140,7 @@
                 renderConfiguredDevices(hubs);
             }
         } catch (error) {
-            console.error('Error loading devices:', error);
+            debugLog(`❌ Error loading devices: ${error.message}`, 'error');
         }
     }
 
@@ -1124,20 +1225,15 @@
     }
 
     // ==========================================
-    // INIT - FIXED: Added event listener correctly
+    // INIT
     // ==========================================
-    // Add click event listener to the auth button
     document.addEventListener('DOMContentLoaded', function() {
-        // Fix: Use onclick attribute or addEventListener
         const authBtn = document.getElementById('authActionBtn');
         authBtn.addEventListener('click', handleAuthAction);
-        
-        // Also ensure the onclick attribute works
         authBtn.onclick = function(e) {
             handleAuthAction(e);
         };
-        
-        console.log('✅ Dashboard loaded - Auth button attached');
+        debugLog('✅ Auth button attached', 'success');
     });
     
     checkSession();
@@ -1153,10 +1249,7 @@
         }
     });
 
-    // Debug: Log when page loads
-    console.log('🚀 FarmIOT Dashboard loaded');
-    console.log('📍 API_BASE:', API_BASE);
-    console.log('🔑 Token exists:', !!token);
+    debugLog('✅ Dashboard ready', 'success');
 </script>
 </body>
 </html>

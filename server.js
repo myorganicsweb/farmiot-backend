@@ -30,7 +30,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // ==========================================
-// MIDDLEWARE
+// MIDDLEWARE - CRITICAL: MUST BE BEFORE ROUTES
 // ==========================================
 app.use(cors({
   origin: '*',
@@ -38,8 +38,10 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// IMPORTANT: These MUST be before any route handlers
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(__dirname));
 
 // Handle preflight requests
@@ -89,7 +91,17 @@ async function authenticate(req, res, next) {
 // REGISTER NEW USER
 app.post('/api/auth/register', async (req, res) => {
   console.log('📥 Registration request received');
+  console.log('Headers:', req.headers);
   console.log('Body:', req.body);
+  
+  // Log raw body for debugging
+  let rawBody = '';
+  req.on('data', chunk => {
+    rawBody += chunk;
+  });
+  req.on('end', () => {
+    console.log('Raw body:', rawBody);
+  });
   
   const { email, password, name } = req.body;
   
@@ -98,7 +110,7 @@ app.post('/api/auth/register', async (req, res) => {
     console.log('❌ Missing email or password');
     return res.status(400).json({ 
       error: 'Email and password required',
-      received: { email: !!email, password: !!password }
+      received: { email: !!email, password: !!password, body: req.body }
     });
   }
   
