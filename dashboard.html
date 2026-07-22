@@ -40,7 +40,20 @@
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            align-items: center;
         }
+        
+        /* Auth Buttons */
+        .auth-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .user-info {
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .user-info strong { color: #e5e7eb; }
         
         /* Tabs */
         .tabs {
@@ -202,7 +215,26 @@
             background: rgba(255,255,255,0.08);
             color: #e5e7eb;
         }
+        .btn-google {
+            background: #ffffff;
+            color: #1a1a2e;
+            padding: 8px 20px;
+        }
+        .btn-google:hover { background: #e8e8e8; transform: translateY(-2px); }
+        .btn-google img {
+            width: 18px;
+            height: 18px;
+            vertical-align: middle;
+        }
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .btn-logout {
+            background: rgba(248,113,113,0.1);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.15);
+            padding: 4px 12px;
+            font-size: 12px;
+        }
+        .btn-logout:hover { background: rgba(248,113,113,0.2); }
         
         /* Discovery Card */
         .discovery-card {
@@ -327,6 +359,18 @@
             background: rgba(59,130,246,0.2);
         }
         
+        .loading-overlay {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        .loading-overlay .spinner {
+            width: 40px;
+            height: 40px;
+            border-width: 3px;
+            margin-bottom: 12px;
+        }
+        
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
             .tabs { flex-direction: column; }
@@ -334,6 +378,7 @@
             .card-header { flex-direction: column; align-items: flex-start; }
             .btn-group { width: 100%; }
             .btn-group .btn { flex: 1; justify-content: center; }
+            .auth-section { flex-wrap: wrap; }
         }
     </style>
 </head>
@@ -347,7 +392,16 @@
             <div class="subtitle" id="liveTime">--:--:--</div>
         </div>
         <div class="header-actions">
-            <button class="btn btn-primary" onclick="scanForHubs()">🔍 Scan for Devices</button>
+            <div class="auth-section" id="authSection">
+                <button class="btn btn-google" id="loginBtn" onclick="loginWithGoogle()">
+                    🔐 Sign in with Google
+                </button>
+                <div id="userInfo" style="display:none;" class="user-info">
+                    👋 <strong id="userName">User</strong>
+                    <button class="btn btn-logout" onclick="logout()">Sign Out</button>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="scanForHubs()">🔍 Scan</button>
         </div>
     </div>
 
@@ -364,10 +418,9 @@
     <!-- Tab Content: My Devices -->
     <div id="devicesTab">
         <div id="devicesList">
-            <div class="empty-state">
-                <div class="icon">📡</div>
-                <div class="text">No devices configured yet</div>
-                <div class="sub">Go to the Discovery tab to find and configure your hubs</div>
+            <div class="loading-overlay">
+                <div class="spinner"></div>
+                <div>Loading devices...</div>
             </div>
         </div>
     </div>
@@ -377,8 +430,7 @@
         <div id="discoveryList">
             <div class="empty-state">
                 <div class="icon">🔍</div>
-                <div class="text">Scanning for devices...</div>
-                <div class="sub">Click "Scan for Devices" to find hubs in discovery mode</div>
+                <div class="text">Click "Scan" to find devices in discovery mode</div>
             </div>
         </div>
     </div>
@@ -414,7 +466,7 @@
         </div>
         <div class="modal-actions">
             <button class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
-            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()">💾 Save & Configure</button>
+            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()">💾 Save</button>
         </div>
     </div>
 </div>
@@ -422,12 +474,160 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
+    // ==========================================
+    // SUPABASE CONFIG
+    // ==========================================
+    const SUPABASE_URL = 'https://adxaifphothopomwutcg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkeGFpZnBob3Rob3BvbXd1dGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxOTM4NTEsImV4cCI6MjA5Nzc2OTg1MX0.uMbkFZP4kPnjJamcaVwgMhcgDbJkkDg1JYbz0HVDfYk';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ==========================================
+    // GLOBALS
+    // ==========================================
     const API_BASE = window.location.origin;
     let discoveredDevices = [];
     let configuredDevices = [];
     let currentConfigDevice = null;
     let isReconfigure = false;
+    let isLoggedIn = false;
+    let currentUser = null;
+
+    // ==========================================
+    // AUTH FUNCTIONS
+    // ==========================================
+    async function loginWithGoogle() {
+        try {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin
+                }
+            });
+            if (error) throw error;
+        } catch (error) {
+            showToast('❌ Login failed: ' + error.message, 'error');
+        }
+    }
+
+    async function logout() {
+        try {
+            await supabase.auth.signOut();
+            localStorage.removeItem('supabase_token');
+            isLoggedIn = false;
+            currentUser = null;
+            updateAuthUI(null);
+            showToast('✅ Logged out', 'success');
+            document.getElementById('devicesList').innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">🔐</div>
+                    <div class="text">Please sign in to view your devices</div>
+                    <div class="sub">Click "Sign in with Google" above</div>
+                </div>
+            `;
+        } catch (error) {
+            showToast('❌ Logout failed: ' + error.message, 'error');
+        }
+    }
+
+    function updateAuthUI(user) {
+        const loginBtn = document.getElementById('loginBtn');
+        const userInfo = document.getElementById('userInfo');
+        const userName = document.getElementById('userName');
+        
+        if (user) {
+            loginBtn.style.display = 'none';
+            userInfo.style.display = 'block';
+            userName.textContent = user.user_metadata?.full_name || user.email || 'User';
+            isLoggedIn = true;
+            currentUser = user;
+            localStorage.setItem('supabase_token', user.access_token || '');
+        } else {
+            loginBtn.style.display = 'inline-block';
+            userInfo.style.display = 'none';
+            isLoggedIn = false;
+            currentUser = null;
+            localStorage.removeItem('supabase_token');
+        }
+    }
+
+    async function checkSession() {
+        try {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (error) throw error;
+            
+            if (session?.user) {
+                updateAuthUI(session.user);
+                await loadConfiguredDevices();
+                await scanForHubs();
+            } else {
+                updateAuthUI(null);
+                document.getElementById('devicesList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">🔐</div>
+                        <div class="text">Please sign in to view your devices</div>
+                        <div class="sub">Click "Sign in with Google" above</div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Session check failed:', error);
+            updateAuthUI(null);
+        }
+    }
+
+    // Listen for auth changes
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+            updateAuthUI(session.user);
+            showToast('✅ Welcome, ' + (session.user.user_metadata?.full_name || 'User') + '!', 'success');
+            loadConfiguredDevices();
+            scanForHubs();
+        } else if (event === 'SIGNED_OUT') {
+            updateAuthUI(null);
+        }
+    });
+
+    // ==========================================
+    // FETCH WITH AUTH
+    // ==========================================
+    async function fetchWithAuth(url, options = {}) {
+        const token = localStorage.getItem('supabase_token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            ...options.headers
+        };
+        
+        try {
+            const response = await fetch(url, { ...options, headers });
+            
+            if (response.status === 401) {
+                // Token expired or invalid
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.access_token) {
+                    localStorage.setItem('supabase_token', session.access_token);
+                    headers['Authorization'] = `Bearer ${session.access_token}`;
+                    const retryResponse = await fetch(url, { ...options, headers });
+                    if (retryResponse.ok) return retryResponse;
+                }
+                showToast('⚠️ Please sign in again', 'warning');
+                await supabase.auth.signOut();
+                localStorage.removeItem('supabase_token');
+                updateAuthUI(null);
+                throw new Error('Unauthorized');
+            }
+            
+            return response;
+        } catch (error) {
+            if (error.message === 'Unauthorized') throw error;
+            console.error('Fetch error:', error);
+            throw error;
+        }
+    }
 
     // ==========================================
     // TOAST
@@ -450,7 +650,9 @@
         document.getElementById('tabDevices').classList.toggle('active', tab === 'devices');
         document.getElementById('tabDiscovery').classList.toggle('active', tab === 'discovery');
         
-        if (tab === 'discovery') scanForHubs();
+        if (tab === 'discovery' && isLoggedIn) {
+            scanForHubs();
+        }
     }
 
     // ==========================================
@@ -459,7 +661,6 @@
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-    // Close modal on backdrop click
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.classList.remove('active');
@@ -467,47 +668,32 @@
     });
 
     // ==========================================
-    // SCAN FOR HUBS (Discovery Mode)
+    // SCAN FOR HUBS
     // ==========================================
     async function scanForHubs() {
+        if (!isLoggedIn) {
+            showToast('⚠️ Please sign in first', 'warning');
+            return;
+        }
+        
         showToast('🔍 Scanning for devices...', 'info');
         
         try {
-            // Try to fetch from server API
-            const response = await fetch(`${API_BASE}/api/discover`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-                }
-            });
-            
+            const response = await fetchWithAuth(`${API_BASE}/api/discover`);
             if (response.ok) {
                 const hubs = await response.json();
-                // Filter: only show hubs in discovery mode or not yet configured
-                const discovering = hubs.filter(h => 
-                    h.status === 'discovering' || 
-                    h.status === 'offline' || 
-                    !h.user_id
-                );
-                discoveredDevices = discovering;
-                renderDiscoveryList(discovering);
+                discoveredDevices = hubs.filter(h => h.status === 'discovering' || h.status === 'offline');
+                renderDiscoveryList(discoveredDevices);
                 
-                if (discovering.length === 0) {
+                if (discoveredDevices.length === 0) {
                     showToast('🔍 No devices in discovery mode found', 'info');
                 } else {
-                    showToast(`✅ Found ${discovering.length} device(s) in discovery mode`, 'success');
-                }
-            } else {
-                // If auth fails, try public endpoint
-                const publicResponse = await fetch(`${API_BASE}/api/discover/public`);
-                if (publicResponse.ok) {
-                    const hubs = await publicResponse.json();
-                    discoveredDevices = hubs;
-                    renderDiscoveryList(hubs);
+                    showToast(`✅ Found ${discoveredDevices.length} device(s)`, 'success');
                 }
             }
         } catch (error) {
             console.error('Scan error:', error);
-            showToast('❌ Scan failed. Check if ESP32 is powered on.', 'error');
+            showToast('❌ Scan failed', 'error');
         }
     }
 
@@ -542,7 +728,7 @@
                             </span>
                         </div>
                         <div class="card-subtitle">
-                            ID: ${device.device_id} · IP: ${device.ip_address || 'Unknown'} · ${device.mac_address || 'MAC unknown'}
+                            ID: ${device.device_id} · IP: ${device.ip_address || 'Unknown'}
                         </div>
                     </div>
                     <div class="btn-group">
@@ -617,6 +803,11 @@
     // OPEN CONFIG MODAL
     // ==========================================
     function openConfigForDevice(deviceId, isReconfig) {
+        if (!isLoggedIn) {
+            showToast('⚠️ Please sign in first', 'warning');
+            return;
+        }
+        
         isReconfigure = isReconfig;
         currentConfigDevice = deviceId;
         
@@ -629,7 +820,6 @@
         document.getElementById('configMQTT').value = 'broker.hivemq.com';
         document.getElementById('configMQTTPort').value = '1883';
         
-        // If reconfiguring, try to load existing config
         if (isReconfig) {
             fetchConfig(deviceId);
         }
@@ -638,15 +828,11 @@
     }
 
     // ==========================================
-    // FETCH EXISTING CONFIG (for reconfigure)
+    // FETCH EXISTING CONFIG
     // ==========================================
     async function fetchConfig(deviceId) {
         try {
-            const response = await fetch(`${API_BASE}/api/hubs/${deviceId}/config`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-                }
-            });
+            const response = await fetchWithAuth(`${API_BASE}/api/hubs/${deviceId}/config`);
             if (response.ok) {
                 const data = await response.json();
                 document.getElementById('configSSID').value = data.ssid || '';
@@ -663,6 +849,11 @@
     // SAVE CONFIG
     // ==========================================
     async function saveConfig() {
+        if (!isLoggedIn) {
+            showToast('⚠️ Please sign in first', 'warning');
+            return;
+        }
+        
         const deviceId = currentConfigDevice;
         const ssid = document.getElementById('configSSID').value.trim();
         const password = document.getElementById('configPassword').value.trim();
@@ -680,12 +871,8 @@
         btn.innerHTML = '<span class="spinner"></span> Saving...';
 
         try {
-            const response = await fetch(`${API_BASE}/api/hubs/${deviceId}/config`, {
+            const response = await fetchWithAuth(`${API_BASE}/api/hubs/${deviceId}/config`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-                },
                 body: JSON.stringify({
                     ssid: ssid,
                     password: password,
@@ -701,14 +888,12 @@
                 showToast('✅ Config saved! Device will reboot and connect.', 'success');
                 closeModal('configModal');
                 
-                // If this was a discovery device, remove it from discovery list
                 if (!isReconfigure) {
                     discoveredDevices = discoveredDevices.filter(d => d.device_id !== deviceId);
                     renderDiscoveryList(discoveredDevices);
                     document.getElementById('discoveryCount').textContent = discoveredDevices.length;
                 }
                 
-                // Refresh devices list
                 setTimeout(loadConfiguredDevices, 3000);
             } else {
                 showToast('❌ ' + (result.error || 'Failed to save'), 'error');
@@ -718,20 +903,19 @@
         }
 
         btn.disabled = false;
-        btn.innerHTML = '💾 Save & Configure';
+        btn.innerHTML = '💾 Save';
     }
 
     // ==========================================
     // LOAD CONFIGURED DEVICES
     // ==========================================
     async function loadConfiguredDevices() {
+        if (!isLoggedIn) {
+            return;
+        }
+        
         try {
-            const response = await fetch(`${API_BASE}/api/hubs`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-                }
-            });
-            
+            const response = await fetchWithAuth(`${API_BASE}/api/hubs`);
             if (response.ok) {
                 const hubs = await response.json();
                 configuredDevices = hubs;
@@ -746,15 +930,17 @@
     // REBOOT DEVICE
     // ==========================================
     async function rebootDevice(deviceId) {
+        if (!isLoggedIn) {
+            showToast('⚠️ Please sign in first', 'warning');
+            return;
+        }
+        
         if (!confirm(`Reboot ${deviceId}?`)) return;
         
         showToast('🔄 Rebooting device...', 'info');
         try {
-            const response = await fetch(`${API_BASE}/api/hubs/${deviceId}/reboot`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-                }
+            const response = await fetchWithAuth(`${API_BASE}/api/hubs/${deviceId}/reboot`, {
+                method: 'POST'
             });
             if (response.ok) {
                 showToast('✅ Reboot command sent', 'success');
@@ -769,14 +955,16 @@
     // REMOVE DEVICE
     // ==========================================
     async function removeDevice(deviceId) {
+        if (!isLoggedIn) {
+            showToast('⚠️ Please sign in first', 'warning');
+            return;
+        }
+        
         if (!confirm(`Remove ${deviceId} from your devices?`)) return;
         
         try {
-            const response = await fetch(`${API_BASE}/api/hubs/${deviceId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-                }
+            const response = await fetchWithAuth(`${API_BASE}/api/hubs/${deviceId}`, {
+                method: 'DELETE'
             });
             if (response.ok) {
                 showToast('✅ Device removed', 'success');
@@ -798,14 +986,18 @@
     // ==========================================
     // INIT
     // ==========================================
-    loadConfiguredDevices();
+    checkSession();
     updateTime();
     setInterval(updateTime, 1000);
-    setInterval(loadConfiguredDevices, 30000);
+    setInterval(() => {
+        if (isLoggedIn) loadConfiguredDevices();
+    }, 30000);
 
     // Auto-scan discovery tab when switching to it
     document.getElementById('tabDiscovery').addEventListener('click', () => {
-        setTimeout(scanForHubs, 300);
+        if (isLoggedIn) {
+            setTimeout(scanForHubs, 300);
+        }
     });
 </script>
 </body>
