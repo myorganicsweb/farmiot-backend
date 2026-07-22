@@ -1,552 +1,485 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FarmIOT Dashboard</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      background: #0a0e17;
-      color: #fff;
-      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-    }
-
-    .dashboard {
-      width: 100%;
-      max-width: 1200px;
-      background: linear-gradient(145deg, #111827, #0f1629);
-      border-radius: 24px;
-      padding: 30px 35px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-    }
-
-    /* Header */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 28px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .logo {
-      font-size: 28px;
-      line-height: 1;
-    }
-
-    .header h1 {
-      font-size: 22px;
-      font-weight: 700;
-      background: linear-gradient(135deg, #4ade80, #22d3ee);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      letter-spacing: -0.5px;
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      font-size: 13px;
-      color: #6b7280;
-    }
-
-    .live-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #4ade80;
-      display: inline-block;
-      animation: pulse 1.5s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.8); }
-    }
-
-    /* Cards Row */
-    .cards-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 18px;
-    }
-
-    .card {
-      background: rgba(255, 255, 255, 0.03);
-      backdrop-filter: blur(12px);
-      border-radius: 16px;
-      padding: 20px 22px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-    }
-
-    .card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(255, 255, 255, 0.12);
-      background: rgba(255, 255, 255, 0.05);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-    }
-
-    /* Card status color accents */
-    .card-hub.online::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 40px;
-      height: 40px;
-      background: radial-gradient(circle at top right, rgba(74, 222, 128, 0.08), transparent 70%);
-      border-radius: 50%;
-      pointer-events: none;
-    }
-
-    .card-sensor.online::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 40px;
-      height: 40px;
-      background: radial-gradient(circle at top right, rgba(74, 222, 128, 0.08), transparent 70%);
-      border-radius: 50%;
-      pointer-events: none;
-    }
-
-    .card-soil::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 40px;
-      height: 40px;
-      background: radial-gradient(circle at top right, rgba(251, 191, 36, 0.08), transparent 70%);
-      border-radius: 50%;
-      pointer-events: none;
-    }
-
-    .card-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: #6b7280;
-      margin-bottom: 10px;
-    }
-
-    .card-icon {
-      font-size: 16px;
-    }
-
-    .card-value {
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      margin-bottom: 4px;
-    }
-
-    .card-sub {
-      font-size: 12px;
-      color: #6b7280;
-      font-weight: 400;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 4px 12px;
-      border-radius: 20px;
-      margin-top: 6px;
-    }
-
-    .status-badge.online {
-      color: #4ade80;
-      background: rgba(74, 222, 128, 0.1);
-      border: 1px solid rgba(74, 222, 128, 0.15);
-    }
-
-    .status-badge.offline {
-      color: #f87171;
-      background: rgba(248, 113, 113, 0.1);
-      border: 1px solid rgba(248, 113, 113, 0.15);
-    }
-
-    .status-badge .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    .status-badge.online .dot {
-      background: #4ade80;
-      animation: pulse 1.5s ease-in-out infinite;
-    }
-
-    .status-badge.offline .dot {
-      background: #f87171;
-    }
-
-    /* Soil specific */
-    .soil-reading {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-    }
-
-    .soil-reading .value {
-      font-size: 36px;
-      font-weight: 700;
-      color: #fbbf24;
-    }
-
-    .soil-reading .unit {
-      font-size: 16px;
-      color: #6b7280;
-    }
-
-    /* Responsive */
-    @media (max-width: 1024px) {
-      .cards-row {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 600px) {
-      .dashboard {
-        padding: 16px;
-        border-radius: 16px;
-      }
-
-      .header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-      }
-
-      .cards-row {
-        grid-template-columns: 1fr;
-        gap: 12px;
-      }
-
-      .card {
-        padding: 16px 18px;
-      }
-
-      .card-value {
-        font-size: 22px;
-      }
-
-      .soil-reading .value {
-        font-size: 28px;
-      }
-    }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #2d3748;
-      border-radius: 10px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #4a5568;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmIOT - Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0e17;
+            color: #e5e7eb;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container { max-width: 500px; width: 100%; }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #4ade80, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+        .subtitle {
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: rgba(17, 24, 39, 0.9);
+            padding: 20px;
+            border-radius: 16px;
+            margin: 12px 0;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s;
+        }
+        .card:hover { border-color: rgba(74, 222, 128, 0.15); }
+        .card p {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        .online { color: #4ade80; }
+        .offline { color: #f87171; }
+        .status-indicator {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .last-updated {
+            font-size: 12px;
+            color: #4b5563;
+            margin-top: 6px;
+        }
+        .icon { font-size: 28px; display: block; margin-bottom: 8px; }
+        .soil-value {
+            font-size: 40px;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+        .soil-label { font-size: 12px; color: #6b7280; }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4ade80, #22d3ee);
+            color: #0a0e17;
+        }
+        .btn-primary:hover { transform: translateY(-2px); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: #9ca3af;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.08); }
+        .btn-danger {
+            background: rgba(248,113,113,0.1);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.15);
+        }
+        .btn-danger:hover { background: rgba(248,113,113,0.2); }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .btn-group .btn { flex: 1; min-width: 80px; text-align: center; }
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+        .status-dot.online { background: #4ade80; }
+        .status-dot.offline { background: #f87171; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #1a1f2e;
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 450px;
+            width: 90%;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .modal-content h2 { margin-bottom: 16px; font-size: 22px; }
+        .modal-content .form-group { margin-bottom: 14px; }
+        .modal-content label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #9ca3af;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            color: #e5e7eb;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .modal-content input:focus {
+            outline: none;
+            border-color: #4ade80;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .modal-actions .btn { flex: 1; }
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            background: rgba(17,24,39,0.95);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #e5e7eb;
+            font-size: 14px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 2000;
+            font-family: inherit;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { border-left: 3px solid #4ade80; }
+        .toast.error { border-left: 3px solid #f87171; }
+        .toast.warning { border-left: 3px solid #fbbf24; }
+        .toast.info { border-left: 3px solid #60a5fa; }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: #4ade80;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .server-info {
+            text-align: center;
+            font-size: 12px;
+            color: #4b5563;
+            margin-top: 16px;
+        }
+        .server-info a {
+            color: #4ade80;
+            text-decoration: none;
+        }
+        @media (max-width: 480px) {
+            .container { padding: 0 4px; }
+            .card { padding: 16px; }
+            .btn-group .btn { min-width: 60px; font-size: 12px; padding: 8px 12px; }
+        }
+    </style>
 </head>
 <body>
 
-<div class="dashboard">
-  <!-- Header -->
-  <div class="header">
-    <div class="header-left">
-      <span class="logo">🚜</span>
-      <h1>FarmIOT</h1>
-    </div>
-    <div class="header-right">
-      <span class="live-dot"></span>
-      <span id="liveTime">--:--:--</span>
-      <span style="color:#374151;">|</span>
-      <span id="sensorCount">0 Sensors</span>
-    </div>
-  </div>
+<div class="container">
+    <h1>🚜 FarmIOT</h1>
+    <div class="subtitle" id="liveTime">22:07:11 | 0 Sensors</div>
 
-  <!-- Cards Row -->
-  <div class="cards-row">
     <!-- Hub Card -->
-    <div class="card card-hub" id="hubCard">
-      <div class="card-label">
-        <span class="card-icon">📡</span>
-        Hub
-      </div>
-      <div class="card-value" id="hubStatusText">OFFLINE</div>
-      <div class="status-badge offline" id="hubBadge">
-        <span class="dot"></span>
-        <span id="hubBadgeText">Offline</span>
-      </div>
-      <div class="card-sub" id="hubLastSeen">—</div>
+    <div class="card">
+        <span class="icon">📡</span>
+        <p>Hub</p>
+        <div id="hubStatus" class="status-indicator offline">
+            <span class="status-dot offline"></span> OFFLINE
+        </div>
+        <div id="hubLastSeen" class="last-updated">—</div>
+        <div class="btn-group" style="margin-top:12px;">
+            <button class="btn btn-primary" onclick="rebootHub()">🔄 Reboot</button>
+            <button class="btn btn-secondary" onclick="openConfigModal()">⚙️ Configure</button>
+        </div>
     </div>
 
     <!-- Sensor Card -->
-    <div class="card card-sensor" id="sensorCard">
-      <div class="card-label">
-        <span class="card-icon">🌱</span>
-        Sensor
-      </div>
-      <div class="card-value" id="sensorStatusText">OFFLINE</div>
-      <div class="status-badge offline" id="sensorBadge">
-        <span class="dot"></span>
-        <span id="sensorBadgeText">Offline</span>
-      </div>
-      <div class="card-sub" id="sensorLastSeen">—</div>
+    <div class="card">
+        <span class="icon">🌱</span>
+        <p>Sensor</p>
+        <div id="sensorStatus" class="status-indicator offline">
+            <span class="status-dot offline"></span> OFFLINE
+        </div>
+        <div id="sensorLastSeen" class="last-updated">—</div>
     </div>
 
     <!-- Soil Card -->
-    <div class="card card-soil">
-      <div class="card-label">
-        <span class="card-icon">💧</span>
-        Soil Moisture
-      </div>
-      <div class="soil-reading">
-        <span class="value" id="soilValue">—</span>
-        <span class="unit">ADC</span>
-      </div>
-      <div style="margin-top:6px;">
-        <span style="font-size:12px;color:#6b7280;" id="soilStatus">Waiting for data...</span>
-      </div>
-      <div class="card-sub" id="soilLastUpdated">—</div>
+    <div class="card">
+        <span class="icon">💧</span>
+        <p>Soil Moisture</p>
+        <div id="soilDisplay" class="soil-value">—</div>
+        <div class="soil-label">ADC</div>
+        <div id="soilLastUpdated" class="last-updated">Waiting for data...</div>
     </div>
 
-    <!-- Stats Card -->
-    <div class="card" style="background:rgba(255,255,255,0.02);">
-      <div class="card-label">
-        <span class="card-icon">📊</span>
-        System
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
-        <div style="display:flex;justify-content:space-between;font-size:13px;">
-          <span style="color:#6b7280;">Uptime</span>
-          <span style="color:#e5e7eb;font-weight:500;" id="uptime">—</span>
+    <!-- System Card -->
+    <div class="card">
+        <span class="icon">📊</span>
+        <p>System</p>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
+                <span style="color:#6b7280;">Uptime</span>
+                <span style="color:#e5e7eb;font-weight:500;" id="uptime">1s</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
+                <span style="color:#6b7280;">Requests</span>
+                <span style="color:#e5e7eb;font-weight:500;" id="requestCount">0</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
+                <span style="color:#6b7280;">Status</span>
+                <span style="color:#4ade80;font-weight:500;">● Live</span>
+            </div>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;">
-          <span style="color:#6b7280;">Requests</span>
-          <span style="color:#e5e7eb;font-weight:500;" id="requestCount">0</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:13px;">
-          <span style="color:#6b7280;">Status</span>
-          <span style="color:#4ade80;font-weight:500;">● Live</span>
-        </div>
-      </div>
     </div>
-  </div>
+
+    <div class="server-info">
+        🔗 <a href="https://farm-iot.onrender.com" target="_blank">farm-iot.onrender.com</a>
+    </div>
 </div>
 
+<!-- Config Modal -->
+<div class="modal" id="configModal">
+    <div class="modal-content">
+        <h2>⚙️ Configure Hub</h2>
+        <div style="background:rgba(59,130,246,0.08);padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:13px;color:#60a5fa;">
+            📡 Config is stored on the ESP32. All users see the same config.
+        </div>
+        <div class="form-group">
+            <label>WiFi SSID</label>
+            <input type="text" id="configSSID" placeholder="Enter WiFi name">
+        </div>
+        <div class="form-group">
+            <label>WiFi Password</label>
+            <input type="password" id="configPassword" placeholder="Enter WiFi password">
+        </div>
+        <div class="form-group">
+            <label>Device Name</label>
+            <input type="text" id="configDeviceName" placeholder="farmiot" value="farmiot">
+        </div>
+        <div class="form-group">
+            <label>MQTT Server</label>
+            <input type="text" id="configMQTT" placeholder="broker.hivemq.com" value="broker.hivemq.com">
+        </div>
+        <div class="form-group">
+            <label>MQTT Port</label>
+            <input type="number" id="configMQTTPort" placeholder="1883" value="1883">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveConfig()">💾 Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
-  // State
-  let requestCount = 0;
-  let startTime = Date.now();
+    const API_BASE = window.location.origin;
+    const DEVICE_ID = 'FarmIOT_Hub_001';
+    let startTime = Date.now();
+    let requestCount = 0;
 
-  // Format time
-  function formatTime(timestamp) {
-    if (!timestamp) return '—';
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', { hour12: false });
-  }
-
-  // Format uptime
-  function formatUptime(ms) {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    if (hours > 0) return `${hours}h ${minutes % 60}m`;
-    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
-    return `${seconds}s`;
-  }
-
-  // Update live time
-  function updateLiveTime() {
-    document.getElementById('liveTime').textContent = new Date().toLocaleTimeString('en-US', { hour12: false });
-    document.getElementById('uptime').textContent = formatUptime(Date.now() - startTime);
-  }
-
-  // Fetch Hub Status
-  async function checkHub() {
-    try {
-      const res = await fetch('/api/hub/status');
-      const data = await res.json();
-      
-      const statusText = document.getElementById('hubStatusText');
-      const badge = document.getElementById('hubBadge');
-      const badgeText = document.getElementById('hubBadgeText');
-      const lastSeen = document.getElementById('hubLastSeen');
-      const card = document.getElementById('hubCard');
-
-      if (data.online) {
-        statusText.textContent = 'ONLINE';
-        statusText.style.color = '#4ade80';
-        badge.className = 'status-badge online';
-        badgeText.textContent = 'Online';
-        card.className = 'card card-hub online';
-      } else {
-        statusText.textContent = 'OFFLINE';
-        statusText.style.color = '#f87171';
-        badge.className = 'status-badge offline';
-        badgeText.textContent = 'Offline';
-        card.className = 'card card-hub';
-      }
-
-      lastSeen.textContent = data.lastSeen ? `Last seen: ${formatTime(data.lastSeen)}` : '—';
-    } catch (error) {
-      console.error('Hub error:', error);
+    // ==========================================
+    // TOAST NOTIFICATIONS
+    // ==========================================
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = 'toast ' + type + ' show';
+        clearTimeout(toast._hide);
+        toast._hide = setTimeout(() => toast.classList.remove('show'), 3000);
     }
-  }
 
-  // Fetch Sensor Status
-  async function checkSensor() {
-    try {
-      const res = await fetch('/api/sensor/status');
-      const data = await res.json();
-      
-      const statusText = document.getElementById('sensorStatusText');
-      const badge = document.getElementById('sensorBadge');
-      const badgeText = document.getElementById('sensorBadgeText');
-      const lastSeen = document.getElementById('sensorLastSeen');
-      const card = document.getElementById('sensorCard');
+    // ==========================================
+    // MODAL
+    // ==========================================
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-      if (data.online) {
-        statusText.textContent = 'ONLINE';
-        statusText.style.color = '#4ade80';
-        badge.className = 'status-badge online';
-        badgeText.textContent = 'Online';
-        card.className = 'card card-sensor online';
-        document.getElementById('sensorCount').textContent = '1 Sensor';
-      } else {
-        statusText.textContent = 'OFFLINE';
-        statusText.style.color = '#f87171';
-        badge.className = 'status-badge offline';
-        badgeText.textContent = 'Offline';
-        card.className = 'card card-sensor';
-        document.getElementById('sensorCount').textContent = '0 Sensors';
-      }
-
-      lastSeen.textContent = data.lastSeen ? `Last seen: ${formatTime(data.lastSeen)}` : '—';
-    } catch (error) {
-      console.error('Sensor error:', error);
+    function openConfigModal() {
+        fetchConfig();
+        openModal('configModal');
     }
-  }
 
-  // Fetch Soil Data
-  async function checkSoil() {
-    try {
-      const res = await fetch('/api/sensor/soil');
-      const data = await res.json();
-      
-      const valueEl = document.getElementById('soilValue');
-      const statusEl = document.getElementById('soilStatus');
-      const updatedEl = document.getElementById('soilLastUpdated');
-
-      if (data.moisture !== undefined && data.moisture !== null && data.moisture > 0) {
-        valueEl.textContent = data.moisture;
-        valueEl.style.color = '#fbbf24';
-        
-        // Soil condition
-        if (data.moisture < 300) {
-          statusEl.textContent = '💧 Very Wet';
-          statusEl.style.color = '#60a5fa';
-        } else if (data.moisture < 600) {
-          statusEl.textContent = '🌱 Moist';
-          statusEl.style.color = '#4ade80';
-        } else if (data.moisture < 1000) {
-          statusEl.textContent = '🌿 Dry';
-          statusEl.style.color = '#fbbf24';
-        } else {
-          statusEl.textContent = '🔥 Very Dry';
-          statusEl.style.color = '#f87171';
+    // ==========================================
+    // FETCH: CONFIG
+    // ==========================================
+    async function fetchConfig() {
+        try {
+            const response = await fetch(`${API_BASE}/api/hubs/${DEVICE_ID}/config`);
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('configSSID').value = data.ssid || '';
+                document.getElementById('configDeviceName').value = data.device_name || 'farmiot';
+                document.getElementById('configMQTT').value = data.mqtt_server || 'broker.hivemq.com';
+                document.getElementById('configMQTTPort').value = data.mqtt_port || 1883;
+            }
+        } catch (error) {
+            showToast('❌ Failed to fetch config', 'error');
         }
-        
-        // Increment request count on new data
-        if (data.lastUpdated) {
-          const lastUpdate = new Date(data.lastUpdated);
-          const now = new Date();
-          if ((now - lastUpdate) < 5000) {
-            requestCount++;
-            document.getElementById('requestCount').textContent = requestCount;
-          }
-        }
-      } else {
-        valueEl.textContent = '—';
-        valueEl.style.color = '#6b7280';
-        statusEl.textContent = 'Waiting for data...';
-        statusEl.style.color = '#6b7280';
-      }
-
-      updatedEl.textContent = data.lastUpdated ? `Updated: ${formatTime(data.lastUpdated)}` : '—';
-    } catch (error) {
-      console.error('Soil error:', error);
     }
-  }
 
-  // Refresh all
-  async function refreshAll() {
-    await Promise.all([
-      checkHub(),
-      checkSensor(),
-      checkSoil()
-    ]);
-    updateLiveTime();
-  }
+    // ==========================================
+    // SAVE: CONFIG
+    // ==========================================
+    async function saveConfig() {
+        const ssid = document.getElementById('configSSID').value.trim();
+        const password = document.getElementById('configPassword').value.trim();
+        const name = document.getElementById('configDeviceName').value.trim();
+        const mqtt = document.getElementById('configMQTT').value.trim();
+        const port = parseInt(document.getElementById('configMQTTPort').value) || 1883;
 
-  // Initial load
-  refreshAll();
+        if (!ssid) {
+            showToast('❌ WiFi SSID is required', 'error');
+            return;
+        }
 
-  // Update every 3 seconds
-  setInterval(refreshAll, 3000);
+        const btn = event.target;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Saving...';
 
-  // Update time every second
-  setInterval(updateLiveTime, 1000);
+        try {
+            const response = await fetch(`${API_BASE}/api/hubs/${DEVICE_ID}/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ssid: ssid,
+                    password: password,
+                    mqtt_server: mqtt || 'broker.hivemq.com',
+                    mqtt_port: port,
+                    device_name: name || 'farmiot'
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showToast('✅ Config saved! ESP32 will reboot.', 'success');
+                closeModal('configModal');
+                setTimeout(fetchStatus, 5000);
+            } else {
+                showToast('❌ ' + (result.error || 'Failed to save'), 'error');
+            }
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '💾 Save';
+    }
+
+    // ==========================================
+    // REBOOT HUB
+    // ==========================================
+    async function rebootHub() {
+        showToast('🔄 Rebooting hub...', 'info');
+        try {
+            const response = await fetch(`${API_BASE}/api/hubs/${DEVICE_ID}/reboot`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                showToast('✅ Reboot command sent! Hub will enter discovery mode.', 'success');
+                setTimeout(fetchStatus, 5000);
+            } else {
+                showToast('❌ Failed to reboot hub', 'error');
+            }
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        }
+    }
+
+    // ==========================================
+    // FETCH: STATUS
+    // ==========================================
+    async function fetchStatus() {
+        try {
+            const response = await fetch(`${API_BASE}/api/hubs/${DEVICE_ID}/config`);
+            if (response.ok) {
+                const data = await response.json();
+                const isOnline = data.status === 'online';
+                const statusEl = document.getElementById('hubStatus');
+                const dot = statusEl.querySelector('.status-dot');
+                statusEl.textContent = isOnline ? ' ONLINE' : ' OFFLINE';
+                statusEl.className = 'status-indicator ' + (isOnline ? 'online' : 'offline');
+                dot.className = 'status-dot ' + (isOnline ? 'online' : 'offline');
+                statusEl.prepend(dot);
+                document.getElementById('hubLastSeen').textContent = data.ip_address ? 'IP: ' + data.ip_address : '—';
+            }
+        } catch (error) {
+            // Silently fail
+        }
+    }
+
+    // ==========================================
+    // UPDATE: TIME & UPTIME
+    // ==========================================
+    function updateTime() {
+        const now = new Date();
+        const time = now.toLocaleTimeString('en-US', { hour12: false });
+        document.getElementById('liveTime').textContent = time + ' | 0 Sensors';
+        
+        const seconds = Math.floor((Date.now() - startTime) / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        let display = '';
+        if (hours > 0) display += hours + 'h ';
+        if (minutes > 0) display += (minutes % 60) + 'm ';
+        display += (seconds % 60) + 's';
+        document.getElementById('uptime').textContent = display;
+    }
+
+    // ==========================================
+    // INIT
+    // ==========================================
+    fetchStatus();
+    setInterval(fetchStatus, 15000);
+    setInterval(updateTime, 1000);
+    updateTime();
+
+    // Close modals on backdrop click
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.classList.remove('active');
+        });
+    });
 </script>
-
 </body>
 </html>
