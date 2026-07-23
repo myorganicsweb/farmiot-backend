@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmIOT</title>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0e17;
+            color: #e5e7eb;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header h1 {
+            font-size: 28px;
+            background: linear-gradient(135deg, #4ade80, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header .subtitle { color: #6b7280; font-size: 14px; }
+        .user-badge { color: #6b7280; font-size: 14px; }
+
+        /* Cards */
+        .card {
+            background: rgba(17, 24, 39, 0.9);
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 16px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .card-header h2 { font-size: 18px; font-weight: 600; }
+
+        /* Auth */
+        .auth-card { text-align: center; padding: 40px; }
+        .auth-card h2 { margin-bottom: 8px; }
+        .auth-card p { color: #6b7280; margin-bottom: 20px; }
+        #googleBtn { display: flex; justify-content: center; }
+
+        /* User */
+        .user-card { text-align: center; padding: 30px; }
+        .user-card img {
+            width: 80px; height: 80px; border-radius: 50%;
+            margin-bottom: 12px;
+        }
+        .user-card .name { font-size: 20px; font-weight: 600; }
+        .user-card .email { color: #6b7280; margin: 4px 0 16px; }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4ade80, #22d3ee);
+            color: #0a0e17;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(74,222,128,0.2); }
+        .btn-danger {
+            background: rgba(248,113,113,0.1);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.15);
+        }
+        .btn-danger:hover { background: rgba(248,113,113,0.2); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: #9ca3af;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.08); }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge.online {
+            background: rgba(74,222,128,0.1);
+            color: #4ade80;
+            border: 1px solid rgba(74,222,128,0.15);
+        }
+        .badge.offline {
+            background: rgba(248,113,113,0.1);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.15);
+        }
+        .badge.discovering {
+            background: rgba(251,191,36,0.1);
+            color: #fbbf24;
+            border: 1px solid rgba(251,191,36,0.15);
+        }
+
+        /* Soil */
+        .soil-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+        .soil-time { color: #6b7280; font-size: 14px; margin-top: 4px; }
+
+        /* Hub List */
+        .hub-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .hub-item:last-child { margin-bottom: 0; }
+        .hub-name { font-weight: 600; }
+        .hub-id { font-size: 12px; color: #6b7280; }
+        .hub-ip { font-size: 12px; color: #6b7280; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            background: rgba(17,24,39,0.95);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #e5e7eb;
+            font-size: 14px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s;
+            z-index: 2000;
+            max-width: 90%;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { border-left: 3px solid #4ade80; }
+        .toast.error { border-left: 3px solid #f87171; }
+
+        /* Hidden */
+        .hidden { display: none !important; }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+        }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: #4ade80;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header { flex-direction: column; align-items: flex-start; }
+            .hub-item { flex-direction: column; align-items: flex-start; }
+            .card-header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <div>
+            <h1>🚜 FarmIOT</h1>
+            <div class="subtitle">Smart Agriculture Platform</div>
+        </div>
+        <div class="user-badge" id="userBadge"></div>
+    </div>
+
+    <!-- Auth Section -->
+    <div id="authSection">
+        <div class="card auth-card" id="signinCard">
+            <h2>Welcome to FarmIOT</h2>
+            <p>Sign in with your Google account to continue</p>
+            <div id="googleBtn"></div>
+        </div>
+        <div class="card user-card hidden" id="userCard">
+            <img id="userPic" src="" alt="Profile">
+            <div class="name" id="userName">User</div>
+            <div class="email" id="userEmail">user@example.com</div>
+            <button class="btn btn-danger" id="logoutBtn">Sign Out</button>
+        </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div id="dashboardContent" class="hidden">
+        <!-- Soil Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2>💧 Soil Moisture</h2>
+                <span class="badge" id="soilStatus">Loading...</span>
+            </div>
+            <div class="soil-value" id="soilValue">—</div>
+            <div class="soil-time" id="soilTime">Waiting for data...</div>
+        </div>
+
+        <!-- Hubs Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2>📡 Hubs</h2>
+                <button class="btn btn-secondary" id="refreshBtn">🔄 Refresh</button>
+            </div>
+            <div id="hubList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading hubs...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+    // ==========================================
+    // API CLIENT
+    // ==========================================
+    const API_BASE = window.location.origin;
+    let token = localStorage.getItem('token') || null;
+
+    const api = {
+        async request(endpoint, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                ...options,
+                headers
+            });
+            return response.json();
+        },
+
+        async googleLogin(id_token) {
+            return this.request('/api/auth/google', {
+                method: 'POST',
+                body: JSON.stringify({ id_token })
+            });
+        },
+
+        async getHubs() {
+            return this.request('/api/hubs');
+        },
+
+        async getLatestSoil() {
+            return this.request('/api/soil/latest');
+        }
+    };
+
+    // ==========================================
+    // TOAST
+    // ==========================================
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = 'toast ' + type + ' show';
+        clearTimeout(toast._hide);
+        toast._hide = setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // ==========================================
+    // GOOGLE SSO
+    // ==========================================
+    function initGoogleSSO() {
+        google.accounts.id.initialize({
+            client_id: '472048491207-hofjvaisdj9vnaglutb9kd23ci948jc5.apps.googleusercontent.com',
+            callback: async (response) => {
+                const result = await api.googleLogin(response.credential);
+                if (result.success) {
+                    token = result.token;
+                    localStorage.setItem('token', token);
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    showUser(result.user);
+                    showToast('✅ Welcome, ' + result.user.name + '!');
+                    loadDashboard();
+                } else {
+                    showToast('❌ ' + result.error, 'error');
+                }
+            },
+            cancel_on_tap_outside: false,
+        });
+        
+        google.accounts.id.renderButton(
+            document.getElementById('googleBtn'),
+            {
+                theme: 'outline',
+                size: 'large',
+                text: 'signin_with',
+                shape: 'pill',
+                logo_alignment: 'left'
+            }
+        );
+    }
+
+    // ==========================================
+    // SHOW USER
+    // ==========================================
+    function showUser(user) {
+        document.getElementById('signinCard').classList.add('hidden');
+        document.getElementById('userCard').classList.remove('hidden');
+        document.getElementById('userPic').src = user.picture || '';
+        document.getElementById('userName').textContent = user.name || user.email;
+        document.getElementById('userEmail').textContent = user.email;
+        document.getElementById('userBadge').textContent = '👋 ' + user.name;
+        
+        document.getElementById('logoutBtn').onclick = () => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            token = null;
+            document.getElementById('signinCard').classList.remove('hidden');
+            document.getElementById('userCard').classList.add('hidden');
+            document.getElementById('dashboardContent').classList.add('hidden');
+            document.getElementById('userBadge').textContent = '';
+            showToast('✅ Signed out');
+        };
+    }
+
+    // ==========================================
+    // LOAD DASHBOARD
+    // ==========================================
+    async function loadDashboard() {
+        document.getElementById('dashboardContent').classList.remove('hidden');
+        await loadSoil();
+        await loadHubs();
+    }
+
+    // ==========================================
+    // LOAD SOIL
+    // ==========================================
+    async function loadSoil() {
+        try {
+            const data = await api.getLatestSoil();
+            if (data && data.value) {
+                document.getElementById('soilValue').textContent = data.value;
+                document.getElementById('soilTime').textContent = 'Updated: ' + new Date(data.timestamp).toLocaleTimeString();
+                document.getElementById('soilStatus').textContent = 'Online';
+                document.getElementById('soilStatus').className = 'badge online';
+            }
+        } catch (error) {
+            document.getElementById('soilStatus').textContent = 'Offline';
+            document.getElementById('soilStatus').className = 'badge offline';
+        }
+    }
+
+    // ==========================================
+    // LOAD HUBS
+    // ==========================================
+    async function loadHubs() {
+        const container = document.getElementById('hubList');
+        container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading hubs...</div>';
+        
+        try {
+            const hubs = await api.getHubs();
+            
+            if (hubs.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:20px;color:#6b7280;">
+                        No hubs configured yet
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = hubs.map(hub => `
+                <div class="hub-item">
+                    <div>
+                        <span class="hub-name">${hub.name || hub.hub_id}</span>
+                        <span class="badge ${hub.status === 'online' ? 'online' : 'offline'}">
+                            ${hub.status || 'offline'}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="hub-id">${hub.hub_id}</span>
+                        ${hub.ip_address ? `<span class="hub-ip">· ${hub.ip_address}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:20px;color:#f87171;">
+                    ❌ Failed to load hubs
+                </div>
+            `;
+        }
+    }
+
+    // ==========================================
+    // CHECK SESSION
+    // ==========================================
+    function checkSession() {
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        token = localStorage.getItem('token') || null;
+        
+        if (token && user) {
+            showUser(user);
+            loadDashboard();
+        }
+    }
+
+    // ==========================================
+    // INIT
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', () => {
+        initGoogleSSO();
+        checkSession();
+        
+        document.getElementById('refreshBtn').onclick = () => {
+            loadSoil();
+            loadHubs();
+            showToast('🔄 Refreshed', 'success');
+        };
+        
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            if (token) {
+                loadSoil();
+            }
+        }, 30000);
+    });
+</script>
+</body>
+</html>
