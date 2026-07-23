@@ -22,7 +22,7 @@ const googleClient = new OAuth2Client(
 );
 
 // ==========================================
-// AUTH MIDDLEWARE (Shared with devices.js)
+// AUTH MIDDLEWARE
 // ==========================================
 const authenticate = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -280,6 +280,5 @@ router.post('/logout', (req, res) => {
   res.json({ success: true, message: 'Logged out' });
 });
 
-// Export the authenticate middleware for use in devices.js
 module.exports = router;
 module.exports.authenticate = authenticate;

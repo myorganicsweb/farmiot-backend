@@ -2,7 +2,6 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const axios = require('axios');
 
-// Import the authenticate middleware from auth.js
 const { authenticate } = require('./auth');
 
 const router = express.Router();
@@ -16,182 +15,84 @@ const supabase = createClient(
 );
 
 // ==========================================
-// 1. PROXY - Discover ESP32 via mDNS (Server-side)
+// 1. REGISTER HUB (Called by ESP32 or browser)
 // ==========================================
-router.get('/hubs/discover/mdns', authenticate, async (req, res) => {
-  console.log('🔍 mDNS discovery via server proxy');
+router.post('/hubs/register', async (req, res) => {
+  const { hub_id, ip_address, mac_address, status, device_name } = req.body;
+  
+  if (!hub_id) {
+    return res.status(400).json({ error: 'hub_id required' });
+  }
   
   try {
-    const { host } = req.query;
-    const hosts = host ? [host] : ['farmiot-hub.local', 'farmiot-hub-001.local', 'farmiot-hub', 'farmiot-hub-001', '192.168.4.1'];
-    const results = [];
+    const { data: existing } = await supabase
+      .from('hubs')
+      .select('*')
+      .eq('hub_id', hub_id)
+      .single();
     
-    for (const h of hosts) {
-      try {
-        const url = `http://${h}/api/discovery`;
-        console.log(`📡 Trying: ${url}`);
-        
-        const response = await axios.get(url, {
-          timeout: 3000,
-          headers: { 'Accept': 'application/json' }
-        });
-        
-        if (response.data && response.data.device_id) {
-          console.log(`✅ Found device at ${h}:`, response.data);
-          results.push({
-            ...response.data,
-            source_host: h
-          });
-          break; // Found one, stop looking
-        }
-      } catch (error) {
-        // Silently continue - host not reachable
-        console.log(`⚠️ ${h}: ${error.message}`);
-      }
+    if (existing) {
+      const { data: updated, error: updateError } = await supabase
+        .from('hubs')
+        .update({
+          status: status || 'online',
+          ip_address: ip_address || existing.ip_address,
+          last_seen: new Date().toISOString()
+        })
+        .eq('hub_id', hub_id)
+        .select()
+        .single();
+      
+      if (updateError) throw updateError;
+      
+      return res.json({ 
+        success: true, 
+        hub: updated,
+        message: 'Hub updated' 
+      });
     }
     
-    // If devices found, register them in Supabase
-    const hubs = [];
-    for (const device of results) {
-      if (device.device_id && device.device_id.startsWith('FarmIOT_')) {
-        // Check if already in Supabase
-        const { data: existing } = await supabase
-          .from('hubs')
-          .select('*')
-          .eq('hub_id', device.device_id)
-          .single();
-        
-        if (!existing) {
-          const { data: newHub, error } = await supabase
-            .from('hubs')
-            .insert({
-              hub_id: device.device_id,
-              name: device.device_name || device.device_id,
-              status: 'discovering',
-              ip_address: device.ip || '192.168.4.1',
-              last_seen: new Date().toISOString()
-            })
-            .select()
-            .single();
-          
-          if (!error && newHub) {
-            hubs.push(newHub);
-          }
-        } else {
-          const { data: updated, error } = await supabase
-            .from('hubs')
-            .update({
-              status: 'discovering',
-              ip_address: device.ip || existing.ip_address,
-              last_seen: new Date().toISOString()
-            })
-            .eq('hub_id', device.device_id)
-            .select()
-            .single();
-          
-          if (!error && updated) {
-            hubs.push(updated);
-          }
-        }
-      }
-    }
+    const { data: newHub, error: createError } = await supabase
+      .from('hubs')
+      .insert({
+        hub_id: hub_id,
+        name: device_name || hub_id,
+        status: status || 'discovering',
+        ip_address: ip_address || null,
+        last_seen: new Date().toISOString()
+      })
+      .select()
+      .single();
     
-    // Filter out hubs already owned by this user
-    const filtered = hubs.filter(h => h.user_id !== req.user.id);
+    if (createError) throw createError;
     
-    res.json(filtered);
+    await supabase
+      .from('hub_configs')
+      .insert({
+        hub_id: hub_id,
+        ssid: '',
+        password: '',
+        mqtt_server: 'broker.hivemq.com',
+        mqtt_port: 1883,
+        device_name: device_name || hub_id
+      });
+    
+    console.log(`✅ Hub registered: ${hub_id}`);
+    
+    res.json({ 
+      success: true, 
+      hub: newHub,
+      message: 'Hub registered successfully' 
+    });
     
   } catch (error) {
-    console.error('❌ mDNS proxy error:', error);
+    console.error('❌ Register error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ==========================================
-// 2. PROXY - Forward config to ESP32
-// ==========================================
-router.post('/hubs/:hubId/configure/proxy', authenticate, async (req, res) => {
-  console.log(`📥 Proxy configure for hub: ${req.params.hubId}`);
-  
-  try {
-    const { hubId } = req.params;
-    const { ssid, password, mqtt_server, mqtt_port, device_name, ip_address } = req.body;
-    
-    if (!ssid) {
-      return res.status(400).json({ error: 'SSID is required' });
-    }
-    
-    // Use provided IP or get from database
-    let targetIp = ip_address;
-    if (!targetIp) {
-      const { data: hub } = await supabase
-        .from('hubs')
-        .select('ip_address')
-        .eq('hub_id', hubId)
-        .single();
-      targetIp = hub?.ip_address;
-    }
-    
-    if (!targetIp) {
-      return res.status(400).json({ error: 'Hub IP address not known' });
-    }
-    
-    // Forward config to ESP32
-    const esp32Url = `http://${targetIp}/api/config`;
-    console.log(`📡 Forwarding to: ${esp32Url}`);
-    
-    const response = await axios.post(
-      esp32Url,
-      new URLSearchParams({
-        ssid: ssid,
-        password: password || '',
-        mqtt: mqtt_server || 'broker.hivemq.com',
-        port: String(mqtt_port || 1883)
-      }),
-      {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        timeout: 5000
-      }
-    );
-    
-    // Save to Supabase
-    await supabase
-      .from('hub_configs')
-      .update({
-        ssid: ssid,
-        password: password || '',
-        mqtt_server: mqtt_server || 'broker.hivemq.com',
-        mqtt_port: mqtt_port || 1883,
-        device_name: device_name || hubId,
-        updated_at: new Date().toISOString()
-      })
-      .eq('hub_id', hubId);
-    
-    await supabase
-      .from('hubs')
-      .update({
-        name: device_name || hubId,
-        status: 'configuring',
-        last_seen: new Date().toISOString()
-      })
-      .eq('hub_id', hubId);
-    
-    res.json({
-      success: true,
-      message: 'Configuration sent to ESP32',
-      esp32_response: response.data
-    });
-    
-  } catch (error) {
-    console.error('❌ Proxy configure error:', error);
-    res.status(500).json({ 
-      error: 'Failed to configure ESP32: ' + error.message 
-    });
-  }
-});
-
-// ==========================================
-// 3. DISCOVER HUBS - Existing
+// 2. DISCOVER HUBS
 // ==========================================
 router.get('/hubs/discover', authenticate, async (req, res) => {
   console.log('🔍 Scanning for hubs...');
@@ -221,7 +122,7 @@ router.get('/hubs/discover', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 4. GET ALL HUBS FOR USER
+// 3. GET ALL HUBS FOR USER
 // ==========================================
 router.get('/hubs', authenticate, async (req, res) => {
   console.log(`📡 Getting hubs for user: ${req.user.id}`);
@@ -243,7 +144,7 @@ router.get('/hubs', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 5. ADD HUB
+// 4. ADD HUB TO USER
 // ==========================================
 router.post('/hubs/add', authenticate, async (req, res) => {
   console.log('📥 Add hub request');
@@ -326,7 +227,7 @@ router.post('/hubs/add', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 6. GET HUB CONFIG
+// 5. GET HUB CONFIG
 // ==========================================
 router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
   console.log(`📥 Get config for hub: ${req.params.hubId}`);
@@ -365,7 +266,7 @@ router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 7. CONFIGURE HUB (Direct - Existing)
+// 6. CONFIGURE HUB
 // ==========================================
 router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
   console.log(`📥 Configure hub: ${req.params.hubId}`);
@@ -390,8 +291,7 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Hub not found' });
     }
     
-    // Save config to Supabase
-    const { error: configError } = await supabase
+    await supabase
       .from('hub_configs')
       .update({
         ssid: ssid,
@@ -403,8 +303,6 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
       })
       .eq('hub_id', hubId);
     
-    if (configError) throw configError;
-    
     await supabase
       .from('hubs')
       .update({
@@ -414,7 +312,7 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
       })
       .eq('hub_id', hubId);
     
-    // Try to push config to ESP32 (if online)
+    // Try to push config to ESP32
     let esp32Response = null;
     if (hub.ip_address) {
       try {
@@ -464,7 +362,7 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 8. REBOOT HUB
+// 7. REBOOT HUB
 // ==========================================
 router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
   console.log(`🔄 Rebooting hub: ${req.params.hubId}`);
@@ -514,7 +412,7 @@ router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 9. DELETE HUB
+// 8. DELETE HUB
 // ==========================================
 router.delete('/hubs/:hubId', authenticate, async (req, res) => {
   console.log(`🗑️ Deleting hub: ${req.params.hubId}`);
@@ -538,7 +436,7 @@ router.delete('/hubs/:hubId', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 10. SOIL API
+// 9. SOIL API
 // ==========================================
 router.post('/soil', async (req, res) => {
   const { device_id, value } = req.body;
@@ -568,7 +466,7 @@ router.post('/soil', async (req, res) => {
 });
 
 // ==========================================
-// 11. GET LATEST SOIL
+// 10. GET LATEST SOIL
 // ==========================================
 router.get('/soil/latest', authenticate, async (req, res) => {
   try {

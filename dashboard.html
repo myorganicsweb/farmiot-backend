@@ -229,37 +229,6 @@
         .modal-content h2 { margin-bottom: 16px; font-size: 22px; }
         .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
         .modal-actions .btn { flex: 1; justify-content: center; }
-        .discovery-instructions {
-            background: rgba(251,191,36,0.06);
-            border: 1px solid rgba(251,191,36,0.1);
-            border-radius: 10px;
-            padding: 16px;
-            margin-bottom: 12px;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        .discovery-instructions strong {
-            color: #fbbf24;
-        }
-        .discovery-instructions .step {
-            display: flex;
-            gap: 10px;
-            align-items: flex-start;
-            margin: 6px 0;
-        }
-        .discovery-instructions .step-num {
-            background: rgba(251,191,36,0.15);
-            color: #fbbf24;
-            border-radius: 50%;
-            width: 22px;
-            height: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 700;
-            flex-shrink: 0;
-        }
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
             .hub-item { flex-direction: column; align-items: flex-start; }
@@ -271,7 +240,6 @@
 <body>
 
 <div class="container">
-    <!-- Header -->
     <div class="header">
         <div>
             <h1>🚜 FarmIOT</h1>
@@ -280,7 +248,6 @@
         <div class="user-badge" id="userBadge"></div>
     </div>
 
-    <!-- Auth Section -->
     <div id="authSection">
         <div class="card auth-card" id="signinCard">
             <h2>Welcome to FarmIOT</h2>
@@ -318,9 +285,7 @@
         </div>
     </div>
 
-    <!-- Dashboard Content -->
     <div id="dashboardContent" class="hidden">
-        <!-- Soil Card -->
         <div class="card">
             <div class="card-header">
                 <h2>💧 Soil Moisture</h2>
@@ -330,7 +295,6 @@
             <div class="soil-time" id="soilTime">Waiting for data...</div>
         </div>
 
-        <!-- Hubs Card -->
         <div class="card">
             <div class="card-header">
                 <h2>📡 My Hubs</h2>
@@ -344,7 +308,6 @@
             </div>
         </div>
 
-        <!-- Discovered Hubs -->
         <div class="card" id="discoveryCard" style="display:none;">
             <div class="card-header">
                 <h2>🔍 Discovered Hubs</h2>
@@ -357,7 +320,6 @@
     </div>
 </div>
 
-<!-- Configure Modal -->
 <div class="modal" id="configModal">
     <div class="modal-content">
         <h2>⚙️ Configure Hub</h2>
@@ -391,7 +353,6 @@
     </div>
 </div>
 
-<!-- Toast -->
 <div id="toast" class="toast"></div>
 
 <script>
@@ -401,9 +362,6 @@
     let authMode = 'login';
     let currentConfigHubId = null;
 
-    // ==========================================
-    // TOAST
-    // ==========================================
     function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
         toast.textContent = message;
@@ -412,9 +370,6 @@
         toast._hide = setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    // ==========================================
-    // API
-    // ==========================================
     async function apiRequest(endpoint, options = {}) {
         const headers = { 'Content-Type': 'application/json' };
         if (token) {
@@ -427,9 +382,6 @@
         return response.json();
     }
 
-    // ==========================================
-    // AUTH
-    // ==========================================
     function setAuthMode(m) {
         authMode = m;
         document.getElementById('loginTab').classList.toggle('active', m === 'login');
@@ -557,9 +509,6 @@
         }
     }
 
-    // ==========================================
-    // DASHBOARD
-    // ==========================================
     async function loadDashboard() {
         document.getElementById('dashboardContent').classList.remove('hidden');
         await loadSoil();
@@ -621,151 +570,145 @@
         }
     }
 
-    // ==========================================
-// MDNS DISCOVERY (via Server Proxy)
-// ==========================================
     async function discoverMDNS() {
         try {
-            // The server will try to discover the ESP32
-            const response = await apiRequest('/api/hubs/discover/mdns');
+            const devices = [];
+            const hubNames = ['farmiot-hub.local', 'farmiot-hub-001.local', 'farmiot-hub', 'farmiot-hub-001'];
             
-            if (response && response.length > 0) {
-                console.log('✅ Server found hubs:', response);
-                return response;
+            for (const name of hubNames) {
+                try {
+                    const url = `http://${name}/api/discovery`;
+                    console.log(`🔍 Trying: ${url}`);
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 3000);
+                    
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json' },
+                        mode: 'cors',
+                        cache: 'no-cache',
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (response && response.ok) {
+                        const data = await response.json();
+                        if (data && data.device_id) {
+                            devices.push({
+                                device_id: data.device_id,
+                                device_name: data.device_name || name,
+                                ip: data.ip || 'unknown',
+                                mac: data.mac || ''
+                            });
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    console.log(`⚠️ ${name}: ${e.message}`);
+                }
             }
             
-            return [];
+            return devices;
         } catch (error) {
             console.log('mDNS discovery error:', error);
             return [];
         }
     }
 
-    // ==========================================
-    // SCAN FOR HUBS - UPDATED
-    // ==========================================
     async function scanForHubs() {
-    const card = document.getElementById('discoveryCard');
-    const list = document.getElementById('discoveryList');
-    card.style.display = 'block';
-    list.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning for hubs...</div>';
-    
-    try {
-        let hubs = [];
-        let mdnsFound = false;
+        const card = document.getElementById('discoveryCard');
+        const list = document.getElementById('discoveryList');
+        card.style.display = 'block';
+        list.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning for hubs...</div>';
         
-        // 1. Try server discovery first
         try {
-            const serverHubs = await apiRequest('/api/hubs/discover');
-            if (serverHubs && serverHubs.length > 0) {
-                hubs = serverHubs;
-                console.log('✅ Server found hubs:', hubs);
+            let hubs = [];
+            
+            try {
+                const serverHubs = await apiRequest('/api/hubs/discover');
+                if (serverHubs && serverHubs.length > 0) {
+                    hubs = serverHubs;
+                    console.log('✅ Server found hubs:', hubs);
+                }
+            } catch (e) {
+                console.log('Server discovery failed:', e);
             }
-        } catch (e) {
-            console.log('Server discovery failed:', e);
-        }
-        
-        // 2. Try mDNS discovery via server proxy (avoids mixed content)
-        try {
-            const mdnsResponse = await discoverMDNS();
-            if (mdnsResponse && mdnsResponse.length > 0) {
-                mdnsFound = true;
-                
-                // Merge with existing hubs (avoid duplicates)
-                const existingIds = new Set(hubs.map(h => h.hub_id));
-                for (const hub of mdnsResponse) {
-                    if (!existingIds.has(hub.hub_id)) {
-                        hubs.push(hub);
+            
+            try {
+                const mdnsDevices = await discoverMDNS();
+                if (mdnsDevices && mdnsDevices.length > 0) {
+                    for (const device of mdnsDevices) {
+                        try {
+                            const result = await apiRequest('/api/hubs/register', {
+                                method: 'POST',
+                                body: JSON.stringify({
+                                    hub_id: device.device_id,
+                                    ip_address: device.ip || 'unknown',
+                                    mac_address: device.mac || '',
+                                    status: 'discovering',
+                                    device_name: device.device_name || device.device_id
+                                })
+                            });
+                            if (result.success && result.hub) {
+                                hubs.push(result.hub);
+                            }
+                        } catch (e) {
+                            console.log('Failed to register device:', e);
+                        }
                     }
                 }
+            } catch (e) {
+                console.log('mDNS discovery failed:', e);
             }
-        } catch (e) {
-            console.log('mDNS discovery failed:', e);
-        }
-        
-        // Filter hubs not owned by user
-        let userHubs = [];
-        try {
-            userHubs = await apiRequest('/api/hubs');
-        } catch (e) {
-            console.log('Error getting user hubs:', e);
-        }
-        const userHubIds = new Set(userHubs.map(h => h.hub_id));
-        const available = hubs.filter(h => !userHubIds.has(h.hub_id));
-        
-        if (available.length === 0) {
-            let message = hubs.length === 0 
-                ? '🔍 No hubs found.' 
-                : 'All discovered hubs are already in your account.';
             
-            if (hubs.length === 0 && !mdnsFound) {
+            let userHubs = [];
+            try {
+                userHubs = await apiRequest('/api/hubs');
+            } catch (e) {
+                console.log('Error getting user hubs:', e);
+            }
+            const userHubIds = new Set(userHubs.map(h => h.hub_id));
+            const available = hubs.filter(h => !userHubIds.has(h.hub_id));
+            
+            if (available.length === 0) {
                 list.innerHTML = `
-                    <div style="text-align:center;padding:10px 20px;color:#6b7280;">
-                        <div class="discovery-instructions" style="text-align:left;">
-                            <strong>🔍 To discover your ESP32 hub:</strong>
-                            <div class="step">
-                                <span class="step-num">1</span>
-                                <span>Connect your device to the WiFi network: <strong>FarmIOT_Hub_001</strong></span>
-                            </div>
-                            <div class="step">
-                                <span class="step-num">2</span>
-                                <span>Return to this page and click "Scan" again.</span>
-                            </div>
-                            <div style="margin-top:8px;font-size:12px;color:#6b7280;">
-                                💡 The ESP32 creates this network when no WiFi is configured.
-                            </div>
-                        </div>
+                    <div style="text-align:center;padding:20px;color:#6b7280;">
+                        ${hubs.length === 0 ? '🔍 No hubs found on your network.' : 'All discovered hubs are already in your account.'}
+                        <br><br>
+                        <span style="font-size:13px;color:#4b5563;">
+                            Make sure your ESP32 is powered on and connected to the same network.
+                        </span>
                     </div>
                 `;
                 return;
             }
             
+            list.innerHTML = available.map(hub => `
+                <div class="hub-item" style="border:1px solid rgba(251,191,36,0.2);background:rgba(251,191,36,0.03);">
+                    <div>
+                        <span class="hub-name">${hub.name || hub.hub_id}</span>
+                        <span class="badge discovering">DISCOVERING</span>
+                        <span class="hub-id">${hub.hub_id}</span>
+                        ${hub.ip_address ? `<span class="hub-ip">· ${hub.ip_address}</span>` : ''}
+                    </div>
+                    <div class="hub-actions">
+                        <button class="btn btn-success" onclick="addHub('${hub.hub_id}', '${hub.ip_address || ''}')">➕ Add</button>
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            console.error('Scan error:', error);
             list.innerHTML = `
-                <div style="text-align:center;padding:20px;color:#6b7280;">
-                    ${message}
+                <div style="text-align:center;padding:20px;color:#f87171;">
+                    ❌ Scan failed: ${error.message}
                 </div>
             `;
-            return;
         }
-        
-        list.innerHTML = available.map(hub => `
-            <div class="hub-item" style="border:1px solid rgba(251,191,36,0.2);background:rgba(251,191,36,0.03);">
-                <div>
-                    <span class="hub-name">${hub.name || hub.hub_id}</span>
-                    <span class="badge discovering">DISCOVERING</span>
-                    <span class="hub-id">${hub.hub_id}</span>
-                    ${hub.ip_address ? `<span class="hub-ip">· ${hub.ip_address}</span>` : ''}
-                </div>
-                <div class="hub-actions">
-                    <button class="btn btn-success" onclick="addHub('${hub.hub_id}', '${hub.ip_address || ''}')">➕ Add</button>
-                </div>
-            </div>
-        `).join('');
-        
-    } catch (error) {
-        console.error('Scan error:', error);
-        list.innerHTML = `
-            <div style="text-align:center;padding:20px;color:#f87171;">
-                ❌ Scan failed: ${error.message}
-                <br><br>
-                <div class="discovery-instructions" style="text-align:left;">
-                    <strong>Try this:</strong>
-                    <div class="step">
-                        <span class="step-num">1</span>
-                        <span>Connect your device to: <strong>FarmIOT_Hub_001</strong></span>
-                    </div>
-                    <div class="step">
-                        <span class="step-num">2</span>
-                        <span>Click "Scan" again</span>
-                    </div>
-                </div>
-            </div>
-        `;
     }
-}
-    // ==========================================
-    // ADD HUB
-    // ==========================================
+
     async function addHub(hubId, ipAddress) {
         showToast('📥 Adding hub...', 'warning');
         
@@ -791,9 +734,6 @@
         }
     }
 
-    // ==========================================
-    // CONFIGURE HUB
-    // ==========================================
     async function openConfig(hubId) {
         currentConfigHubId = hubId;
         document.getElementById('configHubId').textContent = hubId;
@@ -856,9 +796,6 @@
         btn.innerHTML = '💾 Save';
     }
 
-    // ==========================================
-    // REBOOT HUB
-    // ==========================================
     async function rebootHub(hubId) {
         if (!confirm(`Reboot ${hubId}?`)) return;
         
@@ -876,9 +813,6 @@
         }
     }
 
-    // ==========================================
-    // DELETE HUB
-    // ==========================================
     async function deleteHub(hubId) {
         if (!confirm(`Delete ${hubId}?`)) return;
         
@@ -896,9 +830,6 @@
         }
     }
 
-    // ==========================================
-    // MODAL
-    // ==========================================
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
@@ -908,9 +839,6 @@
         });
     });
 
-    // ==========================================
-    // INIT
-    // ==========================================
     document.addEventListener('DOMContentLoaded', () => {
         initGoogleSSO();
         checkSession();
