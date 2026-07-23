@@ -135,16 +135,6 @@
             font-size: 12px;
             border-radius: 8px;
         }
-        .btn-icon {
-            width: 32px;
-            height: 32px;
-            padding: 0;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            font-size: 14px;
-        }
         
         /* BADGES */
         .badge {
@@ -171,110 +161,122 @@
             color: #fbbf24;
             border: 1px solid rgba(251,191,36,0.15);
         }
-        .badge.online .dot { background: #4ade80; animation: pulse 2s infinite; }
-        .badge.pairing .dot { background: #fbbf24; animation: pulse 1.5s infinite; }
-        .badge.offline .dot { background: #f87171; }
         .badge .dot {
             width: 6px;
             height: 6px;
             border-radius: 50%;
             display: inline-block;
         }
+        .badge.online .dot { background: #4ade80; animation: pulse 2s infinite; }
+        .badge.pairing .dot { background: #fbbf24; animation: pulse 1.5s infinite; }
+        .badge.offline .dot { background: #f87171; }
+        
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.5; transform: scale(0.8); }
         }
         
-        /* SOIL */
-        .soil-display {
+        /* ===== DEVICE CARD (Standalone) ===== */
+        .device-card {
+            background: rgba(17, 24, 39, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 20px 24px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 16px;
+            transition: all 0.3s;
             display: flex;
             align-items: center;
-            gap: 20px;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .device-card:hover {
+            border-color: rgba(255,255,255,0.1);
+            transform: translateY(-1px);
+        }
+        .device-card .device-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
             flex-wrap: wrap;
         }
-        .soil-value {
-            font-size: 42px;
-            font-weight: 700;
-            color: #fbbf24;
+        .device-card .device-icon {
+            font-size: 36px;
+            width: 48px;
+            height: 48px;
             display: flex;
-            align-items: baseline;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+        }
+        .device-card .device-details {
+            display: flex;
+            flex-direction: column;
             gap: 4px;
         }
-        .soil-value .unit {
-            font-size: 20px;
-            color: #6b7280;
-            font-weight: 400;
+        .device-card .device-name {
+            font-size: 16px;
+            font-weight: 600;
         }
-        .soil-time {
+        .device-card .device-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 12px;
             color: #6b7280;
+        }
+        .device-card .device-meta .ip {
+            font-family: monospace;
+            background: rgba(255,255,255,0.04);
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+        .device-card .device-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        
+        /* Device Soil Moisture inside card */
+        .device-soil {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 120px;
+        }
+        .device-soil .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+        .device-soil .unit {
             font-size: 13px;
+            color: #6b7280;
         }
-        .soil-bar {
-            flex: 1;
-            min-width: 150px;
-            height: 8px;
+        .device-soil .mini-bar {
+            width: 60px;
+            height: 4px;
             background: rgba(255,255,255,0.06);
-            border-radius: 10px;
+            border-radius: 4px;
             overflow: hidden;
         }
-        .soil-bar .fill {
+        .device-soil .mini-bar .fill {
             height: 100%;
-            border-radius: 10px;
+            border-radius: 4px;
             background: linear-gradient(90deg, #f87171, #fbbf24, #4ade80);
             transition: width 0.8s ease;
             width: 45%;
         }
         
-        /* HUB ITEMS */
-        .hub-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: rgba(255,255,255,0.02);
-            border-radius: 12px;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-            gap: 8px;
-            transition: all 0.3s;
-            border: 1px solid transparent;
-        }
-        .hub-item:hover {
-            background: rgba(255,255,255,0.04);
-            border-color: rgba(255,255,255,0.04);
-        }
-        .hub-item .hub-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .hub-item .hub-name {
-            font-weight: 600;
-            font-size: 14px;
-        }
-        .hub-item .hub-id {
-            font-size: 11px;
-            color: #6b7280;
-            font-family: monospace;
-        }
-        .hub-item .hub-ip {
-            font-size: 11px;
-            color: #4b5563;
-            font-family: monospace;
-        }
-        .hub-item .hub-actions {
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-        }
-        
-        /* DISCOVERED HUB */
+        /* Discovered Hub */
         .discovered-hub {
-            border: 2px solid rgba(74,222,128,0.3);
-            background: rgba(74,222,128,0.05);
-            padding: 16px;
-            border-radius: 12px;
+            border: 2px solid rgba(251,191,36,0.3);
+            background: rgba(251,191,36,0.05);
+            padding: 16px 20px;
+            border-radius: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -420,10 +422,9 @@
         
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
-            .hub-item { flex-direction: column; align-items: stretch; }
-            .hub-item .hub-actions { justify-content: flex-start; }
-            .soil-display { flex-direction: column; align-items: stretch; }
-            .soil-value { font-size: 32px; }
+            .device-card { flex-direction: column; align-items: stretch; }
+            .device-card .device-actions { justify-content: flex-start; }
+            .device-soil { justify-content: flex-start; }
             .discovered-hub { flex-direction: column; align-items: stretch; }
             .modal-content { padding: 20px; }
         }
@@ -487,35 +488,18 @@
     <!-- DASHBOARD -->
     <div id="dashboardContent" class="hidden">
         
-        <!-- SOIL -->
+        <!-- DEVICES SECTION -->
         <div class="card">
             <div class="card-header">
-                <h2>💧 Soil Moisture</h2>
-                <span class="badge" id="soilStatus">Loading...</span>
-            </div>
-            <div class="soil-display">
-                <div>
-                    <div class="soil-value"><span id="soilValue">—</span><span class="unit">%</span></div>
-                    <div class="soil-time" id="soilTime">Waiting for data...</div>
-                </div>
-                <div class="soil-bar">
-                    <div class="fill" id="soilBar" style="width:0%;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- HUBS - UNIFIED -->
-        <div class="card">
-            <div class="card-header">
-                <h2>📡 Hubs</h2>
+                <h2>📱 My Devices</h2>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                     <button class="btn btn-primary btn-sm" onclick="scanForHubs()">🔍 Scan</button>
-                    <button class="btn btn-secondary btn-sm" onclick="loadHubs()">🔄 Refresh</button>
+                    <button class="btn btn-secondary btn-sm" onclick="loadDevices()">🔄 Refresh</button>
                     <span id="bleStatus" class="ble-status disconnected">⚪ Offline</span>
                 </div>
             </div>
-            <div id="hubList">
-                <div class="loading"><div class="spinner"></div>Loading hubs...</div>
+            <div id="deviceList">
+                <div class="loading"><div class="spinner"></div>Loading devices...</div>
             </div>
         </div>
     </div>
@@ -699,39 +683,20 @@
     // ===== DASHBOARD =====
     async function loadDashboard() {
         document.getElementById('dashboardContent').classList.remove('hidden');
-        await loadSoil();
-        await loadHubs();
+        await loadDevices();
         autoReconnectBle();
     }
 
-    async function loadSoil() {
-        try {
-            const data = await apiRequest('/api/soil/latest');
-            if (data && data.value) {
-                const val = parseInt(data.value);
-                document.getElementById('soilValue').textContent = val;
-                document.getElementById('soilBar').style.width = Math.min(val, 100) + '%';
-                document.getElementById('soilTime').textContent = '🕐 Updated: ' + new Date(data.timestamp).toLocaleTimeString();
-                document.getElementById('soilStatus').textContent = '● Online';
-                document.getElementById('soilStatus').className = 'badge online';
-            }
-        } catch (error) {
-            document.getElementById('soilStatus').textContent = '● Offline';
-            document.getElementById('soilStatus').className = 'badge offline';
-        }
-    }
-
-    // ===== LOAD HUBS (Unified) =====
-    async function loadHubs() {
-        const container = document.getElementById('hubList');
-        container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading hubs...</div>';
+    // ===== LOAD DEVICES (Standalone Cards) =====
+    async function loadDevices() {
+        const container = document.getElementById('deviceList');
+        container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading devices...</div>';
         
         try {
-            // Get user's hubs from cloud
             const response = await fetch(`${API_BASE}/api/hubs`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!response.ok) throw new Error('Failed to load hubs');
+            if (!response.ok) throw new Error('Failed to load devices');
             const hubs = await response.json();
 
             let html = '';
@@ -756,25 +721,41 @@
                 }
             }
 
-            // Show configured hubs
+            // Show configured devices as standalone cards
             if (hubs && hubs.length > 0) {
                 html += hubs.map(hub => {
                     const status = hub.status || 'offline';
                     const statusClass = status === 'online' ? 'online' : status === 'pairing' ? 'pairing' : 'offline';
+                    const statusIcon = status === 'online' ? '🟢' : status === 'pairing' ? '🟡' : '🔴';
+                    const deviceIcon = status === 'online' ? '🌿' : '📡';
+                    const soilValue = hub.soil_moisture || '--';
+                    
                     return `
-                        <div class="hub-item">
-                            <div class="hub-info">
-                                <span class="hub-name">${hub.device_name || hub.hub_id}</span>
-                                <span class="badge ${statusClass}"><span class="dot"></span> ${status}</span>
-                                <span class="hub-id">${hub.hub_id}</span>
-                                ${hub.ip_address ? `<span class="hub-ip">📡 ${hub.ip_address}</span>` : ''}
+                        <div class="device-card">
+                            <div class="device-info">
+                                <div class="device-icon">${deviceIcon}</div>
+                                <div class="device-details">
+                                    <div class="device-name">${hub.device_name || hub.hub_id}</div>
+                                    <div class="device-meta">
+                                        <span class="badge ${statusClass}"><span class="dot"></span> ${status}</span>
+                                        <span class="ip">📡 ${hub.ip_address || 'No IP'}</span>
+                                        <span>🆔 ${hub.hub_id}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="hub-actions">
+                            <div class="device-soil">
+                                <span class="value">${soilValue}</span>
+                                <span class="unit">%</span>
+                                <div class="mini-bar">
+                                    <div class="fill" style="width:${Math.min(soilValue, 100)}%;"></div>
+                                </div>
+                            </div>
+                            <div class="device-actions">
                                 ${status === 'pairing' ? 
                                     `<button class="btn btn-success btn-sm" onclick="openConfig('${hub.hub_id}')">⚙️ Configure</button>` :
                                     `<button class="btn btn-secondary btn-sm" onclick="rebootHub('${hub.hub_id}')">🔄 Reboot</button>`
                                 }
-                                <button class="btn btn-danger btn-sm btn-icon" onclick="deleteHub('${hub.hub_id}')" title="Delete">🗑️</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteHub('${hub.hub_id}')" title="Delete">🗑️</button>
                             </div>
                         </div>
                     `;
@@ -783,8 +764,8 @@
 
             if (!html) {
                 html = `
-                    <div style="text-align:center;padding:20px;color:#6b7280;">
-                        🌿 No hubs found.<br>
+                    <div style="text-align:center;padding:30px;color:#6b7280;">
+                        🌿 No devices found.<br>
                         <span style="font-size:13px;">Click "Scan" to discover a hub via Bluetooth.</span>
                     </div>
                 `;
@@ -795,9 +776,9 @@
         } catch (error) {
             container.innerHTML = `
                 <div style="text-align:center;padding:20px;color:#f87171;">
-                    ❌ ${error.message || 'Failed to load hubs'}
+                    ❌ ${error.message || 'Failed to load devices'}
                     <br><br>
-                    <button class="btn btn-secondary btn-sm" onclick="loadHubs()">🔄 Retry</button>
+                    <button class="btn btn-secondary btn-sm" onclick="loadDevices()">🔄 Retry</button>
                 </div>
             `;
         }
@@ -839,7 +820,6 @@
             currentBleDevice = device;
             currentBleCharacteristic = characteristic;
 
-            // Read device info
             const value = await characteristic.readValue();
             const decoder = new TextDecoder('utf-8');
             const info = JSON.parse(decoder.decode(value));
@@ -851,10 +831,8 @@
 
             // Check if device already has WiFi (status = online)
             if (info.status === 'online') {
-                showToast('✅ Hub is already online!', 'success');
-                // Claim in cloud if not already
+                showToast('✅ Device is already online!', 'success');
                 await claimHubInCloud(currentConfigHubId);
-                // Disconnect BLE since WiFi is connected
                 setTimeout(() => {
                     if (currentBleDevice?.gatt) {
                         currentBleDevice.gatt.disconnect();
@@ -863,11 +841,10 @@
                     }
                 }, 2000);
             } else {
-                // Show discovered hub for configuration
                 showDiscoveredHub(info);
             }
             
-            await loadHubs();
+            await loadDevices();
             return true;
         } catch (error) {
             console.error('BLE connect error:', error);
@@ -878,11 +855,10 @@
     }
 
     function showDiscoveredHub(info) {
-        const container = document.getElementById('hubList');
+        const container = document.getElementById('deviceList');
         const name = info.device_name || info.name || info.id || 'FarmIOT Hub';
         const id = info.id || info.device_id || 'Unknown';
 
-        // Check if already in list
         const existing = container.querySelector('.discovered-hub');
         if (existing) return;
 
@@ -903,7 +879,6 @@
             </div>
         `;
 
-        // Insert at top of hub list
         const existingContent = container.innerHTML;
         container.innerHTML = html + existingContent;
     }
@@ -919,7 +894,6 @@
                 return;
             }
 
-            // Check paired devices first
             const paired = await navigator.bluetooth.getDevices();
             for (const d of paired) {
                 try {
@@ -935,7 +909,6 @@
                 } catch (e) {}
             }
 
-            // Request new device
             const device = await navigator.bluetooth.requestDevice({
                 filters: [{ services: [BLE_SERVICE_UUID] }],
                 optionalServices: [BLE_SERVICE_UUID]
@@ -990,10 +963,8 @@
             document.getElementById('configHubStatus').textContent = '⏳ ESP32 connecting to WiFi...';
             showToast('📤 Config sent. ESP32 is connecting...', 'warning');
 
-            // Listen for status updates from ESP32
             await currentBleCharacteristic.startNotifications();
             let received = false;
-            let statusCheckCount = 0;
 
             const handler = (event) => {
                 const value = event.target.value;
@@ -1001,20 +972,14 @@
                 const response = decoder.decode(value);
                 try {
                     const result = JSON.parse(response);
-                    console.log('BLE Response:', result);
-                    
                     if (result.status === 'online') {
                         received = true;
-                        showToast('✅ WiFi Connected! Hub is online.', 'success');
+                        showToast('✅ WiFi Connected! Device is online.', 'success');
                         document.getElementById('configHubStatus').textContent = '✅ Online!';
-                        
-                        // Claim in cloud
                         claimHubInCloud(currentConfigHubId);
-                        
                         setTimeout(() => {
                             closeModal('configModal');
-                            loadHubs();
-                            // Disconnect BLE since WiFi is connected
+                            loadDevices();
                             if (currentBleDevice?.gatt) {
                                 currentBleDevice.gatt.disconnect();
                                 isConnected = false;
@@ -1028,30 +993,27 @@
                     }
                     currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
                     currentBleCharacteristic.stopNotifications();
-                } catch (e) {
-                    // Not a valid JSON response yet
-                }
+                } catch (e) {}
             };
 
             currentBleCharacteristic.addEventListener('characteristicvaluechanged', handler);
 
-            // Also poll BLE status every 2 seconds as fallback
+            // Poll status as fallback
             let pollInterval = setInterval(async () => {
                 try {
                     const val = await currentBleCharacteristic.readValue();
                     const decoder = new TextDecoder('utf-8');
                     const response = decoder.decode(val);
                     const result = JSON.parse(response);
-                    
                     if (result.status === 'online') {
                         clearInterval(pollInterval);
                         received = true;
-                        showToast('✅ WiFi Connected! Hub is online.', 'success');
+                        showToast('✅ WiFi Connected! Device is online.', 'success');
                         document.getElementById('configHubStatus').textContent = '✅ Online!';
                         claimHubInCloud(currentConfigHubId);
                         setTimeout(() => {
                             closeModal('configModal');
-                            loadHubs();
+                            loadDevices();
                             if (currentBleDevice?.gatt) {
                                 currentBleDevice.gatt.disconnect();
                                 isConnected = false;
@@ -1104,7 +1066,7 @@
             });
             if (result.success) {
                 console.log('✅ Hub claimed in cloud');
-                loadHubs();
+                loadDevices();
             }
         } catch (e) {
             console.error('Cloud claim error:', e);
@@ -1139,7 +1101,7 @@
             const result = await apiRequest(`/api/hubs/${hubId}/reboot`, { method: 'POST' });
             if (result.success) {
                 showToast('✅ Reboot command sent', 'success');
-                setTimeout(loadHubs, 3000);
+                setTimeout(loadDevices, 3000);
             } else {
                 showToast('❌ ' + (result.error || 'Failed to reboot'), 'error');
             }
@@ -1155,7 +1117,7 @@
             const result = await apiRequest(`/api/hubs/${hubId}`, { method: 'DELETE' });
             if (result.success) {
                 showToast('✅ Hub deleted', 'success');
-                loadHubs();
+                loadDevices();
             } else {
                 showToast('❌ ' + (result.error || 'Failed to delete'), 'error');
             }
@@ -1179,10 +1141,6 @@
         initGoogleSSO();
         checkSession();
         setAuthMode('login');
-
-        setInterval(() => {
-            if (token) loadSoil();
-        }, 30000);
     });
 </script>
 </body>
