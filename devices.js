@@ -16,54 +16,43 @@ const supabase = createClient(
 );
 
 // ==========================================
-// 1. DISCOVER HUBS - Supports mDNS
+// 1. PROXY - Discover ESP32 via mDNS (Server-side)
 // ==========================================
-router.get('/hubs/discover', authenticate, async (req, res) => {
-  console.log('🔍 Scanning for hubs...');
+router.get('/hubs/discover/mdns', authenticate, async (req, res) => {
+  console.log('🔍 mDNS discovery via server proxy');
   
   try {
+    const { host } = req.query;
+    const hosts = host ? [host] : ['farmiot-hub.local', 'farmiot-hub-001.local', 'farmiot-hub', 'farmiot-hub-001', '192.168.4.1'];
     const results = [];
     
-    // Get hubs from Supabase (already registered)
-    const cutoffTime = new Date(Date.now() - 120000).toISOString();
-    const { data: dbHubs, error } = await supabase
-      .from('hubs')
-      .select('*')
-      .or(`status.eq.discovering,status.eq.online`)
-      .gte('last_seen', cutoffTime)
-      .neq('user_id', req.user.id);
-    
-    if (!error && dbHubs) {
-      results.push(...dbHubs);
+    for (const h of hosts) {
+      try {
+        const url = `http://${h}/api/discovery`;
+        console.log(`📡 Trying: ${url}`);
+        
+        const response = await axios.get(url, {
+          timeout: 3000,
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (response.data && response.data.device_id) {
+          console.log(`✅ Found device at ${h}:`, response.data);
+          results.push({
+            ...response.data,
+            source_host: h
+          });
+          break; // Found one, stop looking
+        }
+      } catch (error) {
+        // Silently continue - host not reachable
+        console.log(`⚠️ ${h}: ${error.message}`);
+      }
     }
     
-    console.log(`✅ Found ${results.length} hubs`);
-    res.json(results);
-    
-  } catch (error) {
-    console.error('❌ Discovery error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ==========================================
-// 2. MDNS DISCOVERY (Browser sends mDNS devices)
-// ==========================================
-router.post('/hubs/discover/mdns', authenticate, async (req, res) => {
-  console.log('📡 mDNS discovery received');
-  console.log('📦 Body:', req.body);
-  
-  try {
-    const { devices } = req.body;
-    
-    if (!devices || !Array.isArray(devices)) {
-      return res.status(400).json({ error: 'devices array required' });
-    }
-    
+    // If devices found, register them in Supabase
     const hubs = [];
-    
-    for (const device of devices) {
-      // Check if device is a FarmIOT hub
+    for (const device of results) {
       if (device.device_id && device.device_id.startsWith('FarmIOT_')) {
         // Check if already in Supabase
         const { data: existing } = await supabase
@@ -73,7 +62,6 @@ router.post('/hubs/discover/mdns', authenticate, async (req, res) => {
           .single();
         
         if (!existing) {
-          // Create temporary hub entry
           const { data: newHub, error } = await supabase
             .from('hubs')
             .insert({
@@ -90,7 +78,6 @@ router.post('/hubs/discover/mdns', authenticate, async (req, res) => {
             hubs.push(newHub);
           }
         } else {
-          // Update existing hub
           const { data: updated, error } = await supabase
             .from('hubs')
             .update({
@@ -115,13 +102,126 @@ router.post('/hubs/discover/mdns', authenticate, async (req, res) => {
     res.json(filtered);
     
   } catch (error) {
-    console.error('❌ mDNS discovery error:', error);
+    console.error('❌ mDNS proxy error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ==========================================
-// 3. GET ALL HUBS FOR USER
+// 2. PROXY - Forward config to ESP32
+// ==========================================
+router.post('/hubs/:hubId/configure/proxy', authenticate, async (req, res) => {
+  console.log(`📥 Proxy configure for hub: ${req.params.hubId}`);
+  
+  try {
+    const { hubId } = req.params;
+    const { ssid, password, mqtt_server, mqtt_port, device_name, ip_address } = req.body;
+    
+    if (!ssid) {
+      return res.status(400).json({ error: 'SSID is required' });
+    }
+    
+    // Use provided IP or get from database
+    let targetIp = ip_address;
+    if (!targetIp) {
+      const { data: hub } = await supabase
+        .from('hubs')
+        .select('ip_address')
+        .eq('hub_id', hubId)
+        .single();
+      targetIp = hub?.ip_address;
+    }
+    
+    if (!targetIp) {
+      return res.status(400).json({ error: 'Hub IP address not known' });
+    }
+    
+    // Forward config to ESP32
+    const esp32Url = `http://${targetIp}/api/config`;
+    console.log(`📡 Forwarding to: ${esp32Url}`);
+    
+    const response = await axios.post(
+      esp32Url,
+      new URLSearchParams({
+        ssid: ssid,
+        password: password || '',
+        mqtt: mqtt_server || 'broker.hivemq.com',
+        port: String(mqtt_port || 1883)
+      }),
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 5000
+      }
+    );
+    
+    // Save to Supabase
+    await supabase
+      .from('hub_configs')
+      .update({
+        ssid: ssid,
+        password: password || '',
+        mqtt_server: mqtt_server || 'broker.hivemq.com',
+        mqtt_port: mqtt_port || 1883,
+        device_name: device_name || hubId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('hub_id', hubId);
+    
+    await supabase
+      .from('hubs')
+      .update({
+        name: device_name || hubId,
+        status: 'configuring',
+        last_seen: new Date().toISOString()
+      })
+      .eq('hub_id', hubId);
+    
+    res.json({
+      success: true,
+      message: 'Configuration sent to ESP32',
+      esp32_response: response.data
+    });
+    
+  } catch (error) {
+    console.error('❌ Proxy configure error:', error);
+    res.status(500).json({ 
+      error: 'Failed to configure ESP32: ' + error.message 
+    });
+  }
+});
+
+// ==========================================
+// 3. DISCOVER HUBS - Existing
+// ==========================================
+router.get('/hubs/discover', authenticate, async (req, res) => {
+  console.log('🔍 Scanning for hubs...');
+  
+  try {
+    const results = [];
+    
+    const cutoffTime = new Date(Date.now() - 120000).toISOString();
+    const { data: dbHubs, error } = await supabase
+      .from('hubs')
+      .select('*')
+      .or(`status.eq.discovering,status.eq.online`)
+      .gte('last_seen', cutoffTime)
+      .neq('user_id', req.user.id);
+    
+    if (!error && dbHubs) {
+      results.push(...dbHubs);
+    }
+    
+    console.log(`✅ Found ${results.length} hubs`);
+    res.json(results);
+    
+  } catch (error) {
+    console.error('❌ Discovery error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// 4. GET ALL HUBS FOR USER
 // ==========================================
 router.get('/hubs', authenticate, async (req, res) => {
   console.log(`📡 Getting hubs for user: ${req.user.id}`);
@@ -143,7 +243,7 @@ router.get('/hubs', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 4. ADD HUB
+// 5. ADD HUB
 // ==========================================
 router.post('/hubs/add', authenticate, async (req, res) => {
   console.log('📥 Add hub request');
@@ -156,7 +256,6 @@ router.post('/hubs/add', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'hub_id is required' });
     }
     
-    // Check if hub already exists
     const { data: existing } = await supabase
       .from('hubs')
       .select('*')
@@ -164,7 +263,6 @@ router.post('/hubs/add', authenticate, async (req, res) => {
       .single();
     
     if (existing) {
-      // Update existing hub
       const { data: updated, error: updateError } = await supabase
         .from('hubs')
         .update({
@@ -187,7 +285,6 @@ router.post('/hubs/add', authenticate, async (req, res) => {
       });
     }
     
-    // Create new hub
     const { data: newHub, error: createError } = await supabase
       .from('hubs')
       .insert({
@@ -229,7 +326,7 @@ router.post('/hubs/add', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 5. GET HUB CONFIG
+// 6. GET HUB CONFIG
 // ==========================================
 router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
   console.log(`📥 Get config for hub: ${req.params.hubId}`);
@@ -268,7 +365,7 @@ router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 6. CONFIGURE HUB (Push WiFi to ESP32)
+// 7. CONFIGURE HUB (Direct - Existing)
 // ==========================================
 router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
   console.log(`📥 Configure hub: ${req.params.hubId}`);
@@ -367,7 +464,7 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 7. REBOOT HUB
+// 8. REBOOT HUB
 // ==========================================
 router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
   console.log(`🔄 Rebooting hub: ${req.params.hubId}`);
@@ -417,7 +514,7 @@ router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 8. DELETE HUB
+// 9. DELETE HUB
 // ==========================================
 router.delete('/hubs/:hubId', authenticate, async (req, res) => {
   console.log(`🗑️ Deleting hub: ${req.params.hubId}`);
@@ -441,7 +538,7 @@ router.delete('/hubs/:hubId', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 9. SOIL API
+// 10. SOIL API
 // ==========================================
 router.post('/soil', async (req, res) => {
   const { device_id, value } = req.body;
@@ -471,7 +568,7 @@ router.post('/soil', async (req, res) => {
 });
 
 // ==========================================
-// 10. GET LATEST SOIL
+// 11. GET LATEST SOIL
 // ==========================================
 router.get('/soil/latest', authenticate, async (req, res) => {
   try {
