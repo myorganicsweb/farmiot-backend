@@ -256,6 +256,47 @@
             display: inline-block;
             text-align: center;
         }
+        /* WiFi list styles */
+        .wifi-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            margin: 8px 0;
+        }
+        .wifi-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .wifi-item:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .wifi-item.selected {
+            background: rgba(74,222,128,0.15);
+            border-left: 2px solid #4ade80;
+        }
+        .wifi-item .signal {
+            color: #6b7280;
+            font-size: 12px;
+        }
+        .wifi-item .locked {
+            color: #f87171;
+            font-size: 12px;
+        }
+        .wifi-item .unlocked {
+            color: #4ade80;
+            font-size: 12px;
+        }
+        .scanning-wifi {
+            text-align: center;
+            padding: 12px;
+            color: #6b7280;
+        }
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
             .hub-item { flex-direction: column; align-items: flex-start; }
@@ -361,13 +402,30 @@
             Configuring: <strong id="configHubId" style="color:#e5e7eb;">—</strong>
             <div id="configHubStatus" style="margin-top:4px;font-size:12px;"></div>
         </div>
+        
+        <!-- WiFi Network Selection -->
+        <div class="form-group">
+            <label>Select WiFi Network</label>
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+                <button class="btn btn-secondary" onclick="scanWiFiNetworks()" style="flex:1;font-size:12px;padding:6px;">
+                    🔍 Scan Networks
+                </button>
+            </div>
+            <div id="wifiList" class="wifi-list">
+                <div class="scanning-wifi">Click "Scan Networks" to find available WiFi</div>
+            </div>
+        </div>
+        
         <div class="form-group">
             <label>WiFi SSID</label>
-            <input type="text" id="configSSID" placeholder="Enter WiFi name">
+            <input type="text" id="configSSID" placeholder="Select a WiFi network above or enter manually">
         </div>
         <div class="form-group">
             <label>WiFi Password</label>
             <input type="password" id="configPassword" placeholder="Enter WiFi password">
+            <div style="font-size:11px;color:#6b7280;margin-top:4px;">
+                ⚠️ Browser cannot auto-fill passwords for security reasons.
+            </div>
         </div>
         <div class="form-group">
             <label>Device Name</label>
@@ -628,7 +686,7 @@
     }
 
     // ==========================================
-    // BLE DISCOVERY - SCAN FOR HUBS (FIXED)
+    // BLE DISCOVERY - SCAN FOR HUBS (UPDATED)
     // ==========================================
     async function scanForHubs() {
         const card = document.getElementById('discoveryCard');
@@ -649,7 +707,6 @@
                 return;
             }
 
-            // Request BLE device
             const device = await navigator.bluetooth.requestDevice({
                 filters: [{ services: [BLE_SERVICE_UUID] }],
                 optionalServices: [BLE_SERVICE_UUID]
@@ -694,6 +751,11 @@
                 </div>
             `;
 
+            // Auto-open config after successful connection
+            setTimeout(() => {
+                claimBleHub();
+            }, 500);
+
         } catch (error) {
             console.error('BLE scan error:', error);
             list.innerHTML = `
@@ -711,11 +773,156 @@
     }
 
     // ==========================================
+    // SCAN WIFI NETWORKS (via BLE)
+    // ==========================================
+    async function scanWiFiNetworks() {
+        const wifiList = document.getElementById('wifiList');
+        wifiList.innerHTML = '<div class="scanning-wifi"><span class="spinner"></span> Scanning for WiFi networks...</div>';
+        
+        try {
+            if (!currentBleCharacteristic) {
+                wifiList.innerHTML = `
+                    <div class="scanning-wifi" style="color:#f87171;">
+                        ❌ No BLE connection. Please scan for a hub first.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Send scan command via BLE
+            const scanCommand = JSON.stringify({ command: "scan_wifi" });
+            const encoder = new TextEncoder();
+            await currentBleCharacteristic.writeValue(encoder.encode(scanCommand));
+            
+            // Wait for response
+            let responseReceived = false;
+            
+            const handler = (event) => {
+                const value = event.target.value;
+                const decoder = new TextDecoder('utf-8');
+                const response = decoder.decode(value);
+                
+                try {
+                    const data = JSON.parse(response);
+                    if (data.networks && Array.isArray(data.networks)) {
+                        displayWiFiNetworks(data.networks);
+                        responseReceived = true;
+                        currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
+                        currentBleCharacteristic.stopNotifications();
+                    }
+                } catch (e) {
+                    // Not a valid response yet
+                }
+            };
+            
+            await currentBleCharacteristic.startNotifications();
+            currentBleCharacteristic.addEventListener('characteristicvaluechanged', handler);
+            
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                if (!responseReceived) {
+                    wifiList.innerHTML = `
+                        <div class="scanning-wifi" style="color:#fbbf24;">
+                            ⏳ No response from hub. Try again or enter SSID manually.
+                            <br><br>
+                            <button class="btn btn-secondary" onclick="scanWiFiNetworks()" style="font-size:12px;padding:4px 12px;">
+                                🔄 Retry
+                            </button>
+                        </div>
+                    `;
+                    try {
+                        currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
+                        currentBleCharacteristic.stopNotifications();
+                    } catch (e) {}
+                }
+            }, 10000);
+            
+        } catch (error) {
+            console.error('WiFi scan error:', error);
+            wifiList.innerHTML = `
+                <div class="scanning-wifi" style="color:#f87171;">
+                    ❌ Failed to scan: ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    // ==========================================
+    // DISPLAY WIFI NETWORKS
+    // ==========================================
+    function displayWiFiNetworks(networks) {
+        const wifiList = document.getElementById('wifiList');
+        
+        if (!networks || networks.length === 0) {
+            wifiList.innerHTML = '<div class="scanning-wifi">No WiFi networks found.</div>';
+            return;
+        }
+        
+        wifiList.innerHTML = networks.map((network, index) => `
+            <div class="wifi-item ${index === 0 ? 'selected' : ''}" onclick="selectWiFi(this, '${network.ssid}')">
+                <span>
+                    <span>${network.ssid}</span>
+                    ${network.secured ? '<span class="locked">🔒</span>' : '<span class="unlocked">🔓</span>'}
+                </span>
+                <span class="signal">${network.rssi > -60 ? '📶' : network.rssi > -80 ? '📶' : '📶'}</span>
+            </div>
+        `).join('');
+        
+        // Auto-select first network
+        if (networks.length > 0) {
+            document.getElementById('configSSID').value = networks[0].ssid;
+        }
+    }
+
+    // ==========================================
+    // SELECT WIFI
+    // ==========================================
+    function selectWiFi(element, ssid) {
+        document.querySelectorAll('.wifi-item').forEach(el => el.classList.remove('selected'));
+        element.classList.add('selected');
+        document.getElementById('configSSID').value = ssid;
+        document.getElementById('configPassword').focus();
+    }
+
+    // ==========================================
+    // CLAIM BLE HUB - Auto-open config
+    // ==========================================
+    async function claimBleHub() {
+        if (!currentBleCharacteristic) {
+            showToast('❌ No BLE device found. Please scan first.', 'error');
+            return;
+        }
+
+        showToast('📥 Claiming hub...', 'warning');
+        
+        document.getElementById('configHubId').textContent = currentConfigHubId;
+        document.getElementById('configHubStatus').textContent = '📡 Connected via Bluetooth';
+        document.getElementById('configSSID').value = '';
+        document.getElementById('configPassword').value = '';
+        document.getElementById('configDeviceName').value = currentConfigHubId || 'farmiot-hub';
+        document.getElementById('configMQTT').value = 'broker.hivemq.com';
+        document.getElementById('configMQTTPort').value = '1883';
+        
+        // Clear previous WiFi list
+        document.getElementById('wifiList').innerHTML = `
+            <div class="scanning-wifi">Click "Scan Networks" to find available WiFi</div>
+        `;
+        
+        openModal('configModal');
+        
+        // Auto-scan WiFi after modal opens
+        setTimeout(() => {
+            scanWiFiNetworks();
+        }, 500);
+    }
+
+    // ==========================================
     // SAVE CONFIG VIA BLE (FIXED)
     // ==========================================
     async function saveConfig() {
         const ssid = document.getElementById('configSSID').value.trim();
         const password = document.getElementById('configPassword').value.trim();
+        const name = document.getElementById('configDeviceName').value.trim() || currentConfigHubId;
         const mqtt = document.getElementById('configMQTT').value.trim() || 'broker.hivemq.com';
         const port = parseInt(document.getElementById('configMQTTPort').value) || 1883;
 
@@ -741,7 +948,7 @@
             const encoder = new TextEncoder();
             const data = encoder.encode(configStr);
             
-            // FIX: Use writeValue() with Uint8Array
+            // Write to BLE characteristic
             await currentBleCharacteristic.writeValue(data);
 
             document.getElementById('configHubStatus').textContent = '⏳ Waiting for confirmation...';
@@ -784,28 +991,6 @@
             btn.disabled = false;
             btn.innerHTML = '💾 Save';
         }
-    }
-    
-    // ==========================================
-    // CLAIM BLE HUB
-    // ==========================================
-    async function claimBleHub() {
-        if (!currentBleCharacteristic) {
-            showToast('❌ No BLE device found. Please scan first.', 'error');
-            return;
-        }
-
-        showToast('📥 Claiming hub...', 'warning');
-        
-        document.getElementById('configHubId').textContent = currentConfigHubId;
-        document.getElementById('configHubStatus').textContent = '📡 Connected via Bluetooth';
-        document.getElementById('configSSID').value = '';
-        document.getElementById('configPassword').value = '';
-        document.getElementById('configDeviceName').value = currentConfigHubId || 'farmiot-hub';
-        document.getElementById('configMQTT').value = 'broker.hivemq.com';
-        document.getElementById('configMQTTPort').value = '1883';
-        
-        openModal('configModal');
     }
 
     async function claimHubInCloud(hubId) {
@@ -875,8 +1060,17 @@
                 document.getElementById('configMQTT').value = 'broker.hivemq.com';
                 document.getElementById('configMQTTPort').value = '1883';
                 
+                // Clear previous WiFi list
+                document.getElementById('wifiList').innerHTML = `
+                    <div class="scanning-wifi">Click "Scan Networks" to find available WiFi</div>
+                `;
+                
                 openModal('configModal');
-                document.getElementById('discoveryCard').style.display = 'none';
+                
+                // Auto-scan WiFi after modal opens
+                setTimeout(() => {
+                    scanWiFiNetworks();
+                }, 500);
             } else {
                 showToast('❌ ' + (result.error || 'Failed to add hub'), 'error');
             }
@@ -891,6 +1085,7 @@
     async function openConfig(hubId) {
         currentConfigHubId = hubId;
         currentHubIp = null;
+        currentBleCharacteristic = null;
         
         document.getElementById('configHubId').textContent = hubId;
         document.getElementById('configHubStatus').textContent = 'Loading config...';
@@ -899,6 +1094,11 @@
         document.getElementById('configDeviceName').value = hubId;
         document.getElementById('configMQTT').value = 'broker.hivemq.com';
         document.getElementById('configMQTTPort').value = '1883';
+        
+        // Clear previous WiFi list
+        document.getElementById('wifiList').innerHTML = `
+            <div class="scanning-wifi">Click "Scan Networks" to find available WiFi</div>
+        `;
         
         try {
             const data = await apiRequest(`/api/hubs/${hubId}/config`);
@@ -973,7 +1173,9 @@
         setInterval(() => {
             if (token) loadSoil();
         }, 30000);
-      
+        
+        // DO NOT auto-scan on load - BLE requires user gesture
+        // User must click the "Scan" button
     });
 </script>
 </body>
