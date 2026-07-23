@@ -9,10 +9,12 @@ const PORT = process.env.PORT || 443;
 // ==========================================
 // SUPABASE
 // ==========================================
+console.log('🔌 Connecting to Supabase...');
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
+console.log('✅ Supabase connected');
 
 // ==========================================
 // MIDDLEWARE
@@ -24,59 +26,85 @@ app.use(express.urlencoded({ extended: true }));
 // Log all requests
 app.use((req, res, next) => {
   console.log(`📥 ${req.method} ${req.url}`);
-  if (req.body && Object.keys(req.body).length > 0) {
-    console.log('📦 Body:', req.body);
-  }
+  console.log('📦 Body:', req.body);
   next();
 });
 
 // ==========================================
-// REGISTER
+// REGISTER - WITH FULL LOGGING
 // ==========================================
 app.post('/api/auth/register', async (req, res) => {
-  console.log('✅ REGISTER REQUEST');
+  console.log('========================================');
+  console.log('📥 REGISTER REQUEST');
   console.log('📦 Body:', req.body);
   
   try {
     const { email, password } = req.body;
     
+    // Validate
     if (!email || !password) {
+      console.log('❌ Missing email or password');
       return res.status(400).json({ 
         success: false, 
         error: 'Email and password required' 
       });
     }
     
-    // Check if user exists
-    const { data: existing } = await supabase
+    console.log(`📧 Email: ${email}`);
+    console.log(`🔑 Password length: ${password.length}`);
+    
+    // STEP 1: Check if user exists in profiles
+    console.log('🔍 Checking if user exists in profiles...');
+    const { data: existing, error: checkError } = await supabase
       .from('profiles')
       .select('email')
       .eq('email', email)
       .single();
     
+    console.log('📊 Check result:', { existing, checkError });
+    
     if (existing) {
+      console.log('❌ User already exists');
       return res.status(400).json({ 
         success: false, 
         error: 'User already exists' 
       });
     }
     
-    // Create in Supabase Auth
+    // STEP 2: Create in Supabase Auth
+    console.log('📝 Creating user in Supabase Auth...');
     const { data: authUser, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: email.split('@')[0] } }
     });
     
+    console.log('📊 Auth result:', { 
+      user: authUser?.user?.id, 
+      error: signUpError?.message 
+    });
+    
     if (signUpError) {
+      console.log('❌ Auth error:', signUpError.message);
       return res.status(400).json({ 
         success: false, 
         error: signUpError.message 
       });
     }
     
-    // Create profile
-    const { data: profile } = await supabase
+    if (!authUser?.user) {
+      console.log('❌ No user returned from auth');
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to create user' 
+      });
+    }
+    
+    console.log(`✅ Auth user created: ${authUser.user.id}`);
+    
+    // STEP 3: Create profile
+    console.log('📝 Creating profile...');
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .insert({
         id: authUser.user.id,
@@ -87,12 +115,31 @@ app.post('/api/auth/register', async (req, res) => {
       .select()
       .single();
     
-    // Create JWT
+    console.log('📊 Profile result:', { 
+      profile: profile?.id, 
+      error: profileError?.message 
+    });
+    
+    if (profileError) {
+      console.log('❌ Profile error:', profileError.message);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to create profile: ' + profileError.message 
+      });
+    }
+    
+    console.log(`✅ Profile created: ${profile.id}`);
+    
+    // STEP 4: Create JWT
+    console.log('📝 Creating JWT...');
     const token = jwt.sign(
       { user_id: profile.id, email },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
+    
+    console.log('✅ Registration successful!');
+    console.log('========================================');
     
     res.json({
       success: true,
@@ -101,10 +148,13 @@ app.post('/api/auth/register', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ UNEXPECTED ERROR:', error);
+    console.error('Stack:', error.stack);
+    console.log('========================================');
     res.status(500).json({ 
       success: false, 
-      error: error.message 
+      error: error.message || 'Internal server error',
+      details: error.stack
     });
   }
 });
@@ -113,7 +163,8 @@ app.post('/api/auth/register', async (req, res) => {
 // LOGIN
 // ==========================================
 app.post('/api/auth/login', async (req, res) => {
-  console.log('✅ LOGIN REQUEST');
+  console.log('========================================');
+  console.log('📥 LOGIN REQUEST');
   console.log('📦 Body:', req.body);
   
   try {
@@ -126,17 +177,22 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
     
+    console.log(`📧 Email: ${email}`);
+    
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password
     });
     
     if (authError) {
+      console.log('❌ Auth error:', authError.message);
       return res.status(401).json({ 
         success: false, 
         error: 'Invalid credentials' 
       });
     }
+    
+    console.log(`✅ Auth successful: ${authData.user.id}`);
     
     let { data: profile } = await supabase
       .from('profiles')
@@ -145,6 +201,7 @@ app.post('/api/auth/login', async (req, res) => {
       .single();
     
     if (!profile) {
+      console.log('📝 Creating profile...');
       const { data: newProfile } = await supabase
         .from('profiles')
         .insert({
@@ -163,6 +220,9 @@ app.post('/api/auth/login', async (req, res) => {
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
+    
+    console.log('✅ Login successful');
+    console.log('========================================');
     
     res.json({
       success: true,
