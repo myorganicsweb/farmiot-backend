@@ -239,11 +239,30 @@
             color: #60a5fa;
         }
         .ble-info strong { color: #93bbfc; }
+        .manual-add {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            border: 1px dashed rgba(255,255,255,0.1);
+        }
+        .manual-add input {
+            width: 70%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .manual-add .btn {
+            width: 25%;
+            display: inline-block;
+            text-align: center;
+        }
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
             .hub-item { flex-direction: column; align-items: flex-start; }
             .hub-actions { width: 100%; }
             .hub-actions .btn { flex: 1; text-align: center; }
+            .manual-add input { width: 100%; margin-bottom: 8px; }
+            .manual-add .btn { width: 100%; }
         }
     </style>
 </head>
@@ -325,6 +344,11 @@
             </div>
             <div id="discoveryList">
                 <div class="loading">Scanning...</div>
+            </div>
+            <div class="manual-add">
+                <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">Or add hub manually by IP:</div>
+                <input type="text" id="manualHubIp" placeholder="192.168.1.100" style="width:70%;">
+                <button class="btn btn-success" onclick="manualAddHub()" style="width:25%;">➕ Add</button>
             </div>
         </div>
     </div>
@@ -605,7 +629,7 @@
     }
 
     // ==========================================
-    // MDNS DISCOVERY
+    // MDNS DISCOVERY - Works without HTTPS
     // ==========================================
     async function discoverMDNS() {
         console.log('🔍 Scanning for mDNS hubs...');
@@ -621,12 +645,19 @@
         
         for (const hostname of hostnames) {
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 2000);
+                // Use HTTP (not HTTPS) - this is expected for ESP32
+                const url = `http://${hostname}/api/discovery`;
+                console.log(`Trying: ${url}`);
                 
-                const response = await fetch(`http://${hostname}/api/discovery`, {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                
+                const response = await fetch(url, {
                     signal: controller.signal,
-                    mode: 'no-cors'
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
                 });
                 
                 clearTimeout(timeoutId);
@@ -642,6 +673,7 @@
                 }
             } catch (e) {
                 // Hub not at this hostname, continue
+                console.log(`No hub at ${hostname}:`, e.message);
             }
         }
         
@@ -653,6 +685,11 @@
     // ==========================================
     async function discoverBLE() {
         try {
+            if (!navigator.bluetooth) {
+                console.log('Bluetooth not supported');
+                return null;
+            }
+            
             const device = await Promise.race([
                 navigator.bluetooth.requestDevice({
                     filters: [{ services: [BLE_SERVICE_UUID] }],
@@ -685,6 +722,66 @@
     }
 
     // ==========================================
+    // MANUAL ADD HUB
+    // ==========================================
+    async function manualAddHub() {
+        const ip = document.getElementById('manualHubIp').value.trim();
+        if (!ip) {
+            showToast('❌ Please enter an IP address', 'error');
+            return;
+        }
+        
+        showToast(`📥 Trying to discover hub at ${ip}...`, 'warning');
+        
+        try {
+            // Try to get hub info via HTTP
+            const url = `http://${ip}/api/discovery`;
+            const response = await fetch(url, {
+                mode: 'cors',
+                headers: { 'Accept': 'application/json' }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Hub not responding');
+            }
+            
+            const data = await response.json();
+            const hubId = data.device_id || `hub_${ip.replace(/\./g, '_')}`;
+            
+            // Claim the hub
+            const result = await apiRequest('/api/hubs/add', {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    hub_id: hubId, 
+                    ip_address: ip,
+                    name: data.device_name || hubId
+                })
+            });
+            
+            if (result.success) {
+                showToast('✅ Hub added! Configure WiFi.', 'success');
+                currentConfigHubId = hubId;
+                currentHubIp = ip;
+                
+                document.getElementById('configHubId').textContent = hubId;
+                document.getElementById('configHubStatus').textContent = `📍 IP: ${ip}`;
+                document.getElementById('configSSID').value = '';
+                document.getElementById('configPassword').value = '';
+                document.getElementById('configDeviceName').value = data.device_name || hubId;
+                document.getElementById('configMQTT').value = 'broker.hivemq.com';
+                document.getElementById('configMQTTPort').value = '1883';
+                
+                openModal('configModal');
+                document.getElementById('discoveryCard').style.display = 'none';
+            } else {
+                showToast('❌ ' + (result.error || 'Failed to add hub'), 'error');
+            }
+        } catch (error) {
+            showToast(`❌ Cannot reach hub at ${ip}: ${error.message}`, 'error');
+        }
+    }
+
+    // ==========================================
     // SCAN FOR HUBS
     // ==========================================
     async function scanForHubs() {
@@ -697,7 +794,18 @@
             let allHubs = [];
             let foundVia = [];
             
-            // 1. Try BLE discovery
+            // 1. Try mDNS discovery first (most reliable)
+            try {
+                const mdnsHubs = await discoverMDNS();
+                if (mdnsHubs && mdnsHubs.length > 0) {
+                    allHubs = [...allHubs, ...mdnsHubs];
+                    foundVia.push('mDNS');
+                }
+            } catch (e) {
+                console.log('mDNS discovery failed:', e);
+            }
+            
+            // 2. Try BLE discovery
             const isBluetoothSupported = 'bluetooth' in navigator;
             if (isBluetoothSupported) {
                 try {
@@ -709,17 +817,6 @@
                 } catch (e) {
                     console.log('BLE scan failed:', e);
                 }
-            }
-            
-            // 2. Try mDNS discovery
-            try {
-                const mdnsHubs = await discoverMDNS();
-                if (mdnsHubs && mdnsHubs.length > 0) {
-                    allHubs = [...allHubs, ...mdnsHubs];
-                    foundVia.push('mDNS');
-                }
-            } catch (e) {
-                console.log('mDNS discovery failed:', e);
             }
             
             // 3. Try server discovery
@@ -750,11 +847,11 @@
                     <div style="text-align:center;padding:20px;color:#6b7280;">
                         🔍 No hubs found.<br><br>
                         <div style="font-size:13px;color:#4b5563;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;">
-                            <strong style="color:#fbbf24;">Make sure:</strong><br>
-                            1. Your ESP32 is powered on<br>
-                            2. It's in pairing mode (LED blinking)<br>
-                            3. It's on the same network (for mDNS)<br>
-                            4. Or use Chrome for BLE discovery
+                            <strong style="color:#fbbf24;">Try these:</strong><br>
+                            1. Make sure ESP32 is powered on<br>
+                            2. ESP32 creates WiFi AP: <strong>farmiot-hub</strong><br>
+                            3. Connect to the AP and go to <strong>http://farmiot-hub.local</strong><br>
+                            4. Or enter the IP manually below
                         </div>
                     </div>
                 `;
@@ -764,7 +861,7 @@
             // Display discovered hubs
             list.innerHTML = `
                 <div style="font-size:12px;color:#6b7280;margin-bottom:8px;">
-                    Found via: ${foundVia.join(', ')}
+                    Found via: ${foundVia.join(', ')} | ${uniqueHubs.length} hub(s)
                 </div>
                 ${uniqueHubs.map(hub => `
                     <div class="hub-item" style="border:1px solid rgba(74,222,128,0.3);background:rgba(74,222,128,0.03);">
@@ -772,10 +869,10 @@
                             <span class="hub-name">${hub.device_name || hub.name || hub.hub_id || 'ESP32 Hub'}</span>
                             <span class="badge pairing">PAIRING</span>
                             <span class="hub-id">${hub.device_id || hub.hub_id}</span>
-                            ${hub.ip_address || hub.ip ? `<span class="hub-ip">· ${hub.ip_address || hub.ip}</span>` : ''}
+                            ${hub.ip_address || hub.ip || hub.hostname ? `<span class="hub-ip">· ${hub.ip_address || hub.ip || hub.hostname}</span>` : ''}
                         </div>
                         <div class="hub-actions">
-                            <button class="btn btn-success" onclick="claimHub('${hub.device_id || hub.hub_id}', '${hub.ip_address || hub.ip || ''}')">
+                            <button class="btn btn-success" onclick="claimHub('${hub.device_id || hub.hub_id}', '${hub.ip_address || hub.ip || hub.hostname || ''}')">
                                 ➕ Claim & Configure
                             </button>
                         </div>
@@ -888,7 +985,16 @@
         try {
             // Try to send config directly to hub via HTTP
             let sentToHub = false;
-            const hubIps = [currentHubIp, `http://${hubId}.local`, `http://farmiot-hub.local`];
+            const hubIps = [];
+            
+            if (currentHubIp) {
+                hubIps.push(currentHubIp);
+            }
+            
+            // Try mDNS hostnames
+            hubIps.push(`${hubId}.local`);
+            hubIps.push('farmiot-hub.local');
+            hubIps.push('esp32.local');
             
             for (const ip of hubIps) {
                 if (!ip) continue;
@@ -906,7 +1012,10 @@
                     formData.append('mqtt', mqtt);
                     formData.append('port', port);
                     
-                    const response = await fetch(`http://${ip}/api/config`, {
+                    const url = `http://${ip}/api/config`;
+                    console.log(`Sending config to ${url}`);
+                    
+                    const response = await fetch(url, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'
@@ -934,6 +1043,8 @@
                 showToast(sentToHub ? '✅ Configuration sent to hub! It will reboot.' : '✅ Configuration saved in cloud. Hub will pull it on next check-in.', 'success');
                 closeModal('configModal');
                 loadHubs();
+                // Auto-scan after config
+                setTimeout(() => scanForHubs(), 3000);
             } else {
                 showToast('❌ ' + (result.error || 'Failed to save'), 'error');
             }
