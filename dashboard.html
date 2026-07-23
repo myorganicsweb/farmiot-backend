@@ -14,31 +14,68 @@
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width: 900px; margin: 0 auto; }
+        .container { max-width: 960px; margin: 0 auto; }
+        
+        /* ===== HEADER ===== */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 0;
+            padding: 16px 0;
             border-bottom: 1px solid rgba(255,255,255,0.06);
             margin-bottom: 24px;
             flex-wrap: wrap;
             gap: 12px;
         }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
         .header h1 {
-            font-size: 28px;
+            font-size: 24px;
             background: linear-gradient(135deg, #4ade80, #22d3ee);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .header .subtitle { color: #6b7280; font-size: 14px; }
-        .user-badge { color: #6b7280; font-size: 14px; }
+        .header .subtitle {
+            color: #6b7280;
+            font-size: 13px;
+            margin-left: 4px;
+            -webkit-text-fill-color: #6b7280;
+        }
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #9ca3af;
+            font-size: 14px;
+            background: rgba(255,255,255,0.05);
+            padding: 6px 14px 6px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .user-badge img {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+        }
+        
+        /* ===== CARDS ===== */
         .card {
             background: rgba(17, 24, 39, 0.9);
+            backdrop-filter: blur(10px);
             padding: 24px;
-            border-radius: 16px;
+            border-radius: 20px;
             border: 1px solid rgba(255,255,255,0.06);
             margin-bottom: 16px;
+            transition: all 0.3s;
+        }
+        .card:hover {
+            border-color: rgba(255,255,255,0.1);
         }
         .card-header {
             display: flex;
@@ -48,84 +85,305 @@
             flex-wrap: wrap;
             gap: 8px;
         }
-        .card-header h2 { font-size: 18px; font-weight: 600; }
+        .card-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-header .badge {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        
+        /* ===== BUTTONS ===== */
         .btn {
             padding: 8px 16px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
         .btn-primary {
             background: linear-gradient(135deg, #4ade80, #22d3ee);
             color: #0a0e17;
         }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(74,222,128,0.2); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(74,222,128,0.25); }
         .btn-secondary {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.06);
             color: #9ca3af;
             border: 1px solid rgba(255,255,255,0.06);
         }
-        .btn-secondary:hover { background: rgba(255,255,255,0.08); }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); }
         .btn-success {
-            background: rgba(74,222,128,0.1);
+            background: rgba(74,222,128,0.15);
             color: #4ade80;
             border: 1px solid rgba(74,222,128,0.15);
         }
-        .btn-success:hover { background: rgba(74,222,128,0.2); }
+        .btn-success:hover { background: rgba(74,222,128,0.25); transform: translateY(-2px); }
         .btn-danger {
             background: rgba(248,113,113,0.1);
             color: #f87171;
             border: 1px solid rgba(248,113,113,0.15);
         }
-        .btn-danger:hover { background: rgba(248,113,113,0.2); }
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .badge.online {
-            background: rgba(74,222,128,0.1);
-            color: #4ade80;
-            border: 1px solid rgba(74,222,128,0.15);
-        }
-        .badge.offline {
-            background: rgba(248,113,113,0.1);
-            color: #f87171;
-            border: 1px solid rgba(248,113,113,0.15);
-        }
-        .badge.pairing {
+        .btn-danger:hover { background: rgba(248,113,113,0.2); transform: translateY(-2px); }
+        .btn-warning {
             background: rgba(251,191,36,0.1);
             color: #fbbf24;
             border: 1px solid rgba(251,191,36,0.15);
         }
+        .btn-warning:hover { background: rgba(251,191,36,0.2); transform: translateY(-2px); }
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 8px;
+        }
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 14px;
+        }
+        
+        /* ===== BADGES ===== */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge.online {
+            background: rgba(74,222,128,0.15);
+            color: #4ade80;
+            border: 1px solid rgba(74,222,128,0.15);
+        }
+        .badge.offline {
+            background: rgba(248,113,113,0.15);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.15);
+        }
+        .badge.pairing {
+            background: rgba(251,191,36,0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251,191,36,0.15);
+        }
+        .badge.connecting {
+            background: rgba(96,165,250,0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(96,165,250,0.15);
+        }
+        .badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .badge.online .dot { background: #4ade80; animation: pulse 2s infinite; }
+        .badge.pairing .dot { background: #fbbf24; animation: pulse 1.5s infinite; }
+        .badge.offline .dot { background: #f87171; }
+        .badge.connecting .dot { background: #60a5fa; animation: pulse 0.8s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+        
+        /* ===== SOIL METER ===== */
+        .soil-display {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
         .soil-value {
-            font-size: 36px;
+            font-size: 42px;
             font-weight: 700;
             color: #fbbf24;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
         }
-        .soil-time { color: #6b7280; font-size: 14px; margin-top: 4px; }
+        .soil-value .unit {
+            font-size: 20px;
+            color: #6b7280;
+            font-weight: 400;
+        }
+        .soil-time {
+            color: #6b7280;
+            font-size: 13px;
+        }
+        .soil-bar {
+            flex: 1;
+            min-width: 150px;
+            height: 8px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .soil-bar .fill {
+            height: 100%;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #f87171, #fbbf24, #4ade80);
+            transition: width 0.8s ease;
+            width: 45%;
+        }
+        
+        /* ===== HUB LIST ===== */
         .hub-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 12px 16px;
             background: rgba(255,255,255,0.02);
-            border-radius: 10px;
+            border-radius: 12px;
             margin-bottom: 8px;
             flex-wrap: wrap;
             gap: 8px;
+            transition: all 0.3s;
+            border: 1px solid transparent;
         }
-        .hub-item:last-child { margin-bottom: 0; }
-        .hub-name { font-weight: 600; }
-        .hub-id { font-size: 12px; color: #6b7280; }
-        .hub-ip { font-size: 12px; color: #6b7280; }
-        .hub-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .hub-item:hover {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.04);
+        }
+        .hub-item .hub-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .hub-item .hub-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .hub-item .hub-id {
+            font-size: 11px;
+            color: #6b7280;
+            font-family: monospace;
+        }
+        .hub-item .hub-ip {
+            font-size: 11px;
+            color: #4b5563;
+            font-family: monospace;
+        }
+        .hub-item .hub-actions {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        
+        /* ===== STATUS INDICATOR ===== */
+        .ble-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .ble-status.connected { background: rgba(74,222,128,0.15); color: #4ade80; }
+        .ble-status.disconnected { background: rgba(248,113,113,0.15); color: #f87171; }
+        .ble-status.scanning { background: rgba(251,191,36,0.15); color: #fbbf24; }
+        
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-dot.online { background: #4ade80; animation: pulse 2s infinite; }
+        .status-dot.pairing { background: #fbbf24; animation: pulse 1.5s infinite; }
+        .status-dot.offline { background: #f87171; }
+        .status-dot.connecting { background: #60a5fa; animation: pulse 0.8s infinite; }
+        
+        /* ===== MODAL ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #1a1f2e;
+            border-radius: 24px;
+            padding: 32px;
+            max-width: 480px;
+            width: 90%;
+            border: 1px solid rgba(255,255,255,0.06);
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .modal-content h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .modal-content .sub {
+            color: #6b7280;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+        
+        /* ===== FORM ===== */
+        .form-group { margin-bottom: 14px; }
+        .form-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #9ca3af;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            color: #e5e7eb;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #4ade80;
+            box-shadow: 0 0 0 3px rgba(74,222,128,0.1);
+        }
+        .form-group input::placeholder { color: #4b5563; }
+        .form-hint {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        
+        /* ===== TOAST ===== */
         .toast {
             position: fixed;
             bottom: 24px;
@@ -133,21 +391,73 @@
             padding: 12px 20px;
             border-radius: 12px;
             background: rgba(17,24,39,0.95);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.08);
             color: #e5e7eb;
             font-size: 14px;
             transform: translateY(100px);
             opacity: 0;
-            transition: all 0.4s;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             z-index: 2000;
             max-width: 90%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.success { border-left: 3px solid #4ade80; }
         .toast.error { border-left: 3px solid #f87171; }
         .toast.warning { border-left: 3px solid #fbbf24; }
+        
+        /* ===== DISCOVERY CARD ===== */
+        .discovered-hub {
+            border: 2px solid rgba(74,222,128,0.2);
+            background: rgba(74,222,128,0.03);
+            padding: 16px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .discovered-hub .info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 600px) {
+            .header { flex-direction: column; align-items: flex-start; }
+            .hub-item { flex-direction: column; align-items: stretch; }
+            .hub-item .hub-actions { justify-content: flex-start; }
+            .hub-item .hub-actions .btn { flex: 0; }
+            .soil-display { flex-direction: column; align-items: stretch; }
+            .soil-value { font-size: 32px; }
+            .discovered-hub { flex-direction: column; align-items: stretch; }
+            .modal-content { padding: 20px; }
+            .manual-add input { width: 100%; margin-bottom: 8px; }
+            .manual-add .btn { width: 100%; }
+        }
+        
+        /* ===== UTILITY ===== */
         .hidden { display: none !important; }
-        .loading { text-align: center; padding: 20px; color: #6b7280; }
+        .text-center { text-align: center; }
+        .text-muted { color: #6b7280; }
+        .mt-8 { margin-top: 8px; }
+        .mt-16 { margin-top: 16px; }
+        .gap-8 { gap: 8px; }
+        .flex { display: flex; }
+        .flex-wrap { flex-wrap: wrap; }
+        .items-center { align-items: center; }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+        }
         .spinner {
             display: inline-block;
             width: 20px;
@@ -160,186 +470,106 @@
             vertical-align: middle;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #googleBtn { display: flex; justify-content: center; margin: 10px 0; }
-        .divider {
-            display: flex;
-            align-items: center;
-            margin: 16px 0;
-            color: #374151;
-            font-size: 12px;
-        }
-        .divider::before, .divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-        .divider span { padding: 0 12px; }
-        .auth-card { text-align: center; padding: 40px; }
-        .auth-card h2 { margin-bottom: 8px; }
-        .auth-card p { color: #6b7280; margin-bottom: 20px; }
-        .user-card { text-align: center; padding: 30px; }
-        .user-card img {
-            width: 80px; height: 80px; border-radius: 50%;
-            margin-bottom: 12px;
-        }
-        .user-card .name { font-size: 20px; font-weight: 600; }
-        .user-card .email { color: #6b7280; margin: 4px 0 16px; }
-        .form-group { margin-bottom: 14px; }
-        label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: #9ca3af;
-            margin-bottom: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        input {
-            width: 100%;
-            padding: 10px 14px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 10px;
-            color: #e5e7eb;
-            font-size: 14px;
-            font-family: inherit;
-        }
-        input:focus { outline: none; border-color: #4ade80; }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(8px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal.active { display: flex; }
-        .modal-content {
-            background: #1a1f2e;
-            border-radius: 20px;
-            padding: 32px;
-            max-width: 500px;
-            width: 90%;
-            border: 1px solid rgba(255,255,255,0.06);
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        .modal-content h2 { margin-bottom: 16px; font-size: 22px; }
-        .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
-        .modal-actions .btn { flex: 1; justify-content: center; }
+        
         .manual-add {
-            margin-top: 12px;
-            padding: 12px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 8px;
-            border: 1px dashed rgba(255,255,255,0.1);
-        }
-        .manual-add input {
-            width: 70%;
-            display: inline-block;
-            margin-right: 8px;
-        }
-        .manual-add .btn {
-            width: 25%;
-            display: inline-block;
-            text-align: center;
-        }
-        .ble-status {
-            display: inline-block;
-            padding: 2px 10px;
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(255,255,255,0.02);
             border-radius: 12px;
-            font-size: 11px;
-            margin-left: 8px;
+            border: 1px dashed rgba(255,255,255,0.08);
         }
-        .ble-status.connected {
-            background: rgba(74,222,128,0.15);
-            color: #4ade80;
+        .manual-add .row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
-        .ble-status.disconnected {
-            background: rgba(248,113,113,0.15);
-            color: #f87171;
-        }
-        .ble-status.scanning {
-            background: rgba(251,191,36,0.15);
-            color: #fbbf24;
-        }
-        @media (max-width: 600px) {
-            .header { flex-direction: column; align-items: flex-start; }
-            .hub-item { flex-direction: column; align-items: flex-start; }
-            .hub-actions { width: 100%; }
-            .hub-actions .btn { flex: 1; text-align: center; }
-            .manual-add input { width: 100%; margin-bottom: 8px; }
-            .manual-add .btn { width: 100%; }
-        }
+        .manual-add .row input { flex: 1; min-width: 150px; }
+        .manual-add .row .btn { flex-shrink: 0; }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <!-- HEADER -->
     <div class="header">
-        <div>
-            <h1>🚜 FarmIOT</h1>
-            <div class="subtitle">Smart Agriculture Platform</div>
+        <div class="header-left">
+            <h1>🌿 FarmIOT <span class="subtitle">Smart Agriculture</span></h1>
         </div>
-        <div class="user-badge" id="userBadge"></div>
+        <div class="user-badge" id="userBadge">
+            <span>👤</span> <span id="userNameDisplay">Sign In</span>
+        </div>
     </div>
 
+    <!-- AUTH SECTION -->
     <div id="authSection">
         <div class="card auth-card" id="signinCard">
-            <h2>Welcome to FarmIOT</h2>
-            <p>Sign in with your Google account to continue</p>
-            <div id="googleBtn"></div>
-            <div class="divider"><span>or</span></div>
+            <h2 style="font-size:22px;text-align:center;">🌿 Welcome to FarmIOT</h2>
+            <p style="text-align:center;color:#6b7280;margin-bottom:20px;">Sign in to manage your smart farm devices</p>
+            <div id="googleBtn" style="display:flex;justify-content:center;"></div>
+            <div class="divider" style="display:flex;align-items:center;margin:16px 0;color:#374151;font-size:12px;">
+                <span style="flex:1;border-bottom:1px solid rgba(255,255,255,0.06);"></span>
+                <span style="padding:0 12px;">or</span>
+                <span style="flex:1;border-bottom:1px solid rgba(255,255,255,0.06);"></span>
+            </div>
             <div style="text-align:left;">
-                <div class="toggle" style="display:flex;gap:4px;background:rgba(255,255,255,0.03);border-radius:8px;padding:3px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.04);">
-                    <button class="active" id="loginTab" onclick="setAuthMode('login')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Sign In</button>
-                    <button id="registerTab" onclick="setAuthMode('register')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Register</button>
+                <div style="display:flex;gap:4px;background:rgba(255,255,255,0.03);border-radius:8px;padding:3px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.04);">
+                    <button class="active" id="loginTab" onclick="setAuthMode('login')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Sign In</button>
+                    <button id="registerTab" onclick="setAuthMode('register')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Register</button>
                 </div>
                 <form id="authForm" onsubmit="handleAuthSubmit(event)">
                     <div class="form-group">
-                        <label>Email</label>
+                        <label>📧 Email</label>
                         <input type="email" id="email" placeholder="Enter your email" required>
                     </div>
                     <div class="form-group">
-                        <label>Password</label>
+                        <label>🔒 Password</label>
                         <input type="password" id="password" placeholder="Enter your password" minlength="6" required>
                     </div>
                     <div class="form-group" id="confirmGroup" style="display:none;">
-                        <label>Confirm Password</label>
+                        <label>🔒 Confirm Password</label>
                         <input type="password" id="confirmPassword" placeholder="Confirm your password" minlength="6">
                     </div>
-                    <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;padding:12px;">Sign In</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;padding:12px;justify-content:center;">Sign In</button>
                 </form>
                 <div id="authStatus" style="margin-top:12px;padding:10px;border-radius:8px;font-size:13px;display:none;"></div>
             </div>
         </div>
-        <div class="card user-card hidden" id="userCard">
-            <img id="userPic" src="" alt="Profile">
-            <div class="name" id="userName">User</div>
-            <div class="email" id="userEmail">user@example.com</div>
-            <button class="btn btn-danger" id="logoutBtn">Sign Out</button>
+        <div class="card user-card hidden" id="userCard" style="text-align:center;padding:30px;">
+            <img id="userPic" src="" alt="Profile" style="width:80px;height:80px;border-radius:50%;margin-bottom:12px;">
+            <div class="name" id="userName" style="font-size:20px;font-weight:600;">User</div>
+            <div class="email" id="userEmail" style="color:#6b7280;margin:4px 0 16px;">user@example.com</div>
+            <button class="btn btn-danger" id="logoutBtn">🚪 Sign Out</button>
         </div>
     </div>
 
+    <!-- DASHBOARD -->
     <div id="dashboardContent" class="hidden">
+        
+        <!-- SOIL MOISTURE -->
         <div class="card">
             <div class="card-header">
                 <h2>💧 Soil Moisture</h2>
                 <span class="badge" id="soilStatus">Loading...</span>
             </div>
-            <div class="soil-value" id="soilValue">—</div>
-            <div class="soil-time" id="soilTime">Waiting for data...</div>
+            <div class="soil-display">
+                <div>
+                    <div class="soil-value"><span id="soilValue">—</span><span class="unit">%</span></div>
+                    <div class="soil-time" id="soilTime">Waiting for data...</div>
+                </div>
+                <div class="soil-bar">
+                    <div class="fill" id="soilBar" style="width:0%;"></div>
+                </div>
+            </div>
         </div>
 
+        <!-- HUBS -->
         <div class="card">
             <div class="card-header">
                 <h2>📡 My Hubs</h2>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                    <button class="btn btn-primary" onclick="scanForHubs()">🔍 Scan</button>
-                    <button class="btn btn-secondary" onclick="loadHubs()">🔄 Refresh</button>
-                    <span id="bleStatus" class="ble-status disconnected">⚪ Disconnected</span>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    <button class="btn btn-primary btn-sm" onclick="scanForHubs()">🔍 Scan</button>
+                    <button class="btn btn-secondary btn-sm" onclick="loadHubs()">🔄 Refresh</button>
+                    <span id="bleStatus" class="ble-status disconnected">⚪ Offline</span>
                 </div>
             </div>
             <div id="hubList">
@@ -347,56 +577,58 @@
             </div>
         </div>
 
+        <!-- DISCOVERY -->
         <div class="card" id="discoveryCard" style="display:none;">
             <div class="card-header">
                 <h2>🔍 Discovered Hubs</h2>
-                <button class="btn btn-secondary" onclick="scanForHubs()">🔄 Scan Again</button>
+                <button class="btn btn-secondary btn-sm" onclick="scanForHubs()">🔄 Scan Again</button>
             </div>
             <div id="discoveryList">
                 <div class="loading">Scanning...</div>
             </div>
             <div class="manual-add">
-                <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">Or add hub manually by IP:</div>
-                <input type="text" id="manualHubIp" placeholder="192.168.1.100" style="width:70%;">
-                <button class="btn btn-success" onclick="manualAddHub()" style="width:25%;">➕ Add</button>
+                <div style="font-size:12px;color:#6b7280;margin-bottom:8px;">📶 Or add hub manually by IP:</div>
+                <div class="row">
+                    <input type="text" id="manualHubIp" placeholder="192.168.1.100">
+                    <button class="btn btn-success btn-sm" onclick="manualAddHub()">➕ Add</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- CONFIG MODAL -->
 <div class="modal" id="configModal">
     <div class="modal-content">
         <h2>⚙️ Configure Hub</h2>
-        <div id="configHubInfo" style="background:rgba(255,255,255,0.03);padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:13px;color:#6b7280;">
-            Configuring: <strong id="configHubId" style="color:#e5e7eb;">—</strong>
-            <div id="configHubStatus" style="margin-top:4px;font-size:12px;"></div>
+        <div class="sub" id="configHubInfo">
+            Configuring: <strong id="configHubId">—</strong>
+            <span id="configHubStatus" style="color:#6b7280;font-size:12px;display:block;margin-top:4px;"></span>
         </div>
         
         <div class="form-group">
-            <label>WiFi Network</label>
-            <div style="font-size:12px;color:#6b7280;margin-bottom:8px;">
-                Enter your WiFi credentials (browsers cannot scan for security reasons)
-            </div>
-            <input type="text" id="configSSID" placeholder="WiFi SSID (network name)" required>
+            <label>📶 WiFi Network</label>
+            <input type="text" id="configSSID" placeholder="Enter your WiFi SSID" required>
+            <div class="form-hint">Type your WiFi network name (e.g., MyHome_5G)</div>
         </div>
         <div class="form-group">
-            <label>WiFi Password</label>
-            <input type="password" id="configPassword" placeholder="WiFi password" required>
-            <div style="font-size:11px;color:#6b7280;margin-top:4px;">
-                ⚠️ Credentials are sent directly to the ESP32 via Bluetooth (not stored in cloud)
-            </div>
+            <label>🔑 WiFi Password</label>
+            <input type="password" id="configPassword" placeholder="Enter your WiFi password" required>
+            <div class="form-hint">🔒 Sent directly to ESP32 via Bluetooth — not stored in cloud</div>
         </div>
         <div class="form-group">
-            <label>Device Name</label>
+            <label>🏷️ Device Name</label>
             <input type="text" id="configDeviceName" placeholder="My Hub" value="farmiot-hub">
         </div>
-        <div class="modal-actions">
-            <button class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
-            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()">💾 Configure</button>
+        
+        <div class="modal-actions" style="display:flex;gap:10px;margin-top:18px;">
+            <button class="btn btn-secondary" onclick="closeModal('configModal')" style="flex:1;">Cancel</button>
+            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()" style="flex:2;">💾 Configure</button>
         </div>
     </div>
 </div>
 
+<!-- TOAST -->
 <div id="toast" class="toast"></div>
 
 <script>
@@ -412,32 +644,32 @@
     const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
     const BLE_CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
 
+    // ===== TOAST =====
     function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
         toast.textContent = message;
         toast.className = 'toast ' + type + ' show';
         clearTimeout(toast._hide);
-        toast._hide = setTimeout(() => toast.classList.remove('show'), 3000);
+        toast._hide = setTimeout(() => toast.classList.remove('show'), 3500);
     }
 
+    // ===== BLE STATUS =====
     function updateBleStatus(status, message) {
         const el = document.getElementById('bleStatus');
         el.className = 'ble-status ' + status;
-        el.textContent = message || (status === 'connected' ? '🟢 Connected' : status === 'scanning' ? '🔄 Scanning...' : '⚪ Disconnected');
+        const icons = { connected: '🟢', disconnected: '⚪', scanning: '🔄' };
+        el.textContent = (icons[status] || '⚪') + ' ' + (message || status);
     }
 
+    // ===== API =====
     async function apiRequest(endpoint, options = {}) {
         const headers = { 'Content-Type': 'application/json' };
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-        const response = await fetch(`${API_BASE}${endpoint}`, {
-            ...options,
-            headers
-        });
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
         return response.json();
     }
 
+    // ===== AUTH =====
     function setAuthMode(m) {
         authMode = m;
         document.getElementById('loginTab').classList.toggle('active', m === 'login');
@@ -448,61 +680,45 @@
 
     async function handleAuthSubmit(e) {
         e.preventDefault();
-        
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value.trim();
-        const confirmPassword = document.getElementById('confirmPassword').value.trim();
+        const confirm = document.getElementById('confirmPassword').value.trim();
         const status = document.getElementById('authStatus');
         const btn = document.getElementById('submitBtn');
 
         if (!email || !password) {
-            status.style.display = 'block';
-            status.className = 'error';
-            status.textContent = '❌ Please fill in all fields';
-            return;
+            status.style.display = 'block'; status.className = 'error';
+            status.textContent = '❌ Please fill in all fields'; return;
+        }
+        if (authMode === 'register' && password !== confirm) {
+            status.style.display = 'block'; status.className = 'error';
+            status.textContent = '❌ Passwords do not match'; return;
         }
 
-        if (authMode === 'register' && password !== confirmPassword) {
-            status.style.display = 'block';
-            status.className = 'error';
-            status.textContent = '❌ Passwords do not match';
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = '⏳ Processing...';
-        status.style.display = 'none';
+        btn.disabled = true; btn.innerHTML = '⏳ Processing...'; status.style.display = 'none';
 
         try {
             const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
-            const data = await apiRequest(endpoint, {
-                method: 'POST',
-                body: JSON.stringify({ email, password })
-            });
+            const data = await apiRequest(endpoint, { method: 'POST', body: JSON.stringify({ email, password }) });
 
             if (data.success) {
-                token = data.token;
-                user = data.user;
-                localStorage.setItem('token', token);
-                localStorage.setItem('user', JSON.stringify(user));
+                token = data.token; user = data.user;
+                localStorage.setItem('token', token); localStorage.setItem('user', JSON.stringify(user));
                 showUser(user);
                 showToast(authMode === 'login' ? '✅ Welcome back!' : '✅ Account created!', 'success');
                 loadDashboard();
             } else {
-                status.style.display = 'block';
-                status.className = 'error';
+                status.style.display = 'block'; status.className = 'error';
                 status.textContent = '❌ ' + (data.error || 'Something went wrong');
                 showToast('❌ ' + data.error, 'error');
             }
         } catch (error) {
-            status.style.display = 'block';
-            status.className = 'error';
+            status.style.display = 'block'; status.className = 'error';
             status.textContent = '❌ Network error: ' + error.message;
             showToast('❌ Network error', 'error');
         }
 
-        btn.disabled = false;
-        btn.innerHTML = authMode === 'login' ? 'Sign In' : 'Register';
+        btn.disabled = false; btn.innerHTML = authMode === 'login' ? 'Sign In' : 'Register';
     }
 
     function initGoogleSSO() {
@@ -514,26 +730,17 @@
                         method: 'POST',
                         body: JSON.stringify({ id_token: response.credential })
                     });
-                    
                     if (result.success) {
-                        token = result.token;
-                        user = result.user;
-                        localStorage.setItem('token', token);
-                        localStorage.setItem('user', JSON.stringify(user));
+                        token = result.token; user = result.user;
+                        localStorage.setItem('token', token); localStorage.setItem('user', JSON.stringify(user));
                         showUser(user);
                         showToast('✅ Welcome, ' + user.name + '!', 'success');
                         loadDashboard();
-                    } else {
-                        showToast('❌ ' + result.error, 'error');
-                    }
-                } catch (error) {
-                    showToast('❌ Login failed: ' + error.message, 'error');
-                }
+                    } else showToast('❌ ' + result.error, 'error');
+                } catch (error) { showToast('❌ Login failed: ' + error.message, 'error'); }
             }
         });
-        
-        google.accounts.id.renderButton(
-            document.getElementById('googleBtn'),
+        google.accounts.id.renderButton(document.getElementById('googleBtn'),
             { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill' }
         );
     }
@@ -544,32 +751,26 @@
         document.getElementById('userPic').src = userData.picture || '';
         document.getElementById('userName').textContent = userData.name || userData.email;
         document.getElementById('userEmail').textContent = userData.email;
-        document.getElementById('userBadge').textContent = '👋 ' + userData.name;
+        document.getElementById('userNameDisplay').textContent = userData.name || 'User';
         document.getElementById('logoutBtn').onclick = () => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            token = null;
-            user = null;
+            localStorage.removeItem('token'); localStorage.removeItem('user');
+            token = null; user = null;
             document.getElementById('signinCard').classList.remove('hidden');
             document.getElementById('userCard').classList.add('hidden');
             document.getElementById('dashboardContent').classList.add('hidden');
-            document.getElementById('userBadge').textContent = '';
+            document.getElementById('userNameDisplay').textContent = 'Sign In';
             showToast('✅ Signed out');
-            if (currentBleDevice && currentBleDevice.gatt) {
-                try { currentBleDevice.gatt.disconnect(); } catch(e) {}
-            }
+            if (currentBleDevice?.gatt) try { currentBleDevice.gatt.disconnect(); } catch(e) {}
             isConnected = false;
             updateBleStatus('disconnected');
         };
     }
 
     function checkSession() {
-        if (token && user) {
-            showUser(user);
-            loadDashboard();
-        }
+        if (token && user) { showUser(user); loadDashboard(); }
     }
 
+    // ===== DASHBOARD =====
     async function loadDashboard() {
         document.getElementById('dashboardContent').classList.remove('hidden');
         await loadSoil();
@@ -581,13 +782,15 @@
         try {
             const data = await apiRequest('/api/soil/latest');
             if (data && data.value) {
-                document.getElementById('soilValue').textContent = data.value;
-                document.getElementById('soilTime').textContent = 'Updated: ' + new Date(data.timestamp).toLocaleTimeString();
-                document.getElementById('soilStatus').textContent = 'Online';
+                const val = parseInt(data.value);
+                document.getElementById('soilValue').textContent = val;
+                document.getElementById('soilBar').style.width = Math.min(val, 100) + '%';
+                document.getElementById('soilTime').textContent = '🕐 Updated: ' + new Date(data.timestamp).toLocaleTimeString();
+                document.getElementById('soilStatus').textContent = '● Online';
                 document.getElementById('soilStatus').className = 'badge online';
             }
         } catch (error) {
-            document.getElementById('soilStatus').textContent = 'Offline';
+            document.getElementById('soilStatus').textContent = '● Offline';
             document.getElementById('soilStatus').className = 'badge offline';
         }
     }
@@ -595,169 +798,130 @@
     async function loadHubs() {
         const container = document.getElementById('hubList');
         container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading hubs...</div>';
-        
         try {
             const response = await fetch(`${API_BASE}/api/hubs`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            
-            if (!response.ok) {
-                throw new Error('Failed to load hubs');
-            }
-            
+            if (!response.ok) throw new Error('Failed to load hubs');
             const hubs = await response.json();
-            
+
             if (!Array.isArray(hubs) || hubs.length === 0) {
                 container.innerHTML = `
                     <div style="text-align:center;padding:20px;color:#6b7280;">
-                        No hubs configured yet.<br>
-                        Click "Scan" to discover a hub via Bluetooth.
+                        🌿 No hubs configured yet.<br>
+                        <span style="font-size:13px;">Click "Scan" to discover a hub via Bluetooth.</span>
                     </div>
                 `;
                 return;
             }
-            
-            container.innerHTML = hubs.map(hub => `
+
+            container.innerHTML = hubs.map(hub => {
+                const status = hub.status || 'offline';
+                const statusClass = status === 'online' ? 'online' : status === 'pairing' ? 'pairing' : 'offline';
+                const icon = status === 'online' ? '🟢' : status === 'pairing' ? '🟡' : '🔴';
+                return `
                 <div class="hub-item">
-                    <div>
+                    <div class="hub-info">
                         <span class="hub-name">${hub.device_name || hub.hub_id}</span>
-                        <span class="badge ${hub.status === 'online' ? 'online' : hub.status === 'pairing' ? 'pairing' : 'offline'}">
-                            ${hub.status || 'offline'}
-                        </span>
+                        <span class="badge ${statusClass}"><span class="dot"></span> ${status}</span>
                         <span class="hub-id">${hub.hub_id}</span>
-                        ${hub.ip_address ? `<span class="hub-ip">· ${hub.ip_address}</span>` : ''}
+                        ${hub.ip_address ? `<span class="hub-ip">📡 ${hub.ip_address}</span>` : ''}
                     </div>
                     <div class="hub-actions">
-                        <button class="btn btn-secondary" onclick="openConfig('${hub.hub_id}')">⚙️</button>
-                        <button class="btn btn-secondary" onclick="rebootHub('${hub.hub_id}')">🔄</button>
-                        <button class="btn btn-danger" onclick="deleteHub('${hub.hub_id}')">🗑️</button>
+                        ${status === 'pairing' ? 
+                            `<button class="btn btn-success btn-sm" onclick="openConfig('${hub.hub_id}')">⚙️ Configure</button>` :
+                            `<button class="btn btn-secondary btn-sm" onclick="rebootHub('${hub.hub_id}')">🔄 Reboot</button>`
+                        }
+                        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteHub('${hub.hub_id}')" title="Delete">🗑️</button>
                     </div>
                 </div>
-            `).join('');
-            
+            `}).join('');
+
         } catch (error) {
-            console.error('Error loading hubs:', error);
             container.innerHTML = `
                 <div style="text-align:center;padding:20px;color:#f87171;">
                     ❌ ${error.message || 'Failed to load hubs'}
                     <br><br>
-                    <button class="btn btn-secondary" onclick="loadHubs()">🔄 Retry</button>
+                    <button class="btn btn-secondary btn-sm" onclick="loadHubs()">🔄 Retry</button>
                 </div>
             `;
         }
     }
 
-    // ==========================================
-    // AUTO-RECONNECT BLE
-    // ==========================================
+    // ===== BLE FUNCTIONS =====
     async function autoReconnectBle() {
         try {
-            if (!navigator.bluetooth) {
-                console.log('Bluetooth not supported');
-                return;
-            }
-
+            if (!navigator.bluetooth) return;
             const devices = await navigator.bluetooth.getDevices();
-            
-            if (devices.length === 0) {
-                console.log('No paired BLE devices found');
-                updateBleStatus('disconnected');
-                return;
-            }
+            if (devices.length === 0) { updateBleStatus('disconnected'); return; }
 
-            let foundDevice = null;
-            for (const device of devices) {
+            let found = null;
+            for (const d of devices) {
                 try {
-                    const server = await device.gatt.connect();
-                    const services = await server.getPrimaryServices();
-                    for (const service of services) {
-                        if (service.uuid === BLE_SERVICE_UUID) {
-                            foundDevice = device;
-                            break;
-                        }
+                    const s = await d.gatt.connect();
+                    const services = await s.getPrimaryServices();
+                    for (const svc of services) {
+                        if (svc.uuid === BLE_SERVICE_UUID) { found = d; break; }
                     }
-                    if (foundDevice) break;
-                    await device.gatt.disconnect();
+                    if (found) break;
+                    await d.gatt.disconnect();
                 } catch (e) {}
             }
 
-            if (!foundDevice) {
-                console.log('No FarmIOT device found');
-                updateBleStatus('disconnected');
-                return;
-            }
-
-            console.log('✅ Found paired device:', foundDevice.name);
-            await connectBleDevice(foundDevice);
-            
+            if (!found) { updateBleStatus('disconnected'); return; }
+            await connectBleDevice(found);
         } catch (error) {
-            console.log('Auto-reconnect failed:', error);
             updateBleStatus('disconnected');
         }
     }
 
-    // ==========================================
-    // CONNECT TO BLE DEVICE
-    // ==========================================
     async function connectBleDevice(device) {
         try {
             const server = await device.gatt.connect();
             const service = await server.getPrimaryService(BLE_SERVICE_UUID);
             const characteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
-            
+
             currentBleDevice = device;
             currentBleCharacteristic = characteristic;
-            
-            // Read device info
+
             const value = await characteristic.readValue();
             const decoder = new TextDecoder('utf-8');
             const info = JSON.parse(decoder.decode(value));
-            
+
             currentConfigHubId = info.id || info.device_id;
             isConnected = true;
-            
             localStorage.setItem('ble_device_id', device.id || device.name);
-            updateBleStatus('connected', '🟢 ' + (device.name || 'Connected'));
-            console.log('✅ BLE Connected:', info);
-            
-            // Show in discovery list
+            updateBleStatus('connected', device.name || 'Connected');
+
             showDiscoveredHub(info, device);
-            
-            // Auto-open config
-            setTimeout(() => {
-                claimBleHub();
-            }, 500);
-            
+            setTimeout(() => claimBleHub(), 500);
             return true;
         } catch (error) {
-            console.error('BLE connection error:', error);
             isConnected = false;
             updateBleStatus('disconnected');
             return false;
         }
     }
 
-    // ==========================================
-    // SHOW DISCOVERED HUB
-    // ==========================================
     function showDiscoveredHub(info, device) {
         const card = document.getElementById('discoveryCard');
         const list = document.getElementById('discoveryList');
         card.style.display = 'block';
-        
+
+        const name = info.device_name || info.name || info.id || 'FarmIOT Hub';
+        const id = info.id || info.device_id || 'Unknown';
+
         list.innerHTML = `
-            <div class="hub-item" style="border:2px solid rgba(74,222,128,0.5);background:rgba(74,222,128,0.05);">
-                <div>
-                    <span class="hub-name">${info.device_name || info.name || info.id || 'FarmIOT Hub'}</span>
-                    <span class="badge pairing">PAIRING</span>
-                    <span class="hub-id">${info.id || info.device_id}</span>
-                    <span class="hub-ip">· ${device ? device.name || 'BLE' : 'BLE'}</span>
+            <div class="discovered-hub">
+                <div class="info">
+                    <span style="font-size:24px;">📡</span>
+                    <div>
+                        <div style="font-weight:600;">${name}</div>
+                        <div style="font-size:12px;color:#6b7280;">${id} · ${device ? device.name || 'BLE' : 'BLE'}</div>
+                    </div>
+                    <span class="badge pairing"><span class="dot"></span> PAIRING</span>
                 </div>
-                <div class="hub-actions">
-                    <button class="btn btn-success" onclick="claimBleHub()">
-                        ➕ Claim & Configure
-                    </button>
-                </div>
+                <button class="btn btn-success btn-sm" onclick="claimBleHub()">⚙️ Configure</button>
             </div>
             <div style="font-size:12px;color:#6b7280;margin-top:8px;">
                 💡 Connected via Bluetooth. Enter WiFi credentials to set up the hub.
@@ -765,43 +929,32 @@
         `;
     }
 
-    // ==========================================
-    // BLE SCAN
-    // ==========================================
     async function scanForHubs() {
         const card = document.getElementById('discoveryCard');
         const list = document.getElementById('discoveryList');
         card.style.display = 'block';
         list.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning for BLE hubs...</div>';
-        updateBleStatus('scanning', '🔄 Scanning...');
-        
+        updateBleStatus('scanning', 'Scanning...');
+
         try {
             if (!navigator.bluetooth) {
-                list.innerHTML = `
-                    <div style="text-align:center;padding:20px;color:#f87171;">
-                        ❌ Web Bluetooth is not supported.<br>
-                        <div style="font-size:13px;color:#6b7280;margin-top:8px;">
-                            Please use Chrome or Edge browser.
-                        </div>
-                    </div>
-                `;
+                list.innerHTML = `<div style="text-align:center;padding:20px;color:#f87171;">
+                    ❌ Web Bluetooth not supported. Please use Chrome or Edge.
+                </div>`;
                 updateBleStatus('disconnected');
                 return;
             }
 
             // Check paired devices first
-            const pairedDevices = await navigator.bluetooth.getDevices();
-            for (const device of pairedDevices) {
+            const paired = await navigator.bluetooth.getDevices();
+            for (const d of paired) {
                 try {
-                    const server = await device.gatt.connect();
-                    const services = await server.getPrimaryServices();
-                    for (const service of services) {
-                        if (service.uuid === BLE_SERVICE_UUID) {
-                            await connectBleDevice(device);
-                            return;
-                        }
+                    const s = await d.gatt.connect();
+                    const services = await s.getPrimaryServices();
+                    for (const svc of services) {
+                        if (svc.uuid === BLE_SERVICE_UUID) { await connectBleDevice(d); return; }
                     }
-                    await device.gatt.disconnect();
+                    await d.gatt.disconnect();
                 } catch (e) {}
             }
 
@@ -820,50 +973,38 @@
             await connectBleDevice(device);
 
         } catch (error) {
-            console.error('BLE scan error:', error);
             updateBleStatus('disconnected');
             list.innerHTML = `
                 <div style="text-align:center;padding:20px;color:#f87171;">
-                    ❌ ${error.message || 'Scan failed'}<br>
+                    ❌ ${error.message || 'Scan failed'}
                     <div style="font-size:13px;color:#6b7280;margin-top:8px;">
-                        Make sure Bluetooth is enabled and the ESP32 is powered on.
+                        Make sure Bluetooth is enabled and ESP32 is powered on.
                     </div>
                     <div style="margin-top:12px;">
-                        <button class="btn btn-secondary" onclick="scanForHubs()">🔄 Try Again</button>
+                        <button class="btn btn-secondary btn-sm" onclick="scanForHubs()">🔄 Try Again</button>
                     </div>
                 </div>
             `;
         }
     }
 
-    // ==========================================
-    // CLAIM BLE HUB
-    // ==========================================
+    // ===== CLAIM & CONFIGURE =====
     async function claimBleHub() {
         if (!currentBleCharacteristic) {
             showToast('❌ No BLE device found. Please scan first.', 'error');
             return;
         }
-
-        showToast('📥 Claiming hub...', 'warning');
-        
         document.getElementById('configHubId').textContent = currentConfigHubId || 'Unknown';
         document.getElementById('configHubStatus').textContent = '📡 Connected via Bluetooth';
         document.getElementById('configSSID').value = '';
         document.getElementById('configPassword').value = '';
         document.getElementById('configDeviceName').value = currentConfigHubId || 'farmiot-hub';
-        
         openModal('configModal');
     }
 
-    // ==========================================
-    // SAVE CONFIG VIA BLE
-    // ==========================================
     async function saveConfig() {
         const ssid = document.getElementById('configSSID').value.trim();
         const password = document.getElementById('configPassword').value.trim();
-        const name = document.getElementById('configDeviceName').value.trim() || currentConfigHubId;
-
         if (!ssid || !password) {
             showToast('❌ WiFi SSID and Password are required', 'error');
             return;
@@ -881,34 +1022,28 @@
 
             document.getElementById('configHubStatus').textContent = '⏳ ESP32 connecting to WiFi...';
             showToast('📤 Config sent. ESP32 is connecting...', 'warning');
-            
-            // Listen for status
+
             await currentBleCharacteristic.startNotifications();
-            let statusReceived = false;
-            
+            let received = false;
+
             const handler = (event) => {
                 const value = event.target.value;
                 const decoder = new TextDecoder('utf-8');
                 const response = decoder.decode(value);
-                
                 try {
                     const result = JSON.parse(response);
                     if (result.status === 'online') {
-                        statusReceived = true;
+                        received = true;
                         showToast('✅ WiFi Connected! Hub is online.', 'success');
                         document.getElementById('configHubStatus').textContent = '✅ Online!';
-                        
                         claimHubInCloud(currentConfigHubId);
-                        
                         setTimeout(() => {
                             closeModal('configModal');
                             loadHubs();
-                            if (currentBleDevice && currentBleDevice.gatt) {
-                                currentBleDevice.gatt.disconnect();
-                            }
+                            if (currentBleDevice?.gatt) currentBleDevice.gatt.disconnect();
                         }, 2000);
                     } else if (result.status === 'failed') {
-                        statusReceived = true;
+                        received = true;
                         showToast('❌ WiFi failed. Check credentials.', 'error');
                         document.getElementById('configHubStatus').textContent = '❌ Connection failed';
                     }
@@ -916,11 +1051,11 @@
                     currentBleCharacteristic.stopNotifications();
                 } catch (e) {}
             };
-            
+
             currentBleCharacteristic.addEventListener('characteristicvaluechanged', handler);
-            
+
             setTimeout(() => {
-                if (!statusReceived) {
+                if (!received) {
                     showToast('⏳ No status received. Check ESP32 serial monitor.', 'warning');
                     document.getElementById('configHubStatus').textContent = '⏳ Timeout';
                     btn.disabled = false;
@@ -933,7 +1068,6 @@
             }, 30000);
 
         } catch (error) {
-            console.error('BLE send error:', error);
             showToast('❌ Failed to send config: ' + error.message, 'error');
             btn.disabled = false;
             btn.innerHTML = '💾 Configure';
@@ -942,54 +1076,38 @@
 
     async function claimHubInCloud(hubId) {
         try {
-            const result = await apiRequest('/api/hubs/add', {
+            await apiRequest('/api/hubs/add', {
                 method: 'POST',
-                body: JSON.stringify({ 
-                    hub_id: hubId, 
-                    ip_address: null,
-                    name: hubId
-                })
+                body: JSON.stringify({ hub_id: hubId, ip_address: null, name: hubId })
             });
-            if (result.success) console.log('✅ Hub claimed in cloud');
-        } catch (error) {
-            console.error('Cloud claim error:', error);
-        }
+        } catch (e) {}
     }
 
-    // ==========================================
-    // MANUAL ADD HUB
-    // ==========================================
+    // ===== MANUAL ADD =====
     async function manualAddHub() {
         const ip = document.getElementById('manualHubIp').value.trim();
-        if (!ip) {
-            showToast('❌ Please enter an IP address', 'error');
-            return;
-        }
-        
+        if (!ip) { showToast('❌ Please enter an IP address', 'error'); return; }
+
         showToast(`📥 Trying to discover hub at ${ip}...`, 'warning');
-        
         try {
-            const url = `http://${ip}/api/discovery`;
-            const response = await fetch(url, {
+            const response = await fetch(`http://${ip}/api/discovery`, {
                 mode: 'cors',
-                headers: { 'Accept': 'application/json' },
                 signal: AbortSignal.timeout(3000)
             });
-            
             if (!response.ok) throw new Error('Hub not responding');
-            
+
             const data = await response.json();
             const hubId = data.device_id || data.id || `hub_${ip.replace(/\./g, '_')}`;
-            
+
             const result = await apiRequest('/api/hubs/add', {
                 method: 'POST',
-                body: JSON.stringify({ 
-                    hub_id: hubId, 
+                body: JSON.stringify({
+                    hub_id: hubId,
                     ip_address: ip,
                     name: data.device_name || data.name || hubId
                 })
             });
-            
+
             if (result.success) {
                 showToast('✅ Hub added!', 'success');
                 loadHubs();
@@ -997,13 +1115,11 @@
                 showToast('❌ ' + (result.error || 'Failed to add hub'), 'error');
             }
         } catch (error) {
-            showToast(`❌ Cannot reach hub at ${ip}: ${error.message}`, 'error');
+            showToast(`❌ Cannot reach hub: ${error.message}`, 'error');
         }
     }
 
-    // ==========================================
-    // OPEN CONFIG (for existing hubs)
-    // ==========================================
+    // ===== HUB MANAGEMENT =====
     async function openConfig(hubId) {
         currentConfigHubId = hubId;
         document.getElementById('configHubId').textContent = hubId;
@@ -1011,22 +1127,19 @@
         document.getElementById('configSSID').value = '';
         document.getElementById('configPassword').value = '';
         document.getElementById('configDeviceName').value = hubId;
-        
+
         try {
             const data = await apiRequest(`/api/hubs/${hubId}/config`);
             if (data.config) {
                 document.getElementById('configSSID').value = data.config.ssid || '';
                 document.getElementById('configDeviceName').value = data.config.device_name || hubId;
             }
-        } catch (error) {}
-        
+        } catch (e) {}
+
         document.getElementById('configHubStatus').textContent = 'Ready';
         openModal('configModal');
     }
 
-    // ==========================================
-    // REBOOT HUB
-    // ==========================================
     async function rebootHub(hubId) {
         if (!confirm(`Reboot ${hubId}?`)) return;
         showToast('🔄 Rebooting...', 'warning');
@@ -1043,9 +1156,6 @@
         }
     }
 
-    // ==========================================
-    // DELETE HUB
-    // ==========================================
     async function deleteHub(hubId) {
         if (!confirm(`Delete ${hubId}?`)) return;
         showToast('🗑️ Deleting...', 'warning');
@@ -1062,6 +1172,7 @@
         }
     }
 
+    // ===== MODAL =====
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
@@ -1071,11 +1182,12 @@
         });
     });
 
+    // ===== INIT =====
     document.addEventListener('DOMContentLoaded', () => {
         initGoogleSSO();
         checkSession();
         setAuthMode('login');
-        
+
         setInterval(() => {
             if (token) loadSoil();
         }, 30000);
