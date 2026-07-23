@@ -46,7 +46,7 @@ app.use((req, res, next) => {
 });
 
 // ==========================================
-// AUTH MIDDLEWARE
+// AUTH MIDDLEWARE - FIXED
 // ==========================================
 const authenticate = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -56,15 +56,30 @@ const authenticate = async (req, res, next) => {
   
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    req.user = decoded;
+    
+    // The user_id is now the email (since we're using email as ID)
+    // Get the user from profiles table
+    const { data: user, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', decoded.user_id)  // decoded.user_id is the email
+      .single();
+    
+    if (error || !user) {
+      console.log('❌ User not found:', error);
+      return res.status(401).json({ success: false, error: 'User not found' });
+    }
+    
+    req.user = user;
     next();
   } catch (error) {
+    console.error('Auth error:', error);
     res.status(401).json({ success: false, error: 'Invalid token' });
   }
 };
 
 // ==========================================
-// GOOGLE SSO - FIXED (Uses email as ID)
+// GOOGLE SSO - WORKING
 // ==========================================
 app.post('/api/auth/google', async (req, res) => {
   console.log('========================================');
@@ -92,10 +107,6 @@ app.post('/api/auth/google', async (req, res) => {
     const { sub: google_id, email, name, picture } = payload;
     
     console.log(`👤 Google user: ${email} (${google_id})`);
-    
-    // ==========================================
-    // FIX: Use email as the primary key
-    // ==========================================
     
     // Check if user exists in profiles by google_id or email
     let { data: existingUser } = await supabase
@@ -136,14 +147,13 @@ app.post('/api/auth/google', async (req, res) => {
     } else {
       console.log('📝 Creating new user...');
       
-      // Use email as the ID (since it's unique)
       const userId = email;
       console.log(`📝 Using email as ID: ${userId}`);
       
       const { data: newUser, error: createError } = await supabase
         .from('profiles')
         .insert({
-          id: userId,  // Using email as ID
+          id: userId,
           google_id: google_id,
           email: email,
           name: name || email.split('@')[0],
@@ -155,30 +165,10 @@ app.post('/api/auth/google', async (req, res) => {
       
       if (createError) {
         console.log('❌ Profile create error:', createError.message);
-        
-        // If profile already exists, fetch it
-        if (createError.message.includes('duplicate key')) {
-          const { data: existing } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('email', email)
-            .single();
-          
-          if (existing) {
-            user = existing;
-            console.log('✅ Found existing profile');
-          } else {
-            return res.status(500).json({ 
-              success: false, 
-              error: 'Failed to create or find profile' 
-            });
-          }
-        } else {
-          return res.status(500).json({ 
-            success: false, 
-            error: 'Failed to create profile: ' + createError.message 
-          });
-        }
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to create profile: ' + createError.message 
+        });
       } else {
         user = newUser;
         console.log(`✅ Profile created: ${user.id}`);
@@ -193,6 +183,7 @@ app.post('/api/auth/google', async (req, res) => {
       });
     }
     
+    // Create JWT - user_id is the email
     const token = jwt.sign(
       { user_id: user.id, email: user.email },
       process.env.JWT_SECRET || 'your-secret-key',
@@ -369,21 +360,25 @@ app.get('/api/auth/verify', async (req, res) => {
 });
 
 // ==========================================
-// HUBS API
+// HUBS API - FIXED
 // ==========================================
 
 // Get all hubs
 app.get('/api/hubs', authenticate, async (req, res) => {
   try {
+    console.log('📡 Getting hubs for user:', req.user.id);
+    
     const { data, error } = await supabase
       .from('hubs')
       .select('*')
-      .eq('user_id', req.user.user_id)
+      .eq('user_id', req.user.id)  // user_id is now the email
       .order('created_at', { ascending: false });
     
     if (error) throw error;
+    console.log(`✅ Found ${data?.length || 0} hubs`);
     res.json(data || []);
   } catch (error) {
+    console.error('❌ Error getting hubs:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -442,7 +437,7 @@ app.get('/api/discover', authenticate, async (req, res) => {
     
     if (error) throw error;
     
-    const filtered = (data || []).filter(h => h.user_id !== req.user.user_id);
+    const filtered = (data || []).filter(h => h.user_id !== req.user.id);
     res.json(filtered);
   } catch (error) {
     res.status(500).json({ error: error.message });
