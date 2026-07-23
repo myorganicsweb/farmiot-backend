@@ -302,6 +302,10 @@
             background: rgba(251,191,36,0.15);
             color: #fbbf24;
         }
+        .paired-device {
+            border: 1px solid rgba(74,222,128,0.2);
+            background: rgba(74,222,128,0.03);
+        }
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
             .hub-item { flex-direction: column; align-items: flex-start; }
@@ -707,30 +711,58 @@
     }
 
     // ==========================================
-    // AUTO-RECONNECT BLE (No popup after first pairing)
+    // AUTO-RECONNECT BLE - Shows paired devices automatically
     // ==========================================
     async function autoReconnectBle() {
         try {
-            const savedDeviceId = localStorage.getItem('ble_device_id');
-            if (!savedDeviceId) {
-                console.log('No saved BLE device');
+            if (!navigator.bluetooth) {
+                console.log('Bluetooth not supported');
                 return;
             }
 
-            updateBleStatus('scanning', '🔄 Auto-connecting...');
-            
-            // Try to reconnect to previously paired device
+            // Get all paired devices
             const devices = await navigator.bluetooth.getDevices();
-            const savedDevice = devices.find(d => d.id === savedDeviceId || d.name === savedDeviceId);
             
-            if (!savedDevice) {
-                console.log('Saved device not found');
+            if (devices.length === 0) {
+                console.log('No paired BLE devices found');
                 updateBleStatus('disconnected');
                 return;
             }
 
-            console.log('Found saved device, reconnecting...', savedDevice.name);
-            await connectBleDevice(savedDevice);
+            // Check if any device matches our service
+            let foundDevice = null;
+            for (const device of devices) {
+                try {
+                    // Try to connect and check if it has our service
+                    const server = await device.gatt.connect();
+                    const services = await server.getPrimaryServices();
+                    
+                    for (const service of services) {
+                        if (service.uuid === BLE_SERVICE_UUID) {
+                            foundDevice = device;
+                            break;
+                        }
+                    }
+                    
+                    if (foundDevice) break;
+                    
+                    // Disconnect if it doesn't have our service
+                    await device.gatt.disconnect();
+                } catch (e) {
+                    console.log('Device check failed:', e);
+                }
+            }
+
+            if (!foundDevice) {
+                console.log('No FarmIOT device found among paired devices');
+                updateBleStatus('disconnected');
+                return;
+            }
+
+            console.log('✅ Found paired FarmIOT device:', foundDevice.name);
+            
+            // Connect to it
+            await connectBleDevice(foundDevice);
             
         } catch (error) {
             console.log('Auto-reconnect failed:', error);
@@ -790,22 +822,26 @@
         const list = document.getElementById('discoveryList');
         card.style.display = 'block';
         
+        const isPaired = device && device.id;
+        
         list.innerHTML = `
-            <div class="hub-item" style="border:2px solid rgba(74,222,128,0.5);background:rgba(74,222,128,0.05);">
+            <div class="hub-item ${isPaired ? 'paired-device' : ''}" style="border:2px solid ${isPaired ? 'rgba(74,222,128,0.5)' : 'rgba(74,222,128,0.3)'};background:${isPaired ? 'rgba(74,222,128,0.08)' : 'rgba(74,222,128,0.03)'};">
                 <div>
                     <span class="hub-name">${info.device_name || info.device_id}</span>
-                    <span class="badge pairing">PAIRING</span>
+                    <span class="badge ${isPaired ? 'online' : 'pairing'}">
+                        ${isPaired ? '✅ PAIRED' : 'PAIRING'}
+                    </span>
                     <span class="hub-id">${info.device_id}</span>
                     <span class="hub-ip">· ${device ? device.name || 'BLE' : 'BLE'}</span>
                 </div>
                 <div class="hub-actions">
                     <button class="btn btn-success" onclick="claimBleHub()">
-                        ➕ Claim & Configure
+                        ${isPaired ? '⚙️ Configure' : '➕ Claim & Configure'}
                     </button>
                 </div>
             </div>
             <div style="font-size:12px;color:#6b7280;margin-top:8px;">
-                💡 Connected via Bluetooth. Enter WiFi credentials to set up the hub.
+                ${isPaired ? '✅ Device already paired. Click Configure to set up WiFi.' : '💡 Connected via Bluetooth. Enter WiFi credentials to set up the hub.'}
             </div>
         `;
     }
@@ -834,7 +870,24 @@
                 return;
             }
 
-            // Request BLE device - this shows the popup (required by browser)
+            // First, check if there are already paired devices
+            const pairedDevices = await navigator.bluetooth.getDevices();
+            for (const device of pairedDevices) {
+                try {
+                    const server = await device.gatt.connect();
+                    const services = await server.getPrimaryServices();
+                    for (const service of services) {
+                        if (service.uuid === BLE_SERVICE_UUID) {
+                            // Found a paired device!
+                            await connectBleDevice(device);
+                            return;
+                        }
+                    }
+                    await device.gatt.disconnect();
+                } catch (e) {}
+            }
+
+            // If no paired device found, request new device (shows popup)
             const device = await navigator.bluetooth.requestDevice({
                 filters: [{ services: [BLE_SERVICE_UUID] }],
                 optionalServices: [BLE_SERVICE_UUID]
@@ -866,7 +919,7 @@
     }
 
     // ==========================================
-    // SCAN WIFI NETWORKS (via BLE)
+    // SCAN WIFI NETWORKS (via BLE) - FIXED
     // ==========================================
     async function scanWiFiNetworks() {
         const wifiList = document.getElementById('wifiList');
@@ -882,11 +935,13 @@
                 return;
             }
             
+            // Send scan command via BLE
             const scanCommand = JSON.stringify({ command: "scan_wifi" });
             const encoder = new TextEncoder();
             await currentBleCharacteristic.writeValue(encoder.encode(scanCommand));
             
             let responseReceived = false;
+            let timeoutId = null;
             
             const handler = (event) => {
                 const value = event.target.value;
@@ -898,26 +953,35 @@
                     if (data.networks && Array.isArray(data.networks)) {
                         displayWiFiNetworks(data.networks);
                         responseReceived = true;
+                        clearTimeout(timeoutId);
                         currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
                         currentBleCharacteristic.stopNotifications();
                     }
                 } catch (e) {
-                    // Not a valid response yet
+                    // Not a valid response yet - ignore
                 }
             };
             
             await currentBleCharacteristic.startNotifications();
             currentBleCharacteristic.addEventListener('characteristicvaluechanged', handler);
             
-            setTimeout(() => {
+            // Timeout after 15 seconds (ESP32 needs time to scan)
+            timeoutId = setTimeout(() => {
                 if (!responseReceived) {
                     wifiList.innerHTML = `
                         <div class="scanning-wifi" style="color:#fbbf24;">
-                            ⏳ No response from hub. Try again or enter SSID manually.
+                            ⏳ No response from hub. The ESP32 may not support WiFi scanning yet.
                             <br><br>
+                            <div style="font-size:12px;color:#6b7280;margin:8px 0;">
+                                Make sure your ESP32 code has the scanWiFiNetworks() function.
+                            </div>
                             <button class="btn btn-secondary" onclick="scanWiFiNetworks()" style="font-size:12px;padding:4px 12px;">
                                 🔄 Retry
                             </button>
+                            <br><br>
+                            <div style="font-size:12px;color:#6b7280;">
+                                Or enter SSID and password manually below.
+                            </div>
                         </div>
                     `;
                     try {
@@ -925,13 +989,17 @@
                         currentBleCharacteristic.stopNotifications();
                     } catch (e) {}
                 }
-            }, 10000);
+            }, 15000);
             
         } catch (error) {
             console.error('WiFi scan error:', error);
             wifiList.innerHTML = `
                 <div class="scanning-wifi" style="color:#f87171;">
                     ❌ Failed to scan: ${error.message}
+                    <br><br>
+                    <div style="font-size:12px;color:#6b7280;">
+                        Enter SSID and password manually below.
+                    </div>
                 </div>
             `;
         }
