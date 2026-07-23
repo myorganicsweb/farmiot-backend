@@ -6,684 +6,74 @@
     <title>FarmIOT</title>
     <script src="https://accounts.google.com/gsi/client"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #0a0e17;
-            color: #e5e7eb;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container { max-width: 900px; margin: 0 auto; }
-        .header {
-            display: flex;
-            justify-content: space-between;
+        /* ... existing styles ... */
+        
+        .status-indicator {
+            display: inline-flex;
             align-items: center;
-            padding: 20px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        .header h1 {
-            font-size: 28px;
-            background: linear-gradient(135deg, #4ade80, #22d3ee);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .header .subtitle { color: #6b7280; font-size: 14px; }
-        .user-badge { color: #6b7280; font-size: 14px; }
-        .card {
-            background: rgba(17, 24, 39, 0.9);
-            padding: 24px;
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.06);
-            margin-bottom: 16px;
-        }
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .card-header h2 { font-size: 18px; font-weight: 600; }
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-family: inherit;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #4ade80, #22d3ee);
-            color: #0a0e17;
-        }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(74,222,128,0.2); }
-        .btn-secondary {
-            background: rgba(255,255,255,0.05);
-            color: #9ca3af;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .btn-secondary:hover { background: rgba(255,255,255,0.08); }
-        .btn-success {
-            background: rgba(74,222,128,0.1);
-            color: #4ade80;
-            border: 1px solid rgba(74,222,128,0.15);
-        }
-        .btn-success:hover { background: rgba(74,222,128,0.2); }
-        .btn-danger {
-            background: rgba(248,113,113,0.1);
-            color: #f87171;
-            border: 1px solid rgba(248,113,113,0.15);
-        }
-        .btn-danger:hover { background: rgba(248,113,113,0.2); }
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .badge.online {
-            background: rgba(74,222,128,0.1);
-            color: #4ade80;
-            border: 1px solid rgba(74,222,128,0.15);
-        }
-        .badge.offline {
-            background: rgba(248,113,113,0.1);
-            color: #f87171;
-            border: 1px solid rgba(248,113,113,0.15);
-        }
-        .badge.pairing {
-            background: rgba(251,191,36,0.1);
-            color: #fbbf24;
-            border: 1px solid rgba(251,191,36,0.15);
-        }
-        .badge.connecting {
-            background: rgba(96,165,250,0.1);
-            color: #60a5fa;
-            border: 1px solid rgba(96,165,250,0.15);
-        }
-        .soil-value {
-            font-size: 36px;
-            font-weight: 700;
-            color: #fbbf24;
-        }
-        .soil-time { color: #6b7280; font-size: 14px; margin-top: 4px; }
-        .hub-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: rgba(255,255,255,0.02);
-            border-radius: 10px;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .hub-item:last-child { margin-bottom: 0; }
-        .hub-name { font-weight: 600; }
-        .hub-id { font-size: 12px; color: #6b7280; }
-        .hub-ip { font-size: 12px; color: #6b7280; }
-        .hub-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-        .toast {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            padding: 12px 20px;
-            border-radius: 12px;
-            background: rgba(17,24,39,0.95);
-            border: 1px solid rgba(255,255,255,0.08);
-            color: #e5e7eb;
-            font-size: 14px;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.4s;
-            z-index: 2000;
-            max-width: 90%;
-        }
-        .toast.show { transform: translateY(0); opacity: 1; }
-        .toast.success { border-left: 3px solid #4ade80; }
-        .toast.error { border-left: 3px solid #f87171; }
-        .toast.warning { border-left: 3px solid #fbbf24; }
-        .hidden { display: none !important; }
-        .loading { text-align: center; padding: 20px; color: #6b7280; }
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255,255,255,0.1);
-            border-top-color: #4ade80;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        #googleBtn { display: flex; justify-content: center; margin: 10px 0; }
-        .divider {
-            display: flex;
-            align-items: center;
-            margin: 16px 0;
-            color: #374151;
-            font-size: 12px;
-        }
-        .divider::before, .divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-        .divider span { padding: 0 12px; }
-        .auth-card { text-align: center; padding: 40px; }
-        .auth-card h2 { margin-bottom: 8px; }
-        .auth-card p { color: #6b7280; margin-bottom: 20px; }
-        .user-card { text-align: center; padding: 30px; }
-        .user-card img {
-            width: 80px; height: 80px; border-radius: 50%;
-            margin-bottom: 12px;
-        }
-        .user-card .name { font-size: 20px; font-weight: 600; }
-        .user-card .email { color: #6b7280; margin: 4px 0 16px; }
-        .form-group { margin-bottom: 14px; }
-        label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: #9ca3af;
-            margin-bottom: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        input {
-            width: 100%;
-            padding: 10px 14px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 10px;
-            color: #e5e7eb;
-            font-size: 14px;
-            font-family: inherit;
-        }
-        input:focus { outline: none; border-color: #4ade80; }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(8px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal.active { display: flex; }
-        .modal-content {
-            background: #1a1f2e;
-            border-radius: 20px;
-            padding: 32px;
-            max-width: 500px;
-            width: 90%;
-            border: 1px solid rgba(255,255,255,0.06);
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        .modal-content h2 { margin-bottom: 16px; font-size: 22px; }
-        .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
-        .modal-actions .btn { flex: 1; justify-content: center; }
-        .ble-info {
-            background: rgba(59,130,246,0.08);
-            border: 1px solid rgba(59,130,246,0.1);
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-bottom: 12px;
-            font-size: 13px;
-            color: #60a5fa;
-        }
-        .ble-info strong { color: #93bbfc; }
-        .manual-add {
-            margin-top: 12px;
-            padding: 12px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 8px;
-            border: 1px dashed rgba(255,255,255,0.1);
-        }
-        .manual-add input {
-            width: 70%;
-            display: inline-block;
-            margin-right: 8px;
-        }
-        .manual-add .btn {
-            width: 25%;
-            display: inline-block;
-            text-align: center;
-        }
-        .wifi-list {
-            max-height: 150px;
-            overflow-y: auto;
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 8px;
-            margin: 8px 0;
-        }
-        .wifi-item {
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
-            transition: background 0.2s;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .wifi-item:hover {
-            background: rgba(255,255,255,0.05);
-        }
-        .wifi-item.selected {
-            background: rgba(74,222,128,0.15);
-            border-left: 2px solid #4ade80;
-        }
-        .wifi-item .signal { color: #6b7280; font-size: 12px; }
-        .wifi-item .locked { color: #f87171; font-size: 12px; }
-        .wifi-item .unlocked { color: #4ade80; font-size: 12px; }
-        .scanning-wifi { text-align: center; padding: 12px; color: #6b7280; }
-        .ble-status {
-            display: inline-block;
+            gap: 6px;
             padding: 2px 10px;
             border-radius: 12px;
             font-size: 11px;
-            margin-left: 8px;
+            font-weight: 600;
         }
-        .ble-status.connected {
+        .status-indicator.online {
             background: rgba(74,222,128,0.15);
             color: #4ade80;
         }
-        .ble-status.disconnected {
+        .status-indicator.offline {
             background: rgba(248,113,113,0.15);
             color: #f87171;
         }
-        .ble-status.scanning {
+        .status-indicator.pairing {
             background: rgba(251,191,36,0.15);
             color: #fbbf24;
         }
-        .paired-device {
-            border: 1px solid rgba(74,222,128,0.2);
-            background: rgba(74,222,128,0.03);
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
         }
-        .wifi-scan-note {
-            font-size: 11px;
-            color: #6b7280;
-            margin-top: 4px;
-        }
-        @media (max-width: 600px) {
-            .header { flex-direction: column; align-items: flex-start; }
-            .hub-item { flex-direction: column; align-items: flex-start; }
-            .hub-actions { width: 100%; }
-            .hub-actions .btn { flex: 1; text-align: center; }
-            .manual-add input { width: 100%; margin-bottom: 8px; }
-            .manual-add .btn { width: 100%; }
+        .status-dot.online { background: #4ade80; }
+        .status-dot.offline { background: #f87171; }
+        .status-dot.pairing { background: #fbbf24; }
+        
+        .hub-item .status-badge {
+            margin-left: 8px;
         }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <div class="header">
-        <div>
-            <h1>🚜 FarmIOT</h1>
-            <div class="subtitle">Smart Agriculture Platform</div>
-        </div>
-        <div class="user-badge" id="userBadge"></div>
-    </div>
-
-    <div id="authSection">
-        <div class="card auth-card" id="signinCard">
-            <h2>Welcome to FarmIOT</h2>
-            <p>Sign in with your Google account to continue</p>
-            <div id="googleBtn"></div>
-            <div class="divider"><span>or</span></div>
-            <div style="text-align:left;">
-                <div class="toggle" style="display:flex;gap:4px;background:rgba(255,255,255,0.03);border-radius:8px;padding:3px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.04);">
-                    <button class="active" id="loginTab" onclick="setAuthMode('login')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Sign In</button>
-                    <button id="registerTab" onclick="setAuthMode('register')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Register</button>
-                </div>
-                <form id="authForm" onsubmit="handleAuthSubmit(event)">
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" id="email" placeholder="Enter your email" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Password</label>
-                        <input type="password" id="password" placeholder="Enter your password" minlength="6" required>
-                    </div>
-                    <div class="form-group" id="confirmGroup" style="display:none;">
-                        <label>Confirm Password</label>
-                        <input type="password" id="confirmPassword" placeholder="Confirm your password" minlength="6">
-                    </div>
-                    <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;padding:12px;">Sign In</button>
-                </form>
-                <div id="authStatus" style="margin-top:12px;padding:10px;border-radius:8px;font-size:13px;display:none;"></div>
-            </div>
-        </div>
-        <div class="card user-card hidden" id="userCard">
-            <img id="userPic" src="" alt="Profile">
-            <div class="name" id="userName">User</div>
-            <div class="email" id="userEmail">user@example.com</div>
-            <button class="btn btn-danger" id="logoutBtn">Sign Out</button>
-        </div>
-    </div>
-
-    <div id="dashboardContent" class="hidden">
-        <div class="card">
-            <div class="card-header">
-                <h2>💧 Soil Moisture</h2>
-                <span class="badge" id="soilStatus">Loading...</span>
-            </div>
-            <div class="soil-value" id="soilValue">—</div>
-            <div class="soil-time" id="soilTime">Waiting for data...</div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h2>📡 My Hubs</h2>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                    <button class="btn btn-primary" onclick="scanForHubs()">🔍 Scan</button>
-                    <button class="btn btn-secondary" onclick="loadHubs()">🔄 Refresh</button>
-                    <span id="bleStatus" class="ble-status disconnected">⚪ Disconnected</span>
-                </div>
-            </div>
-            <div id="hubList">
-                <div class="loading"><div class="spinner"></div>Loading hubs...</div>
-            </div>
-        </div>
-
-        <div class="card" id="discoveryCard" style="display:none;">
-            <div class="card-header">
-                <h2>🔍 Discovered Hubs</h2>
-                <button class="btn btn-secondary" onclick="scanForHubs()">🔄 Scan Again</button>
-            </div>
-            <div id="discoveryList">
-                <div class="loading">Scanning...</div>
-            </div>
-            <div class="manual-add">
-                <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">Or add hub manually by IP:</div>
-                <input type="text" id="manualHubIp" placeholder="192.168.1.100" style="width:70%;">
-                <button class="btn btn-success" onclick="manualAddHub()" style="width:25%;">➕ Add</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal" id="configModal">
-    <div class="modal-content">
-        <h2>⚙️ Configure Hub</h2>
-        <div id="configHubInfo" style="background:rgba(255,255,255,0.03);padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:13px;color:#6b7280;">
-            Configuring: <strong id="configHubId" style="color:#e5e7eb;">—</strong>
-            <div id="configHubStatus" style="margin-top:4px;font-size:12px;"></div>
-        </div>
-        
-        <div class="form-group">
-            <label>Select WiFi Network</label>
-            <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-                <button class="btn btn-secondary" onclick="scanWiFiNetworks()" style="flex:1;font-size:12px;padding:6px;min-width:100px;">
-                    🔍 Scan Networks
-                </button>
-                <button class="btn btn-secondary" onclick="getCurrentWiFi()" style="flex:1;font-size:12px;padding:6px;min-width:100px;">
-                    📱 Use Current
-                </button>
-            </div>
-            <div id="wifiList" class="wifi-list">
-                <div class="scanning-wifi">Click "Scan Networks" to find available WiFi</div>
-            </div>
-            <div class="wifi-scan-note">
-                ⚡ WiFi scanning is done by your browser. The ESP32 only receives credentials.
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label>WiFi SSID</label>
-            <input type="text" id="configSSID" placeholder="Select a WiFi network above or enter manually">
-        </div>
-        <div class="form-group">
-            <label>WiFi Password</label>
-            <input type="password" id="configPassword" placeholder="Enter WiFi password">
-            <div style="font-size:11px;color:#6b7280;margin-top:4px;">
-                ⚠️ Browser cannot auto-fill saved passwords for security reasons. Please enter manually.
-            </div>
-        </div>
-        <div class="form-group">
-            <label>Device Name</label>
-            <input type="text" id="configDeviceName" placeholder="My Hub" value="farmiot-hub">
-        </div>
-        <div class="form-group">
-            <label>MQTT Server</label>
-            <input type="text" id="configMQTT" placeholder="broker.hivemq.com" value="broker.hivemq.com">
-        </div>
-        <div class="form-group">
-            <label>MQTT Port</label>
-            <input type="number" id="configMQTTPort" placeholder="1883" value="1883">
-        </div>
-        <div class="modal-actions">
-            <button class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
-            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()">💾 Configure</button>
-        </div>
-    </div>
-</div>
-
-<div id="toast" class="toast"></div>
-
-<script>
-    const API_BASE = window.location.origin;
-    let token = localStorage.getItem('token') || null;
-    let user = JSON.parse(localStorage.getItem('user') || 'null');
-    let authMode = 'login';
-    let currentConfigHubId = null;
-    let currentHubIp = null;
-    let currentBleDevice = null;
-    let currentBleCharacteristic = null;
-    let bleServer = null;
-    let isConnected = false;
-
-    // BLE Config
-    const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-    const BLE_CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
-
-    function showToast(message, type = 'success') {
-        const toast = document.getElementById('toast');
-        toast.textContent = message;
-        toast.className = 'toast ' + type + ' show';
-        clearTimeout(toast._hide);
-        toast._hide = setTimeout(() => toast.classList.remove('show'), 3000);
-    }
-
-    function updateBleStatus(status, message) {
-        const el = document.getElementById('bleStatus');
-        el.className = 'ble-status ' + status;
-        el.textContent = message || (status === 'connected' ? '🟢 Connected' : status === 'scanning' ? '🔄 Scanning...' : '⚪ Disconnected');
-    }
-
-    function updateHubStatus(hubId, status, message) {
-        // Update status in the hubs list
+    <!-- ... existing HTML ... -->
+    
+    <script>
+    // ... existing code ...
+    
+    // ==========================================
+    // UPDATE HUB STATUS IN UI
+    // ==========================================
+    function updateHubStatus(hubId, status, ip) {
         const items = document.querySelectorAll('.hub-item');
         items.forEach(item => {
             const idEl = item.querySelector('.hub-id');
             if (idEl && idEl.textContent === hubId) {
-                const badge = item.querySelector('.badge');
+                const badge = item.querySelector('.status-badge');
                 if (badge) {
-                    badge.className = 'badge ' + status;
-                    badge.textContent = message || status;
+                    badge.className = 'status-indicator ' + status;
+                    badge.innerHTML = `
+                        <span class="status-dot ${status}"></span>
+                        ${status === 'online' ? 'Online' : status === 'offline' ? 'Offline' : 'Pairing'}
+                        ${ip ? '· ' + ip : ''}
+                    `;
                 }
             }
         });
     }
-
-    async function apiRequest(endpoint, options = {}) {
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-        const response = await fetch(`${API_BASE}${endpoint}`, {
-            ...options,
-            headers
-        });
-        return response.json();
-    }
-
-    function setAuthMode(m) {
-        authMode = m;
-        document.getElementById('loginTab').classList.toggle('active', m === 'login');
-        document.getElementById('registerTab').classList.toggle('active', m === 'register');
-        document.getElementById('confirmGroup').style.display = m === 'register' ? 'block' : 'none';
-        document.getElementById('submitBtn').textContent = m === 'login' ? 'Sign In' : 'Register';
-    }
-
-    async function handleAuthSubmit(e) {
-        e.preventDefault();
-        
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value.trim();
-        const confirmPassword = document.getElementById('confirmPassword').value.trim();
-        const status = document.getElementById('authStatus');
-        const btn = document.getElementById('submitBtn');
-
-        if (!email || !password) {
-            status.style.display = 'block';
-            status.className = 'error';
-            status.textContent = '❌ Please fill in all fields';
-            return;
-        }
-
-        if (authMode === 'register' && password !== confirmPassword) {
-            status.style.display = 'block';
-            status.className = 'error';
-            status.textContent = '❌ Passwords do not match';
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = '⏳ Processing...';
-        status.style.display = 'none';
-
-        try {
-            const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
-            const data = await apiRequest(endpoint, {
-                method: 'POST',
-                body: JSON.stringify({ email, password })
-            });
-
-            if (data.success) {
-                token = data.token;
-                user = data.user;
-                localStorage.setItem('token', token);
-                localStorage.setItem('user', JSON.stringify(user));
-                showUser(user);
-                showToast(authMode === 'login' ? '✅ Welcome back!' : '✅ Account created!', 'success');
-                loadDashboard();
-            } else {
-                status.style.display = 'block';
-                status.className = 'error';
-                status.textContent = '❌ ' + (data.error || 'Something went wrong');
-                showToast('❌ ' + data.error, 'error');
-            }
-        } catch (error) {
-            status.style.display = 'block';
-            status.className = 'error';
-            status.textContent = '❌ Network error: ' + error.message;
-            showToast('❌ Network error', 'error');
-        }
-
-        btn.disabled = false;
-        btn.innerHTML = authMode === 'login' ? 'Sign In' : 'Register';
-    }
-
-    function initGoogleSSO() {
-        google.accounts.id.initialize({
-            client_id: '472048491207-hofjvaisdj9vnaglutb9kd23ci948jc5.apps.googleusercontent.com',
-            callback: async (response) => {
-                try {
-                    const result = await apiRequest('/api/auth/google', {
-                        method: 'POST',
-                        body: JSON.stringify({ id_token: response.credential })
-                    });
-                    
-                    if (result.success) {
-                        token = result.token;
-                        user = result.user;
-                        localStorage.setItem('token', token);
-                        localStorage.setItem('user', JSON.stringify(user));
-                        showUser(user);
-                        showToast('✅ Welcome, ' + user.name + '!', 'success');
-                        loadDashboard();
-                    } else {
-                        showToast('❌ ' + result.error, 'error');
-                    }
-                } catch (error) {
-                    showToast('❌ Login failed: ' + error.message, 'error');
-                }
-            }
-        });
-        
-        google.accounts.id.renderButton(
-            document.getElementById('googleBtn'),
-            { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill' }
-        );
-    }
-
-    function showUser(userData) {
-        document.getElementById('signinCard').classList.add('hidden');
-        document.getElementById('userCard').classList.remove('hidden');
-        document.getElementById('userPic').src = userData.picture || '';
-        document.getElementById('userName').textContent = userData.name || userData.email;
-        document.getElementById('userEmail').textContent = userData.email;
-        document.getElementById('userBadge').textContent = '👋 ' + userData.name;
-        document.getElementById('logoutBtn').onclick = () => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            token = null;
-            user = null;
-            document.getElementById('signinCard').classList.remove('hidden');
-            document.getElementById('userCard').classList.add('hidden');
-            document.getElementById('dashboardContent').classList.add('hidden');
-            document.getElementById('userBadge').textContent = '';
-            showToast('✅ Signed out');
-            if (currentBleDevice && currentBleDevice.gatt) {
-                try { currentBleDevice.gatt.disconnect(); } catch(e) {}
-            }
-            isConnected = false;
-            updateBleStatus('disconnected');
-        };
-    }
-
-    function checkSession() {
-        if (token && user) {
-            showUser(user);
-            loadDashboard();
-        }
-    }
-
-    async function loadDashboard() {
-        document.getElementById('dashboardContent').classList.remove('hidden');
-        await loadSoil();
-        await loadHubs();
-        autoReconnectBle();
-    }
-
-    async function loadSoil() {
-        try {
-            const data = await apiRequest('/api/soil/latest');
-            if (data && data.value) {
-                document.getElementById('soilValue').textContent = data.value;
-                document.getElementById('soilTime').textContent = 'Updated: ' + new Date(data.timestamp).toLocaleTimeString();
-                document.getElementById('soilStatus').textContent = 'Online';
-                document.getElementById('soilStatus').className = 'badge online';
-            }
-        } catch (error) {
-            document.getElementById('soilStatus').textContent = 'Offline';
-            document.getElementById('soilStatus').className = 'badge offline';
-        }
-    }
-
+    
+    // ==========================================
+    // LOAD HUBS WITH STATUS
+    // ==========================================
     async function loadHubs() {
         const container = document.getElementById('hubList');
         container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading hubs...</div>';
@@ -693,9 +83,7 @@
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
-            if (!response.ok) {
-                throw new Error('Failed to load hubs');
-            }
+            if (!response.ok) throw new Error('Failed to load hubs');
             
             const hubs = await response.json();
             
@@ -709,23 +97,30 @@
                 return;
             }
             
-            container.innerHTML = hubs.map(hub => `
+            container.innerHTML = hubs.map(hub => {
+                const status = hub.status || 'offline';
+                const statusClass = status === 'online' ? 'online' : status === 'pairing' ? 'pairing' : 'offline';
+                
+                return `
                 <div class="hub-item">
                     <div>
                         <span class="hub-name">${hub.device_name || hub.hub_id}</span>
-                        <span class="badge ${hub.status === 'online' ? 'online' : hub.status === 'pairing' ? 'pairing' : 'offline'}">
-                            ${hub.status || 'offline'}
+                        <span class="status-indicator ${statusClass}">
+                            <span class="status-dot ${statusClass}"></span>
+                            ${status === 'online' ? 'Online' : status === 'pairing' ? 'Pairing' : 'Offline'}
+                            ${hub.ip_address ? '· ' + hub.ip_address : ''}
                         </span>
                         <span class="hub-id">${hub.hub_id}</span>
-                        ${hub.ip_address ? `<span class="hub-ip">· ${hub.ip_address}</span>` : ''}
                     </div>
                     <div class="hub-actions">
-                        <button class="btn btn-secondary" onclick="openConfig('${hub.hub_id}')">⚙️</button>
-                        <button class="btn btn-secondary" onclick="rebootHub('${hub.hub_id}')">🔄</button>
+                        ${status === 'pairing' ? 
+                            `<button class="btn btn-success" onclick="openConfig('${hub.hub_id}')">⚙️ Configure</button>` :
+                            `<button class="btn btn-secondary" onclick="rebootHub('${hub.hub_id}')">🔄 Reboot</button>`
+                        }
                         <button class="btn btn-danger" onclick="deleteHub('${hub.hub_id}')">🗑️</button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
             
         } catch (error) {
             console.error('Error loading hubs:', error);
@@ -738,60 +133,7 @@
             `;
         }
     }
-
-    // ==========================================
-    // AUTO-RECONNECT BLE
-    // ==========================================
-    async function autoReconnectBle() {
-        try {
-            if (!navigator.bluetooth) {
-                console.log('Bluetooth not supported');
-                return;
-            }
-
-            const devices = await navigator.bluetooth.getDevices();
-            
-            if (devices.length === 0) {
-                console.log('No paired BLE devices found');
-                updateBleStatus('disconnected');
-                return;
-            }
-
-            let foundDevice = null;
-            for (const device of devices) {
-                try {
-                    const server = await device.gatt.connect();
-                    const services = await server.getPrimaryServices();
-                    
-                    for (const service of services) {
-                        if (service.uuid === BLE_SERVICE_UUID) {
-                            foundDevice = device;
-                            break;
-                        }
-                    }
-                    
-                    if (foundDevice) break;
-                    await device.gatt.disconnect();
-                } catch (e) {
-                    console.log('Device check failed:', e);
-                }
-            }
-
-            if (!foundDevice) {
-                console.log('No FarmIOT device found among paired devices');
-                updateBleStatus('disconnected');
-                return;
-            }
-
-            console.log('✅ Found paired FarmIOT device:', foundDevice.name);
-            await connectBleDevice(foundDevice);
-            
-        } catch (error) {
-            console.log('Auto-reconnect failed:', error);
-            updateBleStatus('disconnected');
-        }
-    }
-
+    
     // ==========================================
     // CONNECT TO BLE DEVICE
     // ==========================================
@@ -819,9 +161,23 @@
             
             showDiscoveredHub(info, device);
             
-            setTimeout(() => {
-                claimBleHub();
-            }, 500);
+            // Check if hub is already configured (online)
+            if (info.status === 'online') {
+                showToast('✅ Hub is already online!', 'success');
+                document.getElementById('discoveryCard').style.display = 'none';
+                loadHubs();
+                // Disconnect BLE since WiFi is connected
+                setTimeout(() => {
+                    if (currentBleDevice && currentBleDevice.gatt) {
+                        currentBleDevice.gatt.disconnect();
+                    }
+                }, 2000);
+            } else {
+                // Hub is in pairing mode - open config
+                setTimeout(() => {
+                    claimBleHub();
+                }, 500);
+            }
             
             return true;
         } catch (error) {
@@ -831,255 +187,7 @@
             return false;
         }
     }
-
-    // ==========================================
-    // SHOW DISCOVERED HUB
-    // ==========================================
-    function showDiscoveredHub(info, device) {
-        const card = document.getElementById('discoveryCard');
-        const list = document.getElementById('discoveryList');
-        card.style.display = 'block';
-        
-        const isPaired = device && device.id;
-        
-        list.innerHTML = `
-            <div class="hub-item ${isPaired ? 'paired-device' : ''}" style="border:2px solid ${isPaired ? 'rgba(74,222,128,0.5)' : 'rgba(74,222,128,0.3)'};background:${isPaired ? 'rgba(74,222,128,0.08)' : 'rgba(74,222,128,0.03)'};">
-                <div>
-                    <span class="hub-name">${info.device_name || info.device_id}</span>
-                    <span class="badge ${isPaired ? 'online' : 'pairing'}">
-                        ${isPaired ? '✅ PAIRED' : 'PAIRING'}
-                    </span>
-                    <span class="hub-id">${info.device_id}</span>
-                    <span class="hub-ip">· ${device ? device.name || 'BLE' : 'BLE'}</span>
-                </div>
-                <div class="hub-actions">
-                    <button class="btn btn-success" onclick="claimBleHub()">
-                        ${isPaired ? '⚙️ Configure' : '➕ Claim & Configure'}
-                    </button>
-                </div>
-            </div>
-            <div style="font-size:12px;color:#6b7280;margin-top:8px;">
-                ${isPaired ? '✅ Device already paired. Click Configure to set up WiFi.' : '💡 Connected via Bluetooth. Enter WiFi credentials to set up the hub.'}
-            </div>
-        `;
-    }
-
-    // ==========================================
-    // BLE SCAN
-    // ==========================================
-    async function scanForHubs() {
-        const card = document.getElementById('discoveryCard');
-        const list = document.getElementById('discoveryList');
-        card.style.display = 'block';
-        list.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning for BLE hubs...</div>';
-        updateBleStatus('scanning', '🔄 Scanning...');
-        
-        try {
-            if (!navigator.bluetooth) {
-                list.innerHTML = `
-                    <div style="text-align:center;padding:20px;color:#f87171;">
-                        ❌ Web Bluetooth is not supported.<br>
-                        <div style="font-size:13px;color:#6b7280;margin-top:8px;">
-                            Please use Chrome or Edge browser.
-                        </div>
-                    </div>
-                `;
-                updateBleStatus('disconnected');
-                return;
-            }
-
-            // Check paired devices first
-            const pairedDevices = await navigator.bluetooth.getDevices();
-            for (const device of pairedDevices) {
-                try {
-                    const server = await device.gatt.connect();
-                    const services = await server.getPrimaryServices();
-                    for (const service of services) {
-                        if (service.uuid === BLE_SERVICE_UUID) {
-                            await connectBleDevice(device);
-                            return;
-                        }
-                    }
-                    await device.gatt.disconnect();
-                } catch (e) {}
-            }
-
-            // Request new device
-            const device = await navigator.bluetooth.requestDevice({
-                filters: [{ services: [BLE_SERVICE_UUID] }],
-                optionalServices: [BLE_SERVICE_UUID]
-            });
-
-            if (!device) {
-                list.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;">No devices found.</div>';
-                updateBleStatus('disconnected');
-                return;
-            }
-
-            await connectBleDevice(device);
-
-        } catch (error) {
-            console.error('BLE scan error:', error);
-            updateBleStatus('disconnected');
-            list.innerHTML = `
-                <div style="text-align:center;padding:20px;color:#f87171;">
-                    ❌ ${error.message || 'Scan failed'}<br>
-                    <div style="font-size:13px;color:#6b7280;margin-top:8px;">
-                        Make sure Bluetooth is enabled and the ESP32 is powered on.
-                    </div>
-                    <div style="margin-top:12px;">
-                        <button class="btn btn-secondary" onclick="scanForHubs()">🔄 Try Again</button>
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    // ==========================================
-    // SCAN WIFI NETWORKS (Browser-based)
-    // ==========================================
-    async function scanWiFiNetworks() {
-        const wifiList = document.getElementById('wifiList');
-        wifiList.innerHTML = '<div class="scanning-wifi"><span class="spinner"></span> Scanning for WiFi networks...</div>';
-        
-        try {
-            // Try the Network Information API (limited support)
-            // Most browsers don't expose WiFi scanning for security reasons
-            // So we'll use the built-in WiFi API if available, otherwise fallback to manual entry
-            
-            // Check if the browser supports WiFi scanning
-            if ('wifi' in navigator) {
-                // This is available in some browsers
-                const networks = await navigator.wifi.getNetworks();
-                displayWiFiNetworks(networks);
-            } else {
-                // Fallback: Use manual entry with some common network detection
-                // Browser cannot scan WiFi networks for security reasons
-                // We'll show a message and let users enter manually
-                wifiList.innerHTML = `
-                    <div class="scanning-wifi" style="color:#fbbf24;">
-                        📡 Browsers cannot scan WiFi networks for security reasons.
-                        <br><br>
-                        <div style="font-size:13px;color:#6b7280;">
-                            Please enter your WiFi SSID and password manually below.
-                        </div>
-                        <br>
-                        <div style="font-size:12px;color:#4b5563;padding:8px;background:rgba(255,255,255,0.03);border-radius:6px;">
-                            💡 <strong>Tip:</strong> Check your phone/computer's WiFi settings for the network name.
-                        </div>
-                    </div>
-                `;
-            }
-            
-        } catch (error) {
-            console.error('WiFi scan error:', error);
-            wifiList.innerHTML = `
-                <div class="scanning-wifi" style="color:#f87171;">
-                    ❌ WiFi scanning not supported in this browser.
-                    <br><br>
-                    <div style="font-size:13px;color:#6b7280;">
-                        Please enter your WiFi SSID and password manually below.
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    // ==========================================
-    // GET CURRENT WIFI (Browser's network)
-    // ==========================================
-    function getCurrentWiFi() {
-        const wifiList = document.getElementById('wifiList');
-        wifiList.innerHTML = `
-            <div class="scanning-wifi" style="color:#fbbf24;">
-                📱 Browsers cannot detect your current WiFi network for security reasons.
-                <br><br>
-                <div style="font-size:13px;color:#6b7280;">
-                    Please enter your WiFi SSID manually below.
-                </div>
-            </div>
-        `;
-        document.getElementById('configSSID').focus();
-        showToast('Please enter your WiFi SSID manually', 'warning');
-    }
-
-    // ==========================================
-    // DISPLAY WIFI NETWORKS
-    // ==========================================
-    function displayWiFiNetworks(networks) {
-        const wifiList = document.getElementById('wifiList');
-        
-        if (!networks || networks.length === 0) {
-            wifiList.innerHTML = `
-                <div class="scanning-wifi">
-                    No WiFi networks found.
-                    <br><br>
-                    <div style="font-size:13px;color:#6b7280;">
-                        Please enter your WiFi SSID manually below.
-                    </div>
-                </div>
-            `;
-            return;
-        }
-        
-        wifiList.innerHTML = networks.map((network, index) => `
-            <div class="wifi-item ${index === 0 ? 'selected' : ''}" onclick="selectWiFi(this, '${network.ssid || network.SSID || network.name}')">
-                <span>
-                    <span>${network.ssid || network.SSID || network.name}</span>
-                    ${network.secured || network.security ? '<span class="locked">🔒</span>' : '<span class="unlocked">🔓</span>'}
-                </span>
-                <span class="signal">${network.rssi > -60 ? '📶' : '📶'}</span>
-            </div>
-        `).join('');
-        
-        const firstSsid = networks[0]?.ssid || networks[0]?.SSID || networks[0]?.name || '';
-        if (firstSsid) {
-            document.getElementById('configSSID').value = firstSsid;
-        }
-    }
-
-    // ==========================================
-    // SELECT WIFI
-    // ==========================================
-    function selectWiFi(element, ssid) {
-        document.querySelectorAll('.wifi-item').forEach(el => el.classList.remove('selected'));
-        element.classList.add('selected');
-        document.getElementById('configSSID').value = ssid;
-        document.getElementById('configPassword').focus();
-    }
-
-    // ==========================================
-    // CLAIM BLE HUB
-    // ==========================================
-    async function claimBleHub() {
-        if (!currentBleCharacteristic) {
-            showToast('❌ No BLE device found. Please scan first.', 'error');
-            return;
-        }
-
-        showToast('📥 Claiming hub...', 'warning');
-        
-        document.getElementById('configHubId').textContent = currentConfigHubId;
-        document.getElementById('configHubStatus').textContent = '📡 Connected via Bluetooth';
-        document.getElementById('configSSID').value = '';
-        document.getElementById('configPassword').value = '';
-        document.getElementById('configDeviceName').value = currentConfigHubId || 'farmiot-hub';
-        document.getElementById('configMQTT').value = 'broker.hivemq.com';
-        document.getElementById('configMQTTPort').value = '1883';
-        
-        document.getElementById('wifiList').innerHTML = `
-            <div class="scanning-wifi">
-                Enter your WiFi credentials below.
-                <br><br>
-                <div style="font-size:12px;color:#6b7280;">
-                    💡 Click "Scan Networks" to see available networks (if supported by your browser).
-                </div>
-            </div>
-        `;
-        
-        openModal('configModal');
-    }
-
+    
     // ==========================================
     // SAVE CONFIG VIA BLE
     // ==========================================
@@ -1098,7 +206,7 @@
         const btn = document.getElementById('configSaveBtn');
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Configuring...';
-        document.getElementById('configHubStatus').textContent = '📤 Sending WiFi config via BLE...';
+        document.getElementById('configHubStatus').textContent = '📤 Sending WiFi config...';
 
         try {
             const config = {
@@ -1108,16 +216,14 @@
                 port: port,
                 device_name: name
             };
-            const configStr = JSON.stringify(config);
             
             const encoder = new TextEncoder();
-            const data = encoder.encode(configStr);
-            await currentBleCharacteristic.writeValue(data);
+            await currentBleCharacteristic.writeValue(encoder.encode(JSON.stringify(config)));
 
-            document.getElementById('configHubStatus').textContent = '⏳ Waiting for ESP32 to connect...';
-            showToast('📤 Config sent. ESP32 is connecting to WiFi...', 'warning');
+            document.getElementById('configHubStatus').textContent = '⏳ ESP32 connecting to WiFi...';
+            showToast('📤 Config sent. ESP32 is connecting...', 'warning');
             
-            // Listen for connection status
+            // Listen for status updates
             await currentBleCharacteristic.startNotifications();
             let statusReceived = false;
             
@@ -1128,25 +234,30 @@
                 
                 try {
                     const result = JSON.parse(response);
-                    if (result.status) {
+                    if (result.status === 'online') {
                         statusReceived = true;
-                        if (result.status === 'success' || result.status === 'online') {
-                            showToast('✅ WiFi connected! Hub is online.', 'success');
-                            document.getElementById('configHubStatus').textContent = '✅ Connected to WiFi!';
-                            
-                            claimHubInCloud(currentConfigHubId);
-                            
-                            setTimeout(() => {
-                                closeModal('configModal');
-                                loadHubs();
-                            }, 2000);
-                        } else if (result.status === 'failed') {
-                            showToast('❌ WiFi connection failed: ' + (result.message || 'Check credentials'), 'error');
-                            document.getElementById('configHubStatus').textContent = '❌ Connection failed';
-                        }
-                        currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
-                        currentBleCharacteristic.stopNotifications();
+                        showToast('✅ WiFi Connected! Hub is online.', 'success');
+                        document.getElementById('configHubStatus').textContent = '✅ Online!';
+                        
+                        claimHubInCloud(currentConfigHubId);
+                        
+                        setTimeout(() => {
+                            closeModal('configModal');
+                            loadHubs();
+                            // BLE will be stopped by ESP32
+                            if (currentBleDevice && currentBleDevice.gatt) {
+                                currentBleDevice.gatt.disconnect();
+                            }
+                        }, 2000);
+                    } else if (result.status === 'failed') {
+                        statusReceived = true;
+                        showToast('❌ WiFi failed: ' + (result.message || 'Check credentials'), 'error');
+                        document.getElementById('configHubStatus').textContent = '❌ Connection failed';
+                        btn.disabled = false;
+                        btn.innerHTML = '💾 Retry';
                     }
+                    currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
+                    currentBleCharacteristic.stopNotifications();
                 } catch (e) {
                     // Not a valid response yet
                 }
@@ -1154,11 +265,10 @@
             
             currentBleCharacteristic.addEventListener('characteristicvaluechanged', handler);
             
-            // Timeout after 30 seconds
             setTimeout(() => {
                 if (!statusReceived) {
-                    showToast('⏳ No status received. Check ESP32 serial monitor for details.', 'warning');
-                    document.getElementById('configHubStatus').textContent = '⏳ Status timeout - check ESP32';
+                    showToast('⏳ No status received. Check ESP32 serial monitor.', 'warning');
+                    document.getElementById('configHubStatus').textContent = '⏳ Timeout - check ESP32';
                     btn.disabled = false;
                     btn.innerHTML = '💾 Configure';
                     try {
@@ -1175,185 +285,7 @@
             btn.innerHTML = '💾 Configure';
         }
     }
-
-    async function claimHubInCloud(hubId) {
-        try {
-            const result = await apiRequest('/api/hubs/add', {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    hub_id: hubId, 
-                    ip_address: null,
-                    name: hubId
-                })
-            });
-            
-            if (result.success) {
-                console.log('✅ Hub claimed in cloud');
-            }
-        } catch (error) {
-            console.error('Cloud claim error:', error);
-        }
-    }
-
-    // ==========================================
-    // MANUAL ADD HUB
-    // ==========================================
-    async function manualAddHub() {
-        const ip = document.getElementById('manualHubIp').value.trim();
-        if (!ip) {
-            showToast('❌ Please enter an IP address', 'error');
-            return;
-        }
-        
-        showToast(`📥 Trying to discover hub at ${ip}...`, 'warning');
-        
-        try {
-            const url = `http://${ip}/api/discovery`;
-            const response = await fetch(url, {
-                mode: 'cors',
-                headers: { 'Accept': 'application/json' }
-            });
-            
-            if (!response.ok) {
-                throw new Error('Hub not responding');
-            }
-            
-            const data = await response.json();
-            const hubId = data.device_id || `hub_${ip.replace(/\./g, '_')}`;
-            
-            const result = await apiRequest('/api/hubs/add', {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    hub_id: hubId, 
-                    ip_address: ip,
-                    name: data.device_name || hubId
-                })
-            });
-            
-            if (result.success) {
-                showToast('✅ Hub added! Configure WiFi.', 'success');
-                currentConfigHubId = hubId;
-                currentHubIp = ip;
-                
-                document.getElementById('configHubId').textContent = hubId;
-                document.getElementById('configHubStatus').textContent = `📍 IP: ${ip}`;
-                document.getElementById('configSSID').value = '';
-                document.getElementById('configPassword').value = '';
-                document.getElementById('configDeviceName').value = data.device_name || hubId;
-                document.getElementById('configMQTT').value = 'broker.hivemq.com';
-                document.getElementById('configMQTTPort').value = '1883';
-                
-                document.getElementById('wifiList').innerHTML = `
-                    <div class="scanning-wifi">
-                        Enter your WiFi credentials below.
-                    </div>
-                `;
-                
-                openModal('configModal');
-            } else {
-                showToast('❌ ' + (result.error || 'Failed to add hub'), 'error');
-            }
-        } catch (error) {
-            showToast(`❌ Cannot reach hub at ${ip}: ${error.message}`, 'error');
-        }
-    }
-
-    // ==========================================
-    // CONFIGURE HUB (via Cloud)
-    // ==========================================
-    async function openConfig(hubId) {
-        currentConfigHubId = hubId;
-        currentHubIp = null;
-        currentBleCharacteristic = null;
-        
-        document.getElementById('configHubId').textContent = hubId;
-        document.getElementById('configHubStatus').textContent = 'Loading config...';
-        document.getElementById('configSSID').value = '';
-        document.getElementById('configPassword').value = '';
-        document.getElementById('configDeviceName').value = hubId;
-        document.getElementById('configMQTT').value = 'broker.hivemq.com';
-        document.getElementById('configMQTTPort').value = '1883';
-        
-        document.getElementById('wifiList').innerHTML = `
-            <div class="scanning-wifi">
-                Enter your WiFi credentials below.
-            </div>
-        `;
-        
-        try {
-            const data = await apiRequest(`/api/hubs/${hubId}/config`);
-            if (data.config) {
-                document.getElementById('configSSID').value = data.config.ssid || '';
-                document.getElementById('configDeviceName').value = data.config.device_name || hubId;
-                document.getElementById('configMQTT').value = data.config.mqtt_server || 'broker.hivemq.com';
-                document.getElementById('configMQTTPort').value = data.config.mqtt_port || 1883;
-            }
-        } catch (error) {
-            // Ignore - use defaults
-        }
-        
-        document.getElementById('configHubStatus').textContent = 'Ready';
-        openModal('configModal');
-    }
-
-    // ==========================================
-    // REBOOT HUB
-    // ==========================================
-    async function rebootHub(hubId) {
-        if (!confirm(`Reboot ${hubId}?`)) return;
-        
-        showToast('🔄 Rebooting...', 'warning');
-        try {
-            const result = await apiRequest(`/api/hubs/${hubId}/reboot`, { method: 'POST' });
-            if (result.success) {
-                showToast('✅ Reboot command sent', 'success');
-                setTimeout(loadHubs, 3000);
-            } else {
-                showToast('❌ ' + (result.error || 'Failed to reboot'), 'error');
-            }
-        } catch (error) {
-            showToast('❌ Error: ' + error.message, 'error');
-        }
-    }
-
-    // ==========================================
-    // DELETE HUB
-    // ==========================================
-    async function deleteHub(hubId) {
-        if (!confirm(`Delete ${hubId}?`)) return;
-        
-        showToast('🗑️ Deleting...', 'warning');
-        try {
-            const result = await apiRequest(`/api/hubs/${hubId}`, { method: 'DELETE' });
-            if (result.success) {
-                showToast('✅ Hub deleted', 'success');
-                loadHubs();
-            } else {
-                showToast('❌ ' + (result.error || 'Failed to delete'), 'error');
-            }
-        } catch (error) {
-            showToast('❌ Error: ' + error.message, 'error');
-        }
-    }
-
-    function openModal(id) { document.getElementById(id).classList.add('active'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.classList.remove('active');
-        });
-    });
-
-    document.addEventListener('DOMContentLoaded', () => {
-        initGoogleSSO();
-        checkSession();
-        setAuthMode('login');
-        
-        setInterval(() => {
-            if (token) loadSoil();
-        }, 30000);
-    });
-</script>
+    
+    </script>
 </body>
 </html>
