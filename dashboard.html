@@ -591,7 +591,7 @@
     }
 
     // ==========================================
-    // HUB DISCOVERY
+    // HUB DISCOVERY - WITH mDNS SUPPORT
     // ==========================================
     async function scanForHubs() {
         const card = document.getElementById('discoveryCard');
@@ -600,19 +600,58 @@
         list.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning for hubs...</div>';
         
         try {
-            const hubs = await apiRequest('/api/hubs/discover');
+            let hubs = [];
             
-            if (hubs.length === 0) {
+            // 1. Try server discovery first
+            try {
+                const serverHubs = await apiRequest('/api/hubs/discover');
+                if (serverHubs && serverHubs.length > 0) {
+                    hubs = serverHubs;
+                }
+            } catch (e) {
+                console.log('Server discovery failed:', e);
+            }
+            
+            // 2. Try mDNS discovery (browser-side)
+            try {
+                const mdnsDevices = await discoverMDNS();
+                if (mdnsDevices && mdnsDevices.length > 0) {
+                    // Send mDNS devices to server
+                    const mdnsResponse = await apiRequest('/api/hubs/discover/mdns', {
+                        method: 'POST',
+                        body: JSON.stringify({ devices: mdnsDevices })
+                    });
+                    
+                    if (mdnsResponse && mdnsResponse.length > 0) {
+                        // Merge with existing hubs (avoid duplicates)
+                        const existingIds = new Set(hubs.map(h => h.hub_id));
+                        for (const hub of mdnsResponse) {
+                            if (!existingIds.has(hub.hub_id)) {
+                                hubs.push(hub);
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log('mDNS discovery failed:', e);
+            }
+            
+            // Filter hubs not owned by user
+            const userHubs = await apiRequest('/api/hubs');
+            const userHubIds = new Set(userHubs.map(h => h.hub_id));
+            const available = hubs.filter(h => !userHubIds.has(h.hub_id));
+            
+            if (available.length === 0) {
                 list.innerHTML = `
                     <div style="text-align:center;padding:20px;color:#6b7280;">
-                        No hubs found in discovery mode.<br>
-                        Make sure your ESP32 is powered on and in AP mode.
+                        ${hubs.length === 0 ? 'No hubs found. Make sure your ESP32 is powered on.' : 'All discovered hubs are already in your account.'}
+                        ${!navigator.onLine ? '<br><span style="color:#fbbf24;">⚠️ You are offline. Please connect to the ESP32\'s WiFi.</span>' : ''}
                     </div>
                 `;
                 return;
             }
             
-            list.innerHTML = hubs.map(hub => `
+            list.innerHTML = available.map(hub => `
                 <div class="hub-item" style="border:1px solid rgba(251,191,36,0.2);background:rgba(251,191,36,0.03);">
                     <div>
                         <span class="hub-name">${hub.name || hub.hub_id}</span>
@@ -627,7 +666,53 @@
             `).join('');
             
         } catch (error) {
+            console.error('Scan error:', error);
             list.innerHTML = `<div style="text-align:center;padding:20px;color:#f87171;">❌ Scan failed: ${error.message}</div>`;
+        }
+    }
+
+    // ==========================================
+    // MDNS DISCOVERY (Browser-side)
+    // ==========================================
+    async function discoverMDNS() {
+        try {
+            const devices = [];
+            const hubNames = ['farmiot-hub', 'farmiot-hub-001'];
+            
+            for (const name of hubNames) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 3000);
+                    
+                    const url = `http://${name}.local/api/discovery`;
+                    const response = await fetch(url, { 
+                        signal: controller.signal,
+                        mode: 'cors',
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.device_id) {
+                            devices.push({
+                                device_id: data.device_id,
+                                device_name: data.device_name || name,
+                                ip: data.ip || '192.168.4.1',
+                                mac: data.mac || ''
+                            });
+                        }
+                    }
+                } catch (e) {
+                    // mDNS not available for this name
+                }
+            }
+            
+            return devices;
+        } catch (error) {
+            console.log('mDNS discovery error:', error);
+            return [];
         }
     }
 
@@ -671,7 +756,6 @@
         document.getElementById('configMQTT').value = 'broker.hivemq.com';
         document.getElementById('configMQTTPort').value = '1883';
         
-        // Load existing config if any
         try {
             const data = await apiRequest(`/api/hubs/${hubId}/config`);
             if (data.config) {
@@ -789,21 +873,6 @@
             if (token) loadSoil();
         }, 30000);
     });
-
-    // In dashboard.html, try to discover mDNS devices
-    async function discoverMDNS() {
-        try {
-            // Try to reach the ESP32 via mDNS
-            const response = await fetch('http://farmiot-hub.local/api/discovery');
-            if (response.ok) {
-                const data = await response.json();
-                return data;
-            }
-        } catch (error) {
-            // mDNS not available
-            return null;
-        }
-    }
 </script>
 </body>
 </html>

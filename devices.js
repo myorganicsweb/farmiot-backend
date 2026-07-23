@@ -16,29 +16,29 @@ const supabase = createClient(
 );
 
 // ==========================================
-// 1. DISCOVER HUBS
+// 1. DISCOVER HUBS - Supports mDNS
 // ==========================================
-// 1. DISCOVER HUBS (mDNS + Server)
 router.get('/hubs/discover', authenticate, async (req, res) => {
   console.log('🔍 Scanning for hubs...');
   
   try {
+    const results = [];
+    
     // Get hubs from Supabase (already registered)
     const cutoffTime = new Date(Date.now() - 120000).toISOString();
-    const { data: hubs, error } = await supabase
+    const { data: dbHubs, error } = await supabase
       .from('hubs')
       .select('*')
       .or(`status.eq.discovering,status.eq.online`)
-      .gte('last_seen', cutoffTime);
+      .gte('last_seen', cutoffTime)
+      .neq('user_id', req.user.id);
     
-    if (error) throw error;
+    if (!error && dbHubs) {
+      results.push(...dbHubs);
+    }
     
-    // Also check for mDNS devices (local network)
-    // The browser will handle mDNS discovery directly
-    // So we just return the hubs from Supabase
-    
-    console.log(`✅ Found ${hubs?.length || 0} hubs`);
-    res.json(hubs || []);
+    console.log(`✅ Found ${results.length} hubs`);
+    res.json(results);
     
   } catch (error) {
     console.error('❌ Discovery error:', error);
@@ -47,7 +47,81 @@ router.get('/hubs/discover', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 2. GET ALL HUBS FOR USER
+// 2. MDNS DISCOVERY (Browser sends mDNS devices)
+// ==========================================
+router.post('/hubs/discover/mdns', authenticate, async (req, res) => {
+  console.log('📡 mDNS discovery received');
+  console.log('📦 Body:', req.body);
+  
+  try {
+    const { devices } = req.body;
+    
+    if (!devices || !Array.isArray(devices)) {
+      return res.status(400).json({ error: 'devices array required' });
+    }
+    
+    const hubs = [];
+    
+    for (const device of devices) {
+      // Check if device is a FarmIOT hub
+      if (device.device_id && device.device_id.startsWith('FarmIOT_')) {
+        // Check if already in Supabase
+        const { data: existing } = await supabase
+          .from('hubs')
+          .select('*')
+          .eq('hub_id', device.device_id)
+          .single();
+        
+        if (!existing) {
+          // Create temporary hub entry
+          const { data: newHub, error } = await supabase
+            .from('hubs')
+            .insert({
+              hub_id: device.device_id,
+              name: device.device_name || device.device_id,
+              status: 'discovering',
+              ip_address: device.ip || '192.168.4.1',
+              last_seen: new Date().toISOString()
+            })
+            .select()
+            .single();
+          
+          if (!error && newHub) {
+            hubs.push(newHub);
+          }
+        } else {
+          // Update existing hub
+          const { data: updated, error } = await supabase
+            .from('hubs')
+            .update({
+              status: 'discovering',
+              ip_address: device.ip || existing.ip_address,
+              last_seen: new Date().toISOString()
+            })
+            .eq('hub_id', device.device_id)
+            .select()
+            .single();
+          
+          if (!error && updated) {
+            hubs.push(updated);
+          }
+        }
+      }
+    }
+    
+    // Filter out hubs already owned by this user
+    const filtered = hubs.filter(h => h.user_id !== req.user.id);
+    
+    res.json(filtered);
+    
+  } catch (error) {
+    console.error('❌ mDNS discovery error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// 3. GET ALL HUBS FOR USER
 // ==========================================
 router.get('/hubs', authenticate, async (req, res) => {
   console.log(`📡 Getting hubs for user: ${req.user.id}`);
@@ -69,7 +143,7 @@ router.get('/hubs', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 3. ADD HUB
+// 4. ADD HUB
 // ==========================================
 router.post('/hubs/add', authenticate, async (req, res) => {
   console.log('📥 Add hub request');
@@ -90,6 +164,7 @@ router.post('/hubs/add', authenticate, async (req, res) => {
       .single();
     
     if (existing) {
+      // Update existing hub
       const { data: updated, error: updateError } = await supabase
         .from('hubs')
         .update({
@@ -112,6 +187,7 @@ router.post('/hubs/add', authenticate, async (req, res) => {
       });
     }
     
+    // Create new hub
     const { data: newHub, error: createError } = await supabase
       .from('hubs')
       .insert({
@@ -153,7 +229,7 @@ router.post('/hubs/add', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 4. GET HUB CONFIG
+// 5. GET HUB CONFIG
 // ==========================================
 router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
   console.log(`📥 Get config for hub: ${req.params.hubId}`);
@@ -192,7 +268,7 @@ router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 5. CONFIGURE HUB (Push WiFi to ESP32)
+// 6. CONFIGURE HUB (Push WiFi to ESP32)
 // ==========================================
 router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
   console.log(`📥 Configure hub: ${req.params.hubId}`);
@@ -291,7 +367,7 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 6. REBOOT HUB
+// 7. REBOOT HUB
 // ==========================================
 router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
   console.log(`🔄 Rebooting hub: ${req.params.hubId}`);
@@ -341,7 +417,7 @@ router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 7. DELETE HUB
+// 8. DELETE HUB
 // ==========================================
 router.delete('/hubs/:hubId', authenticate, async (req, res) => {
   console.log(`🗑️ Deleting hub: ${req.params.hubId}`);
@@ -365,7 +441,7 @@ router.delete('/hubs/:hubId', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// 8. SOIL API
+// 9. SOIL API
 // ==========================================
 router.post('/soil', async (req, res) => {
   const { device_id, value } = req.body;
@@ -395,7 +471,7 @@ router.post('/soil', async (req, res) => {
 });
 
 // ==========================================
-// 9. GET LATEST SOIL
+// 10. GET LATEST SOIL
 // ==========================================
 router.get('/soil/latest', authenticate, async (req, res) => {
   try {
