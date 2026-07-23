@@ -14,16 +14,25 @@
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width: 500px; margin: 0 auto; }
-        h1 {
-            font-size: 32px;
-            text-align: center;
+        .container { max-width: 900px; margin: 0 auto; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header h1 {
+            font-size: 28px;
             background: linear-gradient(135deg, #4ade80, #22d3ee);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
         }
-        .subtitle { text-align: center; color: #6b7280; margin-bottom: 30px; }
+        .header .subtitle { color: #6b7280; font-size: 14px; }
+        .user-badge { color: #6b7280; font-size: 14px; }
         .card {
             background: rgba(17, 24, 39, 0.9);
             padding: 24px;
@@ -36,8 +45,145 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
         .card-header h2 { font-size: 18px; font-weight: 600; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4ade80, #22d3ee);
+            color: #0a0e17;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(74,222,128,0.2); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: #9ca3af;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.08); }
+        .btn-success {
+            background: rgba(74,222,128,0.1);
+            color: #4ade80;
+            border: 1px solid rgba(74,222,128,0.15);
+        }
+        .btn-success:hover { background: rgba(74,222,128,0.2); }
+        .btn-danger {
+            background: rgba(248,113,113,0.1);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.15);
+        }
+        .btn-danger:hover { background: rgba(248,113,113,0.2); }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge.online {
+            background: rgba(74,222,128,0.1);
+            color: #4ade80;
+            border: 1px solid rgba(74,222,128,0.15);
+        }
+        .badge.offline {
+            background: rgba(248,113,113,0.1);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.15);
+        }
+        .badge.discovering {
+            background: rgba(251,191,36,0.1);
+            color: #fbbf24;
+            border: 1px solid rgba(251,191,36,0.15);
+        }
+        .soil-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+        .soil-time { color: #6b7280; font-size: 14px; margin-top: 4px; }
+        .hub-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .hub-item:last-child { margin-bottom: 0; }
+        .hub-name { font-weight: 600; }
+        .hub-id { font-size: 12px; color: #6b7280; }
+        .hub-ip { font-size: 12px; color: #6b7280; }
+        .hub-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            background: rgba(17,24,39,0.95);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #e5e7eb;
+            font-size: 14px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s;
+            z-index: 2000;
+            max-width: 90%;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { border-left: 3px solid #4ade80; }
+        .toast.error { border-left: 3px solid #f87171; }
+        .toast.warning { border-left: 3px solid #fbbf24; }
+        .hidden { display: none !important; }
+        .loading { text-align: center; padding: 20px; color: #6b7280; }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: #4ade80;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #googleBtn { display: flex; justify-content: center; margin: 10px 0; }
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 16px 0;
+            color: #374151;
+            font-size: 12px;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .divider span { padding: 0 12px; }
+        .auth-card { text-align: center; padding: 40px; }
+        .auth-card h2 { margin-bottom: 8px; }
+        .auth-card p { color: #6b7280; margin-bottom: 20px; }
+        .user-card { text-align: center; padding: 30px; }
+        .user-card img {
+            width: 80px; height: 80px; border-radius: 50%;
+            margin-bottom: 12px;
+        }
+        .user-card .name { font-size: 20px; font-weight: 600; }
+        .user-card .email { color: #6b7280; margin: 4px 0 16px; }
         .form-group { margin-bottom: 14px; }
         label {
             display: block;
@@ -59,198 +205,91 @@
             font-family: inherit;
         }
         input:focus { outline: none; border-color: #4ade80; }
-        .btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-family: inherit;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #4ade80, #22d3ee);
-            color: #0a0e17;
-        }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(74,222,128,0.2); }
-        .btn-danger {
-            background: rgba(248,113,113,0.1);
-            color: #f87171;
-            border: 1px solid rgba(248,113,113,0.15);
-        }
-        .btn-danger:hover { background: rgba(248,113,113,0.2); }
-        .btn-secondary {
-            background: rgba(255,255,255,0.05);
-            color: #9ca3af;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .btn-secondary:hover { background: rgba(255,255,255,0.08); }
-        .toggle {
-            display: flex;
-            gap: 4px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 8px;
-            padding: 3px;
-            margin-bottom: 16px;
-            border: 1px solid rgba(255,255,255,0.04);
-        }
-        .toggle button {
-            flex: 1;
-            padding: 8px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            background: transparent;
-            color: #6b7280;
-            font-family: inherit;
-        }
-        .toggle button.active {
-            background: rgba(74, 222, 128, 0.1);
-            color: #4ade80;
-        }
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .badge.online {
-            background: rgba(74,222,128,0.1);
-            color: #4ade80;
-            border: 1px solid rgba(74,222,128,0.15);
-        }
-        .badge.offline {
-            background: rgba(248,113,113,0.1);
-            color: #f87171;
-            border: 1px solid rgba(248,113,113,0.15);
-        }
-        .soil-value {
-            font-size: 36px;
-            font-weight: 700;
-            color: #fbbf24;
-        }
-        .soil-time { color: #6b7280; font-size: 14px; margin-top: 4px; }
-        .hub-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: rgba(255,255,255,0.02);
-            border-radius: 10px;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .hub-name { font-weight: 600; }
-        .hub-id { font-size: 12px; color: #6b7280; }
-        .toast {
+        .modal {
+            display: none;
             position: fixed;
-            bottom: 24px;
-            right: 24px;
-            padding: 12px 20px;
-            border-radius: 12px;
-            background: rgba(17,24,39,0.95);
-            border: 1px solid rgba(255,255,255,0.08);
-            color: #e5e7eb;
-            font-size: 14px;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.4s;
-            z-index: 2000;
-            max-width: 90%;
-        }
-        .toast.show { transform: translateY(0); opacity: 1; }
-        .toast.success { border-left: 3px solid #4ade80; }
-        .toast.error { border-left: 3px solid #f87171; }
-        .hidden { display: none !important; }
-        .spinner {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            border: 2px solid rgba(255,255,255,0.1);
-            border-top-color: #4ade80;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            vertical-align: middle;
-            margin-right: 8px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .status { margin-top: 12px; padding: 10px; border-radius: 8px; font-size: 13px; display: none; }
-        .status.success { display: block; background: rgba(74,222,128,0.08); color: #4ade80; border: 1px solid rgba(74,222,128,0.15); }
-        .status.error { display: block; background: rgba(248,113,113,0.08); color: #f87171; border: 1px solid rgba(248,113,113,0.15); }
-        .user-info { text-align: center; padding: 10px; color: #6b7280; }
-        .user-info strong { color: #e5e7eb; }
-        .loading { text-align: center; padding: 20px; color: #6b7280; }
-        #googleBtn { display: flex; justify-content: center; margin: 10px 0; }
-        .divider {
-            display: flex;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
             align-items: center;
-            margin: 16px 0;
-            color: #374151;
-            font-size: 12px;
         }
-        .divider::before, .divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #1a1f2e;
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(255,255,255,0.06);
+            max-height: 90vh;
+            overflow-y: auto;
         }
-        .divider span { padding: 0 12px; }
+        .modal-content h2 { margin-bottom: 16px; font-size: 22px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+        .modal-actions .btn { flex: 1; justify-content: center; }
         @media (max-width: 600px) {
+            .header { flex-direction: column; align-items: flex-start; }
             .hub-item { flex-direction: column; align-items: flex-start; }
+            .hub-actions { width: 100%; }
+            .hub-actions .btn { flex: 1; text-align: center; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🚜 FarmIOT</h1>
-    <p class="subtitle">Smart Agriculture Platform</p>
-
-    <!-- Auth Card -->
-    <div class="card" id="authCard">
-        <!-- Google Button -->
-        <div id="googleBtn"></div>
-        
-        <div class="divider"><span>or</span></div>
-        
-        <div class="toggle">
-            <button class="active" id="loginTab" onclick="setMode('login')">Sign In</button>
-            <button id="registerTab" onclick="setMode('register')">Register</button>
+    <!-- Header -->
+    <div class="header">
+        <div>
+            <h1>🚜 FarmIOT</h1>
+            <div class="subtitle">Smart Agriculture Platform</div>
         </div>
-        <form id="authForm" onsubmit="handleSubmit(event)">
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="email" placeholder="Enter your email" required>
-            </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="password" placeholder="Enter your password" minlength="6" required>
-            </div>
-            <div class="form-group" id="confirmGroup" style="display:none;">
-                <label>Confirm Password</label>
-                <input type="password" id="confirmPassword" placeholder="Confirm your password" minlength="6">
-            </div>
-            <button type="submit" class="btn btn-primary" id="submitBtn">Sign In</button>
-        </form>
-        <div id="status" class="status"></div>
+        <div class="user-badge" id="userBadge"></div>
     </div>
 
-    <!-- User Info -->
-    <div id="userInfo" style="display:none;" class="card">
-        <div class="user-info">
-            👋 Logged in as <strong id="userName"></strong><br>
-            <span style="font-size:12px;color:#6b7280;" id="userEmail"></span>
+    <!-- Auth Section -->
+    <div id="authSection">
+        <div class="card auth-card" id="signinCard">
+            <h2>Welcome to FarmIOT</h2>
+            <p>Sign in with your Google account to continue</p>
+            <div id="googleBtn"></div>
+            <div class="divider"><span>or</span></div>
+            <div style="text-align:left;">
+                <div class="toggle" style="display:flex;gap:4px;background:rgba(255,255,255,0.03);border-radius:8px;padding:3px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.04);">
+                    <button class="active" id="loginTab" onclick="setAuthMode('login')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Sign In</button>
+                    <button id="registerTab" onclick="setAuthMode('register')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Register</button>
+                </div>
+                <form id="authForm" onsubmit="handleAuthSubmit(event)">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="password" placeholder="Enter your password" minlength="6" required>
+                    </div>
+                    <div class="form-group" id="confirmGroup" style="display:none;">
+                        <label>Confirm Password</label>
+                        <input type="password" id="confirmPassword" placeholder="Confirm your password" minlength="6">
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;padding:12px;">Sign In</button>
+                </form>
+                <div id="authStatus" style="margin-top:12px;padding:10px;border-radius:8px;font-size:13px;display:none;"></div>
+            </div>
         </div>
-        <button class="btn btn-danger" onclick="logout()" style="margin-top:10px;">Sign Out</button>
+        <div class="card user-card hidden" id="userCard">
+            <img id="userPic" src="" alt="Profile">
+            <div class="name" id="userName">User</div>
+            <div class="email" id="userEmail">user@example.com</div>
+            <button class="btn btn-danger" id="logoutBtn">Sign Out</button>
+        </div>
     </div>
 
-    <!-- Dashboard -->
+    <!-- Dashboard Content -->
     <div id="dashboardContent" class="hidden">
+        <!-- Soil Card -->
         <div class="card">
             <div class="card-header">
                 <h2>💧 Soil Moisture</h2>
@@ -260,28 +299,76 @@
             <div class="soil-time" id="soilTime">Waiting for data...</div>
         </div>
 
+        <!-- Hubs Card -->
         <div class="card">
             <div class="card-header">
-                <h2>📡 Hubs</h2>
-                <button class="btn btn-secondary" onclick="loadHubs()" style="width:auto;padding:6px 16px;">🔄 Refresh</button>
+                <h2>📡 My Hubs</h2>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-primary" onclick="scanForHubs()">🔍 Scan</button>
+                    <button class="btn btn-secondary" onclick="loadHubs()">🔄 Refresh</button>
+                </div>
             </div>
             <div id="hubList">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    Loading hubs...
-                </div>
+                <div class="loading"><div class="spinner"></div>Loading hubs...</div>
+            </div>
+        </div>
+
+        <!-- Discovered Hubs -->
+        <div class="card" id="discoveryCard" style="display:none;">
+            <div class="card-header">
+                <h2>🔍 Discovered Hubs</h2>
+                <button class="btn btn-secondary" onclick="scanForHubs()">🔄 Scan Again</button>
+            </div>
+            <div id="discoveryList">
+                <div class="loading">Scanning...</div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Configure Modal -->
+<div class="modal" id="configModal">
+    <div class="modal-content">
+        <h2>⚙️ Configure Hub</h2>
+        <div id="configHubInfo" style="background:rgba(255,255,255,0.03);padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:13px;color:#6b7280;">
+            Configuring: <strong id="configHubId" style="color:#e5e7eb;">—</strong>
+        </div>
+        <div class="form-group">
+            <label>WiFi SSID</label>
+            <input type="text" id="configSSID" placeholder="Enter WiFi name">
+        </div>
+        <div class="form-group">
+            <label>WiFi Password</label>
+            <input type="password" id="configPassword" placeholder="Enter WiFi password">
+        </div>
+        <div class="form-group">
+            <label>Device Name</label>
+            <input type="text" id="configDeviceName" placeholder="My Hub" value="farmiot-hub">
+        </div>
+        <div class="form-group">
+            <label>MQTT Server</label>
+            <input type="text" id="configMQTT" placeholder="broker.hivemq.com" value="broker.hivemq.com">
+        </div>
+        <div class="form-group">
+            <label>MQTT Port</label>
+            <input type="number" id="configMQTTPort" placeholder="1883" value="1883">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
+            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()">💾 Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
 <div id="toast" class="toast"></div>
 
 <script>
     const API_BASE = window.location.origin;
     let token = localStorage.getItem('token') || null;
     let user = JSON.parse(localStorage.getItem('user') || 'null');
-    let mode = 'login';
+    let authMode = 'login';
+    let currentConfigHubId = null;
 
     // ==========================================
     // TOAST
@@ -310,91 +397,45 @@
     }
 
     // ==========================================
-    // GOOGLE SSO
-    // ==========================================
-    function initGoogleSSO() {
-        try {
-            google.accounts.id.initialize({
-                client_id: '472048491207-hofjvaisdj9vnaglutb9kd23ci948jc5.apps.googleusercontent.com',
-                callback: async (response) => {
-                    console.log('📥 Google callback received');
-                    try {
-                        const result = await apiRequest('/api/auth/google', {
-                            method: 'POST',
-                            body: JSON.stringify({ id_token: response.credential })
-                        });
-                        
-                        if (result.success) {
-                            token = result.token;
-                            user = result.user;
-                            localStorage.setItem('token', token);
-                            localStorage.setItem('user', JSON.stringify(user));
-                            showUser(user);
-                            showToast('✅ Welcome, ' + user.name + '!');
-                            loadDashboard();
-                        } else {
-                            showToast('❌ ' + result.error, 'error');
-                        }
-                    } catch (error) {
-                        console.error('Google login error:', error);
-                        showToast('❌ Login failed: ' + error.message, 'error');
-                    }
-                },
-                cancel_on_tap_outside: false,
-            });
-            
-            google.accounts.id.renderButton(
-                document.getElementById('googleBtn'),
-                {
-                    theme: 'outline',
-                    size: 'large',
-                    text: 'signin_with',
-                    shape: 'pill',
-                    logo_alignment: 'left'
-                }
-            );
-        } catch (error) {
-            console.error('Google init error:', error);
-        }
-    }
-
-    // ==========================================
     // AUTH
     // ==========================================
-    function setMode(m) {
-        mode = m;
+    function setAuthMode(m) {
+        authMode = m;
         document.getElementById('loginTab').classList.toggle('active', m === 'login');
         document.getElementById('registerTab').classList.toggle('active', m === 'register');
         document.getElementById('confirmGroup').style.display = m === 'register' ? 'block' : 'none';
         document.getElementById('submitBtn').textContent = m === 'login' ? 'Sign In' : 'Register';
     }
 
-    async function handleSubmit(e) {
+    async function handleAuthSubmit(e) {
         e.preventDefault();
         
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value.trim();
         const confirmPassword = document.getElementById('confirmPassword').value.trim();
-        const status = document.getElementById('status');
+        const status = document.getElementById('authStatus');
         const btn = document.getElementById('submitBtn');
 
         if (!email || !password) {
-            showToast('❌ Please fill in all fields', 'error');
+            status.style.display = 'block';
+            status.className = 'error';
+            status.textContent = '❌ Please fill in all fields';
             return;
         }
 
-        if (mode === 'register' && password !== confirmPassword) {
-            showToast('❌ Passwords do not match', 'error');
+        if (authMode === 'register' && password !== confirmPassword) {
+            status.style.display = 'block';
+            status.className = 'error';
+            status.textContent = '❌ Passwords do not match';
             return;
         }
 
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Processing...';
-        status.className = 'status';
-        status.textContent = '';
+        btn.innerHTML = '⏳ Processing...';
+        status.style.display = 'none';
 
         try {
-            const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
+            const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
             const data = await apiRequest(endpoint, {
                 method: 'POST',
                 body: JSON.stringify({ email, password })
@@ -406,46 +447,90 @@
                 localStorage.setItem('token', token);
                 localStorage.setItem('user', JSON.stringify(user));
                 showUser(user);
-                showToast(mode === 'login' ? '✅ Welcome back!' : '✅ Account created!', 'success');
+                showToast(authMode === 'login' ? '✅ Welcome back!' : '✅ Account created!', 'success');
                 loadDashboard();
             } else {
-                status.className = 'status error';
+                status.style.display = 'block';
+                status.className = 'error';
                 status.textContent = '❌ ' + (data.error || 'Something went wrong');
                 showToast('❌ ' + data.error, 'error');
             }
         } catch (error) {
-            status.className = 'status error';
+            status.style.display = 'block';
+            status.className = 'error';
             status.textContent = '❌ Network error: ' + error.message;
             showToast('❌ Network error', 'error');
         }
 
         btn.disabled = false;
-        btn.innerHTML = mode === 'login' ? 'Sign In' : 'Register';
+        btn.innerHTML = authMode === 'login' ? 'Sign In' : 'Register';
+    }
+
+    function initGoogleSSO() {
+        google.accounts.id.initialize({
+            client_id: '472048491207-hofjvaisdj9vnaglutb9kd23ci948jc5.apps.googleusercontent.com',
+            callback: async (response) => {
+                try {
+                    const result = await apiRequest('/api/auth/google', {
+                        method: 'POST',
+                        body: JSON.stringify({ id_token: response.credential })
+                    });
+                    
+                    if (result.success) {
+                        token = result.token;
+                        user = result.user;
+                        localStorage.setItem('token', token);
+                        localStorage.setItem('user', JSON.stringify(user));
+                        showUser(user);
+                        showToast('✅ Welcome, ' + user.name + '!', 'success');
+                        loadDashboard();
+                    } else {
+                        showToast('❌ ' + result.error, 'error');
+                    }
+                } catch (error) {
+                    showToast('❌ Login failed: ' + error.message, 'error');
+                }
+            }
+        });
+        
+        google.accounts.id.renderButton(
+            document.getElementById('googleBtn'),
+            { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill' }
+        );
     }
 
     function showUser(userData) {
-        document.getElementById('authCard').style.display = 'none';
-        document.getElementById('userInfo').style.display = 'block';
+        document.getElementById('signinCard').classList.add('hidden');
+        document.getElementById('userCard').classList.remove('hidden');
+        document.getElementById('userPic').src = userData.picture || '';
         document.getElementById('userName').textContent = userData.name || userData.email;
         document.getElementById('userEmail').textContent = userData.email;
-        document.getElementById('dashboardContent').classList.remove('hidden');
+        document.getElementById('userBadge').textContent = '👋 ' + userData.name;
+        document.getElementById('logoutBtn').onclick = () => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            token = null;
+            user = null;
+            document.getElementById('signinCard').classList.remove('hidden');
+            document.getElementById('userCard').classList.add('hidden');
+            document.getElementById('dashboardContent').classList.add('hidden');
+            document.getElementById('userBadge').textContent = '';
+            showToast('✅ Signed out');
+        };
     }
 
-    function logout() {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        token = null;
-        user = null;
-        document.getElementById('authCard').style.display = 'block';
-        document.getElementById('userInfo').style.display = 'none';
-        document.getElementById('dashboardContent').classList.add('hidden');
-        showToast('✅ Logged out', 'success');
+    function checkSession() {
+        if (token && user) {
+            showUser(user);
+            loadDashboard();
+        }
     }
 
     // ==========================================
     // DASHBOARD
     // ==========================================
     async function loadDashboard() {
+        document.getElementById('dashboardContent').classList.remove('hidden');
         await loadSoil();
         await loadHubs();
     }
@@ -473,7 +558,12 @@
             const hubs = await apiRequest('/api/hubs');
             
             if (hubs.length === 0) {
-                container.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;">No hubs configured yet</div>';
+                container.innerHTML = `
+                    <div style="text-align:center;padding:20px;color:#6b7280;">
+                        No hubs configured yet.<br>
+                        Click "Scan" to discover hubs.
+                    </div>
+                `;
                 return;
             }
             
@@ -481,31 +571,211 @@
                 <div class="hub-item">
                     <div>
                         <span class="hub-name">${hub.name || hub.hub_id}</span>
-                        <span class="badge ${hub.status === 'online' ? 'online' : 'offline'}">
+                        <span class="badge ${hub.status === 'online' ? 'online' : hub.status === 'discovering' ? 'discovering' : 'offline'}">
                             ${hub.status || 'offline'}
                         </span>
-                    </div>
-                    <div>
                         <span class="hub-id">${hub.hub_id}</span>
                         ${hub.ip_address ? `<span class="hub-ip">· ${hub.ip_address}</span>` : ''}
+                    </div>
+                    <div class="hub-actions">
+                        <button class="btn btn-secondary" onclick="openConfig('${hub.hub_id}')">⚙️</button>
+                        <button class="btn btn-secondary" onclick="rebootHub('${hub.hub_id}')">🔄</button>
+                        <button class="btn btn-danger" onclick="deleteHub('${hub.hub_id}')">🗑️</button>
                     </div>
                 </div>
             `).join('');
             
         } catch (error) {
-            container.innerHTML = '<div style="text-align:center;padding:20px;color:#f87171;">❌ Failed to load hubs</div>';
+            container.innerHTML = `<div style="text-align:center;padding:20px;color:#f87171;">❌ Failed to load hubs</div>`;
         }
     }
 
     // ==========================================
-    // CHECK SESSION
+    // HUB DISCOVERY
     // ==========================================
-    function checkSession() {
-        if (token && user) {
-            showUser(user);
-            loadDashboard();
+    async function scanForHubs() {
+        const card = document.getElementById('discoveryCard');
+        const list = document.getElementById('discoveryList');
+        card.style.display = 'block';
+        list.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning for hubs...</div>';
+        
+        try {
+            const hubs = await apiRequest('/api/hubs/discover');
+            
+            if (hubs.length === 0) {
+                list.innerHTML = `
+                    <div style="text-align:center;padding:20px;color:#6b7280;">
+                        No hubs found in discovery mode.<br>
+                        Make sure your ESP32 is powered on and in AP mode.
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = hubs.map(hub => `
+                <div class="hub-item" style="border:1px solid rgba(251,191,36,0.2);background:rgba(251,191,36,0.03);">
+                    <div>
+                        <span class="hub-name">${hub.name || hub.hub_id}</span>
+                        <span class="badge discovering">DISCOVERING</span>
+                        <span class="hub-id">${hub.hub_id}</span>
+                        ${hub.ip_address ? `<span class="hub-ip">· ${hub.ip_address}</span>` : ''}
+                    </div>
+                    <div class="hub-actions">
+                        <button class="btn btn-success" onclick="addHub('${hub.hub_id}', '${hub.ip_address || ''}')">➕ Add</button>
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            list.innerHTML = `<div style="text-align:center;padding:20px;color:#f87171;">❌ Scan failed: ${error.message}</div>`;
         }
     }
+
+    // ==========================================
+    // ADD HUB
+    // ==========================================
+    async function addHub(hubId, ipAddress) {
+        showToast('📥 Adding hub...', 'warning');
+        
+        try {
+            const result = await apiRequest('/api/hubs/add', {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    hub_id: hubId, 
+                    ip_address: ipAddress || null,
+                    name: hubId
+                })
+            });
+            
+            if (result.success) {
+                showToast('✅ Hub added successfully!', 'success');
+                document.getElementById('discoveryCard').style.display = 'none';
+                loadHubs();
+            } else {
+                showToast('❌ ' + (result.error || 'Failed to add hub'), 'error');
+            }
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        }
+    }
+
+    // ==========================================
+    // CONFIGURE HUB
+    // ==========================================
+    async function openConfig(hubId) {
+        currentConfigHubId = hubId;
+        document.getElementById('configHubId').textContent = hubId;
+        document.getElementById('configSSID').value = '';
+        document.getElementById('configPassword').value = '';
+        document.getElementById('configDeviceName').value = hubId;
+        document.getElementById('configMQTT').value = 'broker.hivemq.com';
+        document.getElementById('configMQTTPort').value = '1883';
+        
+        // Load existing config if any
+        try {
+            const data = await apiRequest(`/api/hubs/${hubId}/config`);
+            if (data.config) {
+                document.getElementById('configSSID').value = data.config.ssid || '';
+                document.getElementById('configDeviceName').value = data.config.device_name || hubId;
+                document.getElementById('configMQTT').value = data.config.mqtt_server || 'broker.hivemq.com';
+                document.getElementById('configMQTTPort').value = data.config.mqtt_port || 1883;
+            }
+        } catch (error) {
+            // Ignore - use defaults
+        }
+        
+        openModal('configModal');
+    }
+
+    async function saveConfig() {
+        const hubId = currentConfigHubId;
+        const ssid = document.getElementById('configSSID').value.trim();
+        const password = document.getElementById('configPassword').value.trim();
+        const name = document.getElementById('configDeviceName').value.trim() || hubId;
+        const mqtt = document.getElementById('configMQTT').value.trim() || 'broker.hivemq.com';
+        const port = parseInt(document.getElementById('configMQTTPort').value) || 1883;
+
+        if (!ssid) {
+            showToast('❌ WiFi SSID is required', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('configSaveBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Saving...';
+        
+        try {
+            const result = await apiRequest(`/api/hubs/${hubId}/configure`, {
+                method: 'POST',
+                body: JSON.stringify({ ssid, password, mqtt_server: mqtt, mqtt_port: port, device_name: name })
+            });
+            
+            if (result.success) {
+                showToast('✅ Configuration saved!', 'success');
+                closeModal('configModal');
+                loadHubs();
+            } else {
+                showToast('❌ ' + (result.error || 'Failed to save'), 'error');
+            }
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = '💾 Save';
+    }
+
+    // ==========================================
+    // REBOOT HUB
+    // ==========================================
+    async function rebootHub(hubId) {
+        if (!confirm(`Reboot ${hubId}?`)) return;
+        
+        showToast('🔄 Rebooting...', 'warning');
+        try {
+            const result = await apiRequest(`/api/hubs/${hubId}/reboot`, { method: 'POST' });
+            if (result.success) {
+                showToast('✅ Reboot command sent', 'success');
+                setTimeout(loadHubs, 3000);
+            } else {
+                showToast('❌ ' + (result.error || 'Failed to reboot'), 'error');
+            }
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        }
+    }
+
+    // ==========================================
+    // DELETE HUB
+    // ==========================================
+    async function deleteHub(hubId) {
+        if (!confirm(`Delete ${hubId}?`)) return;
+        
+        showToast('🗑️ Deleting...', 'warning');
+        try {
+            const result = await apiRequest(`/api/hubs/${hubId}`, { method: 'DELETE' });
+            if (result.success) {
+                showToast('✅ Hub deleted', 'success');
+                loadHubs();
+            } else {
+                showToast('❌ ' + (result.error || 'Failed to delete'), 'error');
+            }
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
+        }
+    }
+
+    // ==========================================
+    // MODAL
+    // ==========================================
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.classList.remove('active');
+        });
+    });
 
     // ==========================================
     // INIT
@@ -513,9 +783,8 @@
     document.addEventListener('DOMContentLoaded', () => {
         initGoogleSSO();
         checkSession();
-        setMode('login');
+        setAuthMode('login');
         
-        // Auto-refresh soil every 30 seconds
         setInterval(() => {
             if (token) loadSoil();
         }, 30000);
