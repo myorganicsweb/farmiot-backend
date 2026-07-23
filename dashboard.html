@@ -1,25 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>FarmIOT - Test</title>
+    <title>FarmIOT</title>
     <style>
         body {
+            background: #0a0e17;
+            color: #e5e7eb;
             font-family: Arial, sans-serif;
-            max-width: 600px;
+            max-width: 500px;
             margin: 50px auto;
             padding: 20px;
-            background: #0a0e17;
-            color: #fff;
         }
+        h1 { color: #4ade80; }
         button {
-            padding: 12px 24px;
+            padding: 12px 20px;
             background: #4ade80;
             border: none;
             border-radius: 8px;
             color: #000;
             font-weight: bold;
             cursor: pointer;
-            margin: 10px 5px;
+            margin: 5px;
         }
         pre {
             background: #1a1a2e;
@@ -30,16 +31,26 @@
         }
         .error { color: #f87171; }
         .success { color: #4ade80; }
+        input {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
-    <h1>🚜 FarmIOT Test</h1>
+    <h1>🚜 FarmIOT</h1>
     <p>Testing server endpoints...</p>
     
     <div>
-        <button onclick="testEndpoint('/api/test')">Test GET /api/test</button>
-        <button onclick="testRegister()">Test POST /api/auth/register</button>
-        <button onclick="testEndpoint('/api/auth/register')">GET /api/auth/register</button>
+        <button onclick="testHealth()">Health Check</button>
+        <button onclick="testRegister()">Register</button>
+        <button onclick="testLogin()">Login</button>
     </div>
     
     <div id="result">
@@ -47,21 +58,19 @@
     </div>
 
     <script>
-        async function testEndpoint(url) {
+        async function testHealth() {
             const result = document.getElementById('result');
             result.innerHTML = 'Loading...';
             
             try {
-                const res = await fetch(url);
+                const res = await fetch('/health');
                 const data = await res.json();
                 result.innerHTML = `
                     <div class="success">✅ Status: ${res.status}</div>
                     <pre>${JSON.stringify(data, null, 2)}</pre>
                 `;
             } catch (error) {
-                result.innerHTML = `
-                    <div class="error">❌ Error: ${error.message}</div>
-                `;
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
             }
         }
 
@@ -85,9 +94,31 @@
                     <pre>${JSON.stringify(data, null, 2)}</pre>
                 `;
             } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testLogin() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Loading...';
+            
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        email: 'test@example.com', 
+                        password: 'test123' 
+                    })
+                });
+                
+                const data = await res.json();
                 result.innerHTML = `
-                    <div class="error">❌ Error: ${error.message}</div>
+                    <div class="${res.ok ? 'success' : 'error'}">${res.ok ? '✅' : '❌'} Status: ${res.status}</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
                 `;
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
             }
         }
     </script>

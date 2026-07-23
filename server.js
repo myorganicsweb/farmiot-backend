@@ -4,36 +4,75 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 443;
 
+console.log('🚀 SERVER STARTING...');
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// TEST ENDPOINT - This will confirm the server is working
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'Server is working!' });
+// ==========================================
+// API ENDPOINTS
+// ==========================================
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// REGISTER ENDPOINT
+// REGISTER - With logging
 app.post('/api/auth/register', (req, res) => {
   console.log('✅ REGISTER HIT');
-  console.log('Body:', req.body);
+  console.log('📦 Body:', req.body);
   
-  // Always return success for testing
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      error: 'Email and password required'
+    });
+  }
+  
+  // TEMPORARY: Just echo back for testing
   res.json({
     success: true,
-    message: 'Registration endpoint is working!',
-    received: req.body
+    message: 'Registration endpoint works!',
+    received: { email, password: '***' }
   });
 });
 
-// Serve dashboard
+// LOGIN - Echo for testing
+app.post('/api/auth/login', (req, res) => {
+  console.log('✅ LOGIN HIT');
+  console.log('📦 Body:', req.body);
+  
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      error: 'Email and password required'
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Login endpoint works!',
+    received: { email, password: '***' }
+  });
+});
+
+// Serve index.html
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
 
-app.listen(PORT, () => {
+// ==========================================
+// START
+// ==========================================
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${PORT}`);
-  console.log(`✅ Test: GET /api/test`);
+  console.log(`✅ Health: GET /health`);
   console.log(`✅ Register: POST /api/auth/register`);
 });
