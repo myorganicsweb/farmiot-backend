@@ -36,7 +36,7 @@ const authenticate = async (req, res, next) => {
 router.get('/soil/latest', authenticate, async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('soil_readings')  // Using existing table name
+      .from('soil_readings')
       .select('*')
       .order('timestamp', { ascending: false })
       .limit(1);
@@ -64,7 +64,7 @@ router.post('/soil', async (req, res) => {
     }
 
     const { data, error } = await supabase
-      .from('soil_readings')  // Using existing table name
+      .from('soil_readings')
       .insert([{
         hub_id,
         value,
@@ -193,38 +193,56 @@ router.post('/hubs/add', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'hub_id required' });
     }
 
-    const { data, error } = await supabase
+    // First check if hub exists and is unclaimed
+    const { data: existing, error: checkError } = await supabase
       .from('hubs')
-      .update({
-        user_id: req.user.id,
-        device_name: name || hub_id,
-        ip_address: ip_address || null,
-        status: 'pairing'
-      })
+      .select('*')
       .eq('hub_id', hub_id)
-      .is('user_id', null)
-      .select();
+      .single();
 
-    if (error) throw error;
-    
-    if (!data || data.length === 0) {
-      const { data: newData, error: insertError } = await supabase
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    let result;
+    if (existing) {
+      // Update existing hub - claim it
+      const { data, error } = await supabase
+        .from('hubs')
+        .update({
+          user_id: req.user.id,
+          device_name: name || hub_id,
+          ip_address: ip_address || existing.ip_address,
+          status: 'online'
+        })
+        .eq('hub_id', hub_id)
+        .is('user_id', null)  // Only claim if not already claimed
+        .select();
+
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        return res.status(400).json({ error: 'Hub already claimed or not found' });
+      }
+      result = data;
+    } else {
+      // Create new hub and claim it
+      const { data, error } = await supabase
         .from('hubs')
         .insert([{
           hub_id,
           user_id: req.user.id,
           device_name: name || hub_id,
           ip_address: ip_address || null,
-          status: 'pairing'
+          status: 'online'
         }])
         .select();
 
-      if (insertError) throw insertError;
-      
-      return res.json({ success: true, hub: newData[0] });
+      if (error) throw error;
+      result = data;
     }
 
-    res.json({ success: true, hub: data[0] });
+    res.json({ success: true, hub: result[0] });
   } catch (error) {
     console.error('Error adding hub:', error);
     res.status(500).json({ error: 'Failed to add hub' });
@@ -244,6 +262,7 @@ router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
 
     if (error && error.code !== 'PGRST116') throw error;
     
+    // If no config found, return defaults
     if (!data) {
       return res.json({ config: {
         ssid: '',
@@ -270,6 +289,7 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'SSID required' });
     }
 
+    // Check if hub belongs to user
     const { data: hub, error: hubError } = await supabase
       .from('hubs')
       .select('id, ip_address')
@@ -281,6 +301,7 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Hub not found or not owned by user' });
     }
 
+    // Save config
     const { data, error } = await supabase
       .from('hub_config')
       .upsert({
@@ -296,6 +317,7 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
 
     if (error) throw error;
     
+    // Update hub name
     await supabase
       .from('hubs')
       .update({ device_name: device_name || hubId, status: 'online' })
