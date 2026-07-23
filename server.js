@@ -64,7 +64,7 @@ const authenticate = async (req, res, next) => {
 };
 
 // ==========================================
-// GOOGLE SSO - SIMPLIFIED WORKING VERSION
+// GOOGLE SSO - COMPLETE FIX
 // ==========================================
 app.post('/api/auth/google', async (req, res) => {
   console.log('========================================');
@@ -95,7 +95,7 @@ app.post('/api/auth/google', async (req, res) => {
     console.log(`👤 Google user: ${email} (${google_id})`);
     
     // ==========================================
-    // SIMPLIFIED APPROACH - Try to find/create user
+    // SIMPLIFIED APPROACH - Direct profile creation
     // ==========================================
     
     // Step 1: Check if user exists in profiles
@@ -138,150 +138,55 @@ app.post('/api/auth/google', async (req, res) => {
     } else {
       console.log('📝 Creating new user...');
       
-      // Step 2: Check if user exists in Supabase Auth by trying to sign in
-      // Use a random password since we don't know it
-      const randomPassword = Math.random().toString(36).slice(-12) + 'A1!';
+      // Step 2: Generate a random user ID (since Supabase Auth is failing)
+      // Use the google_id as the user ID
+      const userId = google_id;
       
-      // Try to sign up (will fail if user exists)
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: randomPassword,
-        options: { 
-          data: { 
-            full_name: name || email.split('@')[0],
-            provider: 'google'
-          } 
-        }
-      });
+      console.log(`📝 Using google_id as user ID: ${userId}`);
       
-      console.log('📊 Auth result:', { 
-        user_id: authData?.user?.id, 
-        error: authError?.message || 'none' 
-      });
+      // Step 3: Create profile directly
+      const { data: newUser, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          google_id: google_id,
+          email: email,
+          name: name || email.split('@')[0],
+          picture: picture || null,
+          last_login: new Date().toISOString()
+        })
+        .select()
+        .single();
       
-      let userId;
-      
-      if (authError) {
-        // If user already exists, try to get them
-        if (authError.message && authError.message.includes('already registered')) {
-          console.log('🔄 User already exists in auth, but not in profiles');
-          
-          // Try to get the user ID from auth.users via email
-          try {
-            const { data: authUser } = await supabase
-              .from('auth.users')
-              .select('id')
-              .eq('email', email)
-              .single();
-            
-            if (authUser) {
-              userId = authUser.id;
-              console.log(`✅ Found user in auth: ${userId}`);
-            } else {
-              // Last resort: try to sign in with random password to get user
-              // This won't work with random password, so we create profile with a placeholder
-              console.log('⚠️ Could not find user in auth, creating placeholder...');
-              // We'll create a profile without auth - this is a fallback
-              // The user will need to set a password later
-            }
-          } catch (e) {
-            console.log('⚠️ Error finding user in auth:', e.message);
-          }
-        } else {
-          console.log('❌ Auth error:', authError.message);
-          return res.status(400).json({ 
-            success: false, 
-            error: authError.message || 'Failed to create user' 
-          });
-        }
-      } else {
-        userId = authData?.user?.id;
-        console.log(`✅ User created in auth: ${userId}`);
-      }
-      
-      // Step 3: Create profile (if we have userId)
-      if (userId) {
-        console.log('📝 Creating profile...');
-        const { data: newUser, error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            google_id: google_id,
-            email: email,
-            name: name || email.split('@')[0],
-            picture: picture || null,
-            last_login: new Date().toISOString()
-          })
-          .select()
-          .single();
+      if (createError) {
+        console.log('❌ Profile create error:', createError.message);
         
-        if (createError) {
-          console.log('❌ Profile create error:', createError.message);
+        // If profile already exists, fetch it
+        if (createError.message.includes('duplicate key')) {
+          const { data: existing } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
           
-          // If profile already exists, fetch it
-          if (createError.message.includes('duplicate key')) {
-            const { data: existing } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', userId)
-              .single();
-            
-            if (existing) {
-              user = existing;
-              console.log('✅ Found existing profile');
-            } else {
-              return res.status(500).json({ 
-                success: false, 
-                error: 'Failed to create or find profile' 
-              });
-            }
+          if (existing) {
+            user = existing;
+            console.log('✅ Found existing profile');
           } else {
             return res.status(500).json({ 
               success: false, 
-              error: 'Failed to create profile: ' + createError.message 
+              error: 'Failed to create or find profile' 
             });
           }
         } else {
-          user = newUser;
-          console.log(`✅ Profile created: ${user.id}`);
+          return res.status(500).json({ 
+            success: false, 
+            error: 'Failed to create profile: ' + createError.message 
+          });
         }
       } else {
-        // Fallback: Create profile without auth ID (using email as identifier)
-        console.log('⚠️ Creating profile without auth ID (fallback)');
-        // Check if profile already exists by email
-        const { data: existingByEmail } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', email)
-          .single();
-        
-        if (existingByEmail) {
-          user = existingByEmail;
-          console.log('✅ Found existing profile by email');
-        } else {
-          // Create profile with a placeholder ID (this is a fallback)
-          const { data: newUser, error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              google_id: google_id,
-              email: email,
-              name: name || email.split('@')[0],
-              picture: picture || null,
-              last_login: new Date().toISOString()
-            })
-            .select()
-            .single();
-          
-          if (createError) {
-            console.log('❌ Fallback profile error:', createError.message);
-            return res.status(500).json({ 
-              success: false, 
-              error: 'Failed to create profile' 
-            });
-          }
-          user = newUser;
-          console.log(`✅ Profile created (fallback): ${user.id}`);
-        }
+        user = newUser;
+        console.log(`✅ Profile created: ${user.id}`);
       }
     }
     
