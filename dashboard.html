@@ -256,7 +256,6 @@
             display: inline-block;
             text-align: center;
         }
-        /* WiFi list styles */
         .wifi-list {
             max-height: 150px;
             overflow-y: auto;
@@ -280,22 +279,28 @@
             background: rgba(74,222,128,0.15);
             border-left: 2px solid #4ade80;
         }
-        .wifi-item .signal {
-            color: #6b7280;
-            font-size: 12px;
+        .wifi-item .signal { color: #6b7280; font-size: 12px; }
+        .wifi-item .locked { color: #f87171; font-size: 12px; }
+        .wifi-item .unlocked { color: #4ade80; font-size: 12px; }
+        .scanning-wifi { text-align: center; padding: 12px; color: #6b7280; }
+        .ble-status {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-left: 8px;
         }
-        .wifi-item .locked {
-            color: #f87171;
-            font-size: 12px;
-        }
-        .wifi-item .unlocked {
+        .ble-status.connected {
+            background: rgba(74,222,128,0.15);
             color: #4ade80;
-            font-size: 12px;
         }
-        .scanning-wifi {
-            text-align: center;
-            padding: 12px;
-            color: #6b7280;
+        .ble-status.disconnected {
+            background: rgba(248,113,113,0.15);
+            color: #f87171;
+        }
+        .ble-status.scanning {
+            background: rgba(251,191,36,0.15);
+            color: #fbbf24;
         }
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
@@ -368,9 +373,10 @@
         <div class="card">
             <div class="card-header">
                 <h2>📡 My Hubs</h2>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                     <button class="btn btn-primary" onclick="scanForHubs()">🔍 Scan</button>
                     <button class="btn btn-secondary" onclick="loadHubs()">🔄 Refresh</button>
+                    <span id="bleStatus" class="ble-status disconnected">⚪ Disconnected</span>
                 </div>
             </div>
             <div id="hubList">
@@ -403,7 +409,6 @@
             <div id="configHubStatus" style="margin-top:4px;font-size:12px;"></div>
         </div>
         
-        <!-- WiFi Network Selection -->
         <div class="form-group">
             <label>Select WiFi Network</label>
             <div style="display:flex;gap:8px;margin-bottom:8px;">
@@ -457,6 +462,9 @@
     let currentHubIp = null;
     let currentBleDevice = null;
     let currentBleCharacteristic = null;
+    let bleServer = null;
+    let isConnected = false;
+    let autoReconnect = false;
 
     // BLE Config
     const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
@@ -468,6 +476,12 @@
         toast.className = 'toast ' + type + ' show';
         clearTimeout(toast._hide);
         toast._hide = setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function updateBleStatus(status, message) {
+        const el = document.getElementById('bleStatus');
+        el.className = 'ble-status ' + status;
+        el.textContent = message || (status === 'connected' ? '🟢 Connected' : status === 'scanning' ? '🔄 Scanning...' : '⚪ Disconnected');
     }
 
     async function apiRequest(endpoint, options = {}) {
@@ -599,6 +613,11 @@
             document.getElementById('dashboardContent').classList.add('hidden');
             document.getElementById('userBadge').textContent = '';
             showToast('✅ Signed out');
+            if (currentBleDevice && currentBleDevice.gatt) {
+                try { currentBleDevice.gatt.disconnect(); } catch(e) {}
+            }
+            isConnected = false;
+            updateBleStatus('disconnected');
         };
     }
 
@@ -613,6 +632,8 @@
         document.getElementById('dashboardContent').classList.remove('hidden');
         await loadSoil();
         await loadHubs();
+        // Auto-connect to BLE if previously paired
+        autoReconnectBle();
     }
 
     async function loadSoil() {
@@ -686,13 +707,118 @@
     }
 
     // ==========================================
-    // BLE DISCOVERY - SCAN FOR HUBS (UPDATED)
+    // AUTO-RECONNECT BLE (No popup after first pairing)
+    // ==========================================
+    async function autoReconnectBle() {
+        try {
+            const savedDeviceId = localStorage.getItem('ble_device_id');
+            if (!savedDeviceId) {
+                console.log('No saved BLE device');
+                return;
+            }
+
+            updateBleStatus('scanning', '🔄 Auto-connecting...');
+            
+            // Try to reconnect to previously paired device
+            const devices = await navigator.bluetooth.getDevices();
+            const savedDevice = devices.find(d => d.id === savedDeviceId || d.name === savedDeviceId);
+            
+            if (!savedDevice) {
+                console.log('Saved device not found');
+                updateBleStatus('disconnected');
+                return;
+            }
+
+            console.log('Found saved device, reconnecting...', savedDevice.name);
+            await connectBleDevice(savedDevice);
+            
+        } catch (error) {
+            console.log('Auto-reconnect failed:', error);
+            updateBleStatus('disconnected');
+        }
+    }
+
+    // ==========================================
+    // CONNECT TO BLE DEVICE
+    // ==========================================
+    async function connectBleDevice(device) {
+        try {
+            const server = await device.gatt.connect();
+            bleServer = server;
+            currentBleDevice = device;
+            
+            const service = await server.getPrimaryService(BLE_SERVICE_UUID);
+            const characteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
+            currentBleCharacteristic = characteristic;
+            
+            // Read device info
+            const value = await characteristic.readValue();
+            const decoder = new TextDecoder('utf-8');
+            const info = JSON.parse(decoder.decode(value));
+            
+            currentConfigHubId = info.device_id;
+            isConnected = true;
+            
+            // Save for auto-reconnect
+            localStorage.setItem('ble_device_id', device.id || device.name);
+            
+            updateBleStatus('connected', '🟢 ' + (device.name || 'Connected'));
+            console.log('✅ BLE Connected:', info);
+            
+            // Show in discovery list
+            showDiscoveredHub(info, device);
+            
+            // Auto-open config
+            setTimeout(() => {
+                claimBleHub();
+            }, 500);
+            
+            return true;
+        } catch (error) {
+            console.error('BLE connection error:', error);
+            isConnected = false;
+            updateBleStatus('disconnected');
+            return false;
+        }
+    }
+
+    // ==========================================
+    // SHOW DISCOVERED HUB
+    // ==========================================
+    function showDiscoveredHub(info, device) {
+        const card = document.getElementById('discoveryCard');
+        const list = document.getElementById('discoveryList');
+        card.style.display = 'block';
+        
+        list.innerHTML = `
+            <div class="hub-item" style="border:2px solid rgba(74,222,128,0.5);background:rgba(74,222,128,0.05);">
+                <div>
+                    <span class="hub-name">${info.device_name || info.device_id}</span>
+                    <span class="badge pairing">PAIRING</span>
+                    <span class="hub-id">${info.device_id}</span>
+                    <span class="hub-ip">· ${device ? device.name || 'BLE' : 'BLE'}</span>
+                </div>
+                <div class="hub-actions">
+                    <button class="btn btn-success" onclick="claimBleHub()">
+                        ➕ Claim & Configure
+                    </button>
+                </div>
+            </div>
+            <div style="font-size:12px;color:#6b7280;margin-top:8px;">
+                💡 Connected via Bluetooth. Enter WiFi credentials to set up the hub.
+            </div>
+        `;
+    }
+
+    // ==========================================
+    // BLE SCAN (User click required - browser security)
     // ==========================================
     async function scanForHubs() {
         const card = document.getElementById('discoveryCard');
         const list = document.getElementById('discoveryList');
         card.style.display = 'block';
         list.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning for BLE hubs...</div>';
+        updateBleStatus('scanning', '🔄 Scanning...');
         
         try {
             if (!navigator.bluetooth) {
@@ -704,9 +830,11 @@
                         </div>
                     </div>
                 `;
+                updateBleStatus('disconnected');
                 return;
             }
 
+            // Request BLE device - this shows the popup (required by browser)
             const device = await navigator.bluetooth.requestDevice({
                 filters: [{ services: [BLE_SERVICE_UUID] }],
                 optionalServices: [BLE_SERVICE_UUID]
@@ -714,50 +842,15 @@
 
             if (!device) {
                 list.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;">No devices found.</div>';
+                updateBleStatus('disconnected');
                 return;
             }
 
-            list.innerHTML = '<div class="loading"><div class="spinner"></div>Connecting to hub...</div>';
-            
-            const server = await device.gatt.connect();
-            const service = await server.getPrimaryService(BLE_SERVICE_UUID);
-            const characteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
-
-            // FIX: Use readValue() instead of read()
-            const value = await characteristic.readValue();
-            const decoder = new TextDecoder('utf-8');
-            const info = JSON.parse(decoder.decode(value));
-
-            currentBleDevice = device;
-            currentBleCharacteristic = characteristic;
-            currentConfigHubId = info.device_id;
-
-            list.innerHTML = `
-                <div class="hub-item" style="border:2px solid rgba(74,222,128,0.5);background:rgba(74,222,128,0.05);">
-                    <div>
-                        <span class="hub-name">${info.device_name || info.device_id}</span>
-                        <span class="badge pairing">PAIRING</span>
-                        <span class="hub-id">${info.device_id}</span>
-                        <span class="hub-ip">· ${info.mac || 'BLE'}</span>
-                    </div>
-                    <div class="hub-actions">
-                        <button class="btn btn-success" onclick="claimBleHub()">
-                            ➕ Claim & Configure
-                        </button>
-                    </div>
-                </div>
-                <div style="font-size:12px;color:#6b7280;margin-top:8px;">
-                    💡 Connected via Bluetooth. Enter WiFi credentials to set up the hub.
-                </div>
-            `;
-
-            // Auto-open config after successful connection
-            setTimeout(() => {
-                claimBleHub();
-            }, 500);
+            await connectBleDevice(device);
 
         } catch (error) {
             console.error('BLE scan error:', error);
+            updateBleStatus('disconnected');
             list.innerHTML = `
                 <div style="text-align:center;padding:20px;color:#f87171;">
                     ❌ ${error.message || 'Scan failed'}<br>
@@ -789,12 +882,10 @@
                 return;
             }
             
-            // Send scan command via BLE
             const scanCommand = JSON.stringify({ command: "scan_wifi" });
             const encoder = new TextEncoder();
             await currentBleCharacteristic.writeValue(encoder.encode(scanCommand));
             
-            // Wait for response
             let responseReceived = false;
             
             const handler = (event) => {
@@ -818,7 +909,6 @@
             await currentBleCharacteristic.startNotifications();
             currentBleCharacteristic.addEventListener('characteristicvaluechanged', handler);
             
-            // Timeout after 10 seconds
             setTimeout(() => {
                 if (!responseReceived) {
                     wifiList.innerHTML = `
@@ -868,7 +958,6 @@
             </div>
         `).join('');
         
-        // Auto-select first network
         if (networks.length > 0) {
             document.getElementById('configSSID').value = networks[0].ssid;
         }
@@ -885,7 +974,7 @@
     }
 
     // ==========================================
-    // CLAIM BLE HUB - Auto-open config
+    // CLAIM BLE HUB
     // ==========================================
     async function claimBleHub() {
         if (!currentBleCharacteristic) {
@@ -903,21 +992,19 @@
         document.getElementById('configMQTT').value = 'broker.hivemq.com';
         document.getElementById('configMQTTPort').value = '1883';
         
-        // Clear previous WiFi list
         document.getElementById('wifiList').innerHTML = `
             <div class="scanning-wifi">Click "Scan Networks" to find available WiFi</div>
         `;
         
         openModal('configModal');
         
-        // Auto-scan WiFi after modal opens
         setTimeout(() => {
             scanWiFiNetworks();
         }, 500);
     }
 
     // ==========================================
-    // SAVE CONFIG VIA BLE (FIXED)
+    // SAVE CONFIG VIA BLE
     // ==========================================
     async function saveConfig() {
         const ssid = document.getElementById('configSSID').value.trim();
@@ -947,8 +1034,6 @@
             
             const encoder = new TextEncoder();
             const data = encoder.encode(configStr);
-            
-            // Write to BLE characteristic
             await currentBleCharacteristic.writeValue(data);
 
             document.getElementById('configHubStatus').textContent = '⏳ Waiting for confirmation...';
@@ -1060,14 +1145,12 @@
                 document.getElementById('configMQTT').value = 'broker.hivemq.com';
                 document.getElementById('configMQTTPort').value = '1883';
                 
-                // Clear previous WiFi list
                 document.getElementById('wifiList').innerHTML = `
                     <div class="scanning-wifi">Click "Scan Networks" to find available WiFi</div>
                 `;
                 
                 openModal('configModal');
                 
-                // Auto-scan WiFi after modal opens
                 setTimeout(() => {
                     scanWiFiNetworks();
                 }, 500);
@@ -1095,7 +1178,6 @@
         document.getElementById('configMQTT').value = 'broker.hivemq.com';
         document.getElementById('configMQTTPort').value = '1883';
         
-        // Clear previous WiFi list
         document.getElementById('wifiList').innerHTML = `
             <div class="scanning-wifi">Click "Scan Networks" to find available WiFi</div>
         `;
@@ -1173,9 +1255,6 @@
         setInterval(() => {
             if (token) loadSoil();
         }, 30000);
-        
-        // DO NOT auto-scan on load - BLE requires user gesture
-        // User must click the "Scan" button
     });
 </script>
 </body>
