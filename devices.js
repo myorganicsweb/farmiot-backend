@@ -18,21 +18,26 @@ const supabase = createClient(
 // ==========================================
 // 1. DISCOVER HUBS
 // ==========================================
+// 1. DISCOVER HUBS (mDNS + Server)
 router.get('/hubs/discover', authenticate, async (req, res) => {
   console.log('🔍 Scanning for hubs...');
   
   try {
+    // Get hubs from Supabase (already registered)
     const cutoffTime = new Date(Date.now() - 120000).toISOString();
     const { data: hubs, error } = await supabase
       .from('hubs')
       .select('*')
-      .or(`status.eq.discovering,status.eq.offline`)
-      .gte('last_seen', cutoffTime)
-      .neq('user_id', req.user.id);
+      .or(`status.eq.discovering,status.eq.online`)
+      .gte('last_seen', cutoffTime);
     
     if (error) throw error;
     
-    console.log(`✅ Found ${hubs?.length || 0} hubs in discovery mode`);
+    // Also check for mDNS devices (local network)
+    // The browser will handle mDNS discovery directly
+    // So we just return the hubs from Supabase
+    
+    console.log(`✅ Found ${hubs?.length || 0} hubs`);
     res.json(hubs || []);
     
   } catch (error) {

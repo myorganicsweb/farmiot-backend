@@ -789,6 +789,21 @@
             if (token) loadSoil();
         }, 30000);
     });
+
+    // In dashboard.html, try to discover mDNS devices
+    async function discoverMDNS() {
+        try {
+            // Try to reach the ESP32 via mDNS
+            const response = await fetch('http://farmiot-hub.local/api/discovery');
+            if (response.ok) {
+                const data = await response.json();
+                return data;
+            }
+        } catch (error) {
+            // mDNS not available
+            return null;
+        }
+    }
 </script>
 </body>
 </html>
