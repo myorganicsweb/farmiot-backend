@@ -229,6 +229,37 @@
         .modal-content h2 { margin-bottom: 16px; font-size: 22px; }
         .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
         .modal-actions .btn { flex: 1; justify-content: center; }
+        .discovery-instructions {
+            background: rgba(251,191,36,0.06);
+            border: 1px solid rgba(251,191,36,0.1);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .discovery-instructions strong {
+            color: #fbbf24;
+        }
+        .discovery-instructions .step {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            margin: 6px 0;
+        }
+        .discovery-instructions .step-num {
+            background: rgba(251,191,36,0.15);
+            color: #fbbf24;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
             .hub-item { flex-direction: column; align-items: flex-start; }
@@ -601,6 +632,28 @@
         
         try {
             let hubs = [];
+            let mdnsFound = false;
+            
+            // Check if online
+            if (!navigator.onLine) {
+                list.innerHTML = `
+                    <div style="text-align:center;padding:20px;color:#fbbf24;">
+                        ⚠️ You are offline.<br><br>
+                        <div class="discovery-instructions" style="text-align:left;">
+                            <strong>To discover your ESP32 hub:</strong>
+                            <div class="step">
+                                <span class="step-num">1</span>
+                                <span>Connect your device to the WiFi network: <strong>FarmIOT_Hub_001</strong></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-num">2</span>
+                                <span>Return to this page and click "Scan" again.</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
             
             // 1. Try server discovery first
             try {
@@ -616,6 +669,7 @@
             try {
                 const mdnsDevices = await discoverMDNS();
                 if (mdnsDevices && mdnsDevices.length > 0) {
+                    mdnsFound = true;
                     // Send mDNS devices to server
                     const mdnsResponse = await apiRequest('/api/hubs/discover/mdns', {
                         method: 'POST',
@@ -637,15 +691,46 @@
             }
             
             // Filter hubs not owned by user
-            const userHubs = await apiRequest('/api/hubs');
+            let userHubs = [];
+            try {
+                userHubs = await apiRequest('/api/hubs');
+            } catch (e) {
+                console.log('Error getting user hubs:', e);
+            }
             const userHubIds = new Set(userHubs.map(h => h.hub_id));
             const available = hubs.filter(h => !userHubIds.has(h.hub_id));
             
             if (available.length === 0) {
+                let message = hubs.length === 0 
+                    ? '🔍 No hubs found.' 
+                    : 'All discovered hubs are already in your account.';
+                
+                // If no hubs found, show instructions
+                if (hubs.length === 0 && !mdnsFound) {
+                    list.innerHTML = `
+                        <div style="text-align:center;padding:10px 20px;color:#6b7280;">
+                            <div class="discovery-instructions" style="text-align:left;">
+                                <strong>🔍 To discover your ESP32 hub:</strong>
+                                <div class="step">
+                                    <span class="step-num">1</span>
+                                    <span>Connect your device to the WiFi network: <strong>FarmIOT_Hub_001</strong></span>
+                                </div>
+                                <div class="step">
+                                    <span class="step-num">2</span>
+                                    <span>Return to this page and click "Scan" again.</span>
+                                </div>
+                                <div style="margin-top:8px;font-size:12px;color:#6b7280;">
+                                    💡 The ESP32 creates this network when no WiFi is configured.
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
                 list.innerHTML = `
                     <div style="text-align:center;padding:20px;color:#6b7280;">
-                        ${hubs.length === 0 ? 'No hubs found. Make sure your ESP32 is powered on.' : 'All discovered hubs are already in your account.'}
-                        ${!navigator.onLine ? '<br><span style="color:#fbbf24;">⚠️ You are offline. Please connect to the ESP32\'s WiFi.</span>' : ''}
+                        ${message}
                     </div>
                 `;
                 return;
@@ -667,7 +752,23 @@
             
         } catch (error) {
             console.error('Scan error:', error);
-            list.innerHTML = `<div style="text-align:center;padding:20px;color:#f87171;">❌ Scan failed: ${error.message}</div>`;
+            list.innerHTML = `
+                <div style="text-align:center;padding:20px;color:#f87171;">
+                    ❌ Scan failed: ${error.message}
+                    <br><br>
+                    <div class="discovery-instructions" style="text-align:left;">
+                        <strong>Try this:</strong>
+                        <div class="step">
+                            <span class="step-num">1</span>
+                            <span>Connect your device to: <strong>FarmIOT_Hub_001</strong></span>
+                        </div>
+                        <div class="step">
+                            <span class="step-num">2</span>
+                            <span>Click "Scan" again</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
     }
 
@@ -677,24 +778,39 @@
     async function discoverMDNS() {
         try {
             const devices = [];
-            const hubNames = ['farmiot-hub', 'farmiot-hub-001'];
+            // Try different possible mDNS hostnames
+            const hubNames = [
+                'farmiot-hub',
+                'farmiot-hub-001',
+                'farmiot-hub.local',
+                'farmiot-hub-001.local',
+                '192.168.4.1'  // Direct AP IP
+            ];
             
             for (const name of hubNames) {
                 try {
+                    const url = `http://${name}/api/discovery`;
+                    console.log(`🔍 Trying: ${url}`);
+                    
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 3000);
                     
-                    const url = `http://${name}.local/api/discovery`;
-                    const response = await fetch(url, { 
-                        signal: controller.signal,
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: { 
+                            'Accept': 'application/json',
+                            'Origin': window.location.origin
+                        },
                         mode: 'cors',
-                        headers: { 'Accept': 'application/json' }
+                        cache: 'no-cache',
+                        signal: controller.signal
                     });
                     
                     clearTimeout(timeoutId);
                     
-                    if (response.ok) {
+                    if (response && response.ok) {
                         const data = await response.json();
+                        console.log('✅ Found device:', data);
                         if (data && data.device_id) {
                             devices.push({
                                 device_id: data.device_id,
@@ -702,10 +818,12 @@
                                 ip: data.ip || '192.168.4.1',
                                 mac: data.mac || ''
                             });
+                            break; // Found one, stop looking
                         }
                     }
                 } catch (e) {
-                    // mDNS not available for this name
+                    // Silently continue - mDNS not available for this name
+                    console.log(`⚠️ ${name}: ${e.message}`);
                 }
             }
             
