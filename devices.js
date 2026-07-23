@@ -20,8 +20,13 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: 'No token provided' });
     }
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    
+    // Your auth.js uses 'user_id' in the JWT
+    req.user = {
+      id: decoded.user_id,  // This will be the email (since your auth uses email as ID)
+      email: decoded.email
+    };
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token' });
@@ -87,10 +92,11 @@ router.post('/soil', async (req, res) => {
 // Get all hubs for a user
 router.get('/hubs', authenticate, async (req, res) => {
   try {
+    // req.user.id is the email (since your auth uses email as ID)
     const { data, error } = await supabase
       .from('hubs')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', req.user.id)  // user_id in hubs table stores the email
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -140,7 +146,7 @@ router.post('/hubs/register', async (req, res) => {
       if (error) throw error;
       result = data;
     } else {
-      // Create new hub (unclaimed)
+      // Create new hub (unclaimed) - user_id is null initially
       const { data, error } = await supabase
         .from('hubs')
         .insert([{
@@ -193,56 +199,40 @@ router.post('/hubs/add', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'hub_id required' });
     }
 
-    // First check if hub exists and is unclaimed
-    const { data: existing, error: checkError } = await supabase
+    // Update hub - claim it with the user's email
+    const { data, error } = await supabase
       .from('hubs')
-      .select('*')
+      .update({
+        user_id: req.user.id,  // This is the email from your auth
+        device_name: name || hub_id,
+        ip_address: ip_address || null,
+        status: 'online'
+      })
       .eq('hub_id', hub_id)
-      .single();
+      .is('user_id', null)  // Only claim if not already claimed
+      .select();
 
-    if (checkError && checkError.code !== 'PGRST116') {
-      throw checkError;
-    }
-
-    let result;
-    if (existing) {
-      // Update existing hub - claim it
-      const { data, error } = await supabase
-        .from('hubs')
-        .update({
-          user_id: req.user.id,
-          device_name: name || hub_id,
-          ip_address: ip_address || existing.ip_address,
-          status: 'online'
-        })
-        .eq('hub_id', hub_id)
-        .is('user_id', null)  // Only claim if not already claimed
-        .select();
-
-      if (error) throw error;
-      
-      if (!data || data.length === 0) {
-        return res.status(400).json({ error: 'Hub already claimed or not found' });
-      }
-      result = data;
-    } else {
-      // Create new hub and claim it
-      const { data, error } = await supabase
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      // If hub doesn't exist or is already claimed, create it
+      const { data: newData, error: insertError } = await supabase
         .from('hubs')
         .insert([{
           hub_id,
-          user_id: req.user.id,
+          user_id: req.user.id,  // This is the email from your auth
           device_name: name || hub_id,
           ip_address: ip_address || null,
           status: 'online'
         }])
         .select();
 
-      if (error) throw error;
-      result = data;
+      if (insertError) throw insertError;
+      
+      return res.json({ success: true, hub: newData[0] });
     }
 
-    res.json({ success: true, hub: result[0] });
+    res.json({ success: true, hub: data[0] });
   } catch (error) {
     console.error('Error adding hub:', error);
     res.status(500).json({ error: 'Failed to add hub' });
@@ -262,7 +252,6 @@ router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
 
     if (error && error.code !== 'PGRST116') throw error;
     
-    // If no config found, return defaults
     if (!data) {
       return res.json({ config: {
         ssid: '',
@@ -294,7 +283,7 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
       .from('hubs')
       .select('id, ip_address')
       .eq('hub_id', hubId)
-      .eq('user_id', req.user.id)
+      .eq('user_id', req.user.id)  // user_id stores the email
       .single();
 
     if (hubError || !hub) {
@@ -356,7 +345,7 @@ router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
       .from('hubs')
       .select('ip_address')
       .eq('hub_id', hubId)
-      .eq('user_id', req.user.id)
+      .eq('user_id', req.user.id)  // user_id stores the email
       .single();
 
     if (hubError || !hub) {
@@ -394,7 +383,7 @@ router.delete('/hubs/:hubId', authenticate, async (req, res) => {
       .from('hubs')
       .update({ user_id: null, status: 'pairing' })
       .eq('hub_id', hubId)
-      .eq('user_id', req.user.id);
+      .eq('user_id', req.user.id);  // user_id stores the email
 
     if (error) throw error;
     
