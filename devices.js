@@ -1,7 +1,6 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
-const axios = require('axios');
 
 const router = express.Router();
 const supabase = createClient(
@@ -27,77 +26,7 @@ const authenticate = async (req, res, next) => {
 };
 
 // ==========================================
-// CHECK ESP32 STATUS (Server polls ESP32)
-// ==========================================
-async function checkHubStatus(hub) {
-  try {
-    // Try to reach ESP32's health endpoint
-    const url = `http://${hub.ip_address}/api/health`;
-    const response = await axios.get(url, { timeout: 3000 });
-    
-    if (response.status === 200) {
-      // ESP32 is online - update database
-      await supabase
-        .from('hubs')
-        .update({
-          status: 'online',
-          last_seen: new Date().toISOString()
-        })
-        .eq('hub_id', hub.hub_id);
-      return true;
-    }
-  } catch (error) {
-    // ESP32 is offline - update database
-    await supabase
-      .from('hubs')
-      .update({
-        status: 'offline',
-        last_seen: new Date().toISOString()
-      })
-      .eq('hub_id', hub.hub_id);
-    return false;
-  }
-}
-
-// ==========================================
-// GET ALL HUBS (With status check)
-// ==========================================
-router.get('/hubs', authenticate, async (req, res) => {
-  try {
-    // Get all hubs for this user
-    const { data: hubs, error } = await supabase
-      .from('hubs')
-      .select('*')
-      .eq('user_id', req.user.id)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    // Check status of each hub (if it has an IP)
-    for (const hub of hubs) {
-      if (hub.ip_address) {
-        await checkHubStatus(hub);
-      }
-    }
-
-    // Get updated status from database
-    const { data: updatedHubs, error: updateError } = await supabase
-      .from('hubs')
-      .select('*')
-      .eq('user_id', req.user.id)
-      .order('created_at', { ascending: false });
-
-    if (updateError) throw updateError;
-
-    res.json(updatedHubs || []);
-  } catch (error) {
-    console.error('Error fetching hubs:', error);
-    res.status(500).json({ error: 'Failed to fetch hubs' });
-  }
-});
-
-// ==========================================
-// REGISTER HUB (Discovery - no POST from ESP32)
+// REGISTER HUB (ESP32 posts here)
 // ==========================================
 router.post('/hubs/register', async (req, res) => {
   try {
@@ -107,7 +36,6 @@ router.post('/hubs/register', async (req, res) => {
       return res.status(400).json({ error: 'hub_id required' });
     }
 
-    // Check if hub exists
     const { data: existing, error: checkError } = await supabase
       .from('hubs')
       .select('id')
@@ -119,7 +47,6 @@ router.post('/hubs/register', async (req, res) => {
     }
 
     if (existing) {
-      // Update existing hub
       const { data, error } = await supabase
         .from('hubs')
         .update({
@@ -135,7 +62,6 @@ router.post('/hubs/register', async (req, res) => {
       if (error) throw error;
       res.json({ success: true, hub: data });
     } else {
-      // Create new hub (unclaimed)
       const { data, error } = await supabase
         .from('hubs')
         .insert([{
@@ -159,6 +85,67 @@ router.post('/hubs/register', async (req, res) => {
 });
 
 // ==========================================
+// HEARTBEAT (ESP32 keeps alive)
+// ==========================================
+router.post('/hubs/heartbeat/:hubId', async (req, res) => {
+  try {
+    const { hubId } = req.params;
+    const { ip } = req.body;
+
+    await supabase
+      .from('hubs')
+      .update({
+        ip_address: ip,
+        status: 'online',
+        last_seen: new Date().toISOString()
+      })
+      .eq('hub_id', hubId);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Heartbeat error:', error);
+    res.status(500).json({ error: 'Failed to update heartbeat' });
+  }
+});
+
+// ==========================================
+// GET ALL HUBS (Dashboard uses this)
+// ==========================================
+router.get('/hubs', authenticate, async (req, res) => {
+  try {
+    const { data: hubs, error } = await supabase
+      .from('hubs')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Mark hubs as offline if last_seen is too old (> 2 minutes)
+    const now = new Date();
+    for (const hub of hubs || []) {
+      if (hub.last_seen) {
+        const lastSeen = new Date(hub.last_seen);
+        const diff = (now - lastSeen) / 1000; // seconds
+        if (diff > 120 && hub.status === 'online') {
+          // Hub hasn't sent heartbeat in 2 minutes - mark offline
+          await supabase
+            .from('hubs')
+            .update({ status: 'offline' })
+            .eq('hub_id', hub.hub_id);
+          hub.status = 'offline';
+        }
+      }
+    }
+
+    res.json(hubs || []);
+  } catch (error) {
+    console.error('Error fetching hubs:', error);
+    res.status(500).json({ error: 'Failed to fetch hubs' });
+  }
+});
+
+// ==========================================
 // DISCOVER HUBS (Unclaimed hubs)
 // ==========================================
 router.get('/hubs/discover', async (req, res) => {
@@ -171,25 +158,7 @@ router.get('/hubs/discover', async (req, res) => {
       .limit(20);
 
     if (error) throw error;
-    
-    // Check status of discovered hubs
-    for (const hub of data || []) {
-      if (hub.ip_address) {
-        await checkHubStatus(hub);
-      }
-    }
-
-    // Get updated status
-    const { data: updated, error: updateError } = await supabase
-      .from('hubs')
-      .select('*')
-      .is('user_id', null)
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    if (updateError) throw updateError;
-
-    res.json(updated || []);
+    res.json(data || []);
   } catch (error) {
     console.error('Error discovering hubs:', error);
     res.status(500).json({ error: 'Failed to discover hubs' });
@@ -241,124 +210,6 @@ router.post('/hubs/add', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error adding hub:', error);
     res.status(500).json({ error: 'Failed to add hub' });
-  }
-});
-
-// ==========================================
-// CONFIGURE HUB (Server sends config to ESP32)
-// ==========================================
-router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
-  try {
-    const { hubId } = req.params;
-    const { ssid, password, mqtt_server, mqtt_port, device_name } = req.body;
-    
-    if (!ssid) {
-      return res.status(400).json({ error: 'SSID required' });
-    }
-
-    // Check if hub belongs to user
-    const { data: hub, error: hubError } = await supabase
-      .from('hubs')
-      .select('id, ip_address')
-      .eq('hub_id', hubId)
-      .eq('user_id', req.user.id)
-      .single();
-
-    if (hubError || !hub) {
-      return res.status(403).json({ error: 'Hub not found or not owned by user' });
-    }
-
-    // Save config in cloud (without password - security)
-    const { data, error } = await supabase
-      .from('hub_config')
-      .upsert({
-        hub_id: hubId,
-        ssid,
-        // password NOT stored in cloud (security)
-        mqtt_server: mqtt_server || 'broker.hivemq.com',
-        mqtt_port: mqtt_port || 1883,
-        device_name: device_name || hubId,
-        updated_at: new Date().toISOString()
-      })
-      .select();
-
-    if (error) throw error;
-    
-    // Try to send config to ESP32 via HTTP
-    let sentToHub = false;
-    if (hub.ip_address) {
-      try {
-        const axios = require('axios');
-        const formData = new URLSearchParams();
-        formData.append('ssid', ssid);
-        formData.append('password', password);
-        formData.append('mqtt', mqtt_server || 'broker.hivemq.com');
-        formData.append('port', mqtt_port || 1883);
-        
-        await axios.post(`http://${hub.ip_address}/api/config`, formData, {
-          timeout: 5000,
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        });
-        sentToHub = true;
-        console.log(`✅ Config sent to hub ${hubId}`);
-      } catch (sendError) {
-        console.log(`⚠️ Could not send config to hub:`, sendError.message);
-      }
-    }
-
-    // Update hub status
-    await supabase
-      .from('hubs')
-      .update({ 
-        device_name: device_name || hubId, 
-        status: sentToHub ? 'online' : 'pairing' 
-      })
-      .eq('hub_id', hubId);
-
-    res.json({ 
-      success: true, 
-      message: sentToHub ? 'Config sent to hub' : 'Config saved (hub offline)',
-      config: data 
-    });
-  } catch (error) {
-    console.error('Error configuring hub:', error);
-    res.status(500).json({ error: 'Failed to configure hub' });
-  }
-});
-
-// ==========================================
-// REBOOT HUB
-// ==========================================
-router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
-  try {
-    const { hubId } = req.params;
-    
-    const { data: hub, error: hubError } = await supabase
-      .from('hubs')
-      .select('ip_address')
-      .eq('hub_id', hubId)
-      .eq('user_id', req.user.id)
-      .single();
-
-    if (hubError || !hub) {
-      return res.status(403).json({ error: 'Hub not found or not owned by user' });
-    }
-
-    let rebooted = false;
-    if (hub.ip_address) {
-      try {
-        await axios.post(`http://${hub.ip_address}/api/reboot`, {}, { timeout: 5000 });
-        rebooted = true;
-      } catch (sendError) {}
-    }
-
-    res.json({ 
-      success: true, 
-      message: rebooted ? 'Reboot command sent' : 'Reboot queued (hub may be offline)'
-    });
-  } catch (error) {
-    console.error('Error rebooting hub:', error);
-    res.status(500).json({ error: 'Failed to reboot hub' });
   }
 });
 
