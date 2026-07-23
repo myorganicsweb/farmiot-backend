@@ -628,7 +628,7 @@
     }
 
     // ==========================================
-    // BLE DISCOVERY - SCAN FOR HUBS
+    // BLE DISCOVERY - SCAN FOR HUBS (FIXED)
     // ==========================================
     async function scanForHubs() {
         const card = document.getElementById('discoveryCard');
@@ -649,6 +649,7 @@
                 return;
             }
 
+            // Request BLE device
             const device = await navigator.bluetooth.requestDevice({
                 filters: [{ services: [BLE_SERVICE_UUID] }],
                 optionalServices: [BLE_SERVICE_UUID]
@@ -665,7 +666,8 @@
             const service = await server.getPrimaryService(BLE_SERVICE_UUID);
             const characteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
 
-            const value = await characteristic.read();
+            // FIX: Use readValue() instead of read()
+            const value = await characteristic.readValue();
             const decoder = new TextDecoder('utf-8');
             const info = JSON.parse(decoder.decode(value));
 
@@ -709,34 +711,11 @@
     }
 
     // ==========================================
-    // CLAIM BLE HUB
-    // ==========================================
-    async function claimBleHub() {
-        if (!currentBleCharacteristic) {
-            showToast('❌ No BLE device found. Please scan first.', 'error');
-            return;
-        }
-
-        showToast('📥 Claiming hub...', 'warning');
-        
-        document.getElementById('configHubId').textContent = currentConfigHubId;
-        document.getElementById('configHubStatus').textContent = '📡 Connected via Bluetooth';
-        document.getElementById('configSSID').value = '';
-        document.getElementById('configPassword').value = '';
-        document.getElementById('configDeviceName').value = currentConfigHubId || 'farmiot-hub';
-        document.getElementById('configMQTT').value = 'broker.hivemq.com';
-        document.getElementById('configMQTTPort').value = '1883';
-        
-        openModal('configModal');
-    }
-
-    // ==========================================
-    // SAVE CONFIG VIA BLE
+    // SAVE CONFIG VIA BLE (FIXED)
     // ==========================================
     async function saveConfig() {
         const ssid = document.getElementById('configSSID').value.trim();
         const password = document.getElementById('configPassword').value.trim();
-        const name = document.getElementById('configDeviceName').value.trim() || currentConfigHubId;
         const mqtt = document.getElementById('configMQTT').value.trim() || 'broker.hivemq.com';
         const port = parseInt(document.getElementById('configMQTTPort').value) || 1883;
 
@@ -761,6 +740,8 @@
             
             const encoder = new TextEncoder();
             const data = encoder.encode(configStr);
+            
+            // FIX: Use writeValue() with Uint8Array
             await currentBleCharacteristic.writeValue(data);
 
             document.getElementById('configHubStatus').textContent = '⏳ Waiting for confirmation...';
@@ -803,6 +784,28 @@
             btn.disabled = false;
             btn.innerHTML = '💾 Save';
         }
+    }
+    
+    // ==========================================
+    // CLAIM BLE HUB
+    // ==========================================
+    async function claimBleHub() {
+        if (!currentBleCharacteristic) {
+            showToast('❌ No BLE device found. Please scan first.', 'error');
+            return;
+        }
+
+        showToast('📥 Claiming hub...', 'warning');
+        
+        document.getElementById('configHubId').textContent = currentConfigHubId;
+        document.getElementById('configHubStatus').textContent = '📡 Connected via Bluetooth';
+        document.getElementById('configSSID').value = '';
+        document.getElementById('configPassword').value = '';
+        document.getElementById('configDeviceName').value = currentConfigHubId || 'farmiot-hub';
+        document.getElementById('configMQTT').value = 'broker.hivemq.com';
+        document.getElementById('configMQTTPort').value = '1883';
+        
+        openModal('configModal');
     }
 
     async function claimHubInCloud(hubId) {
