@@ -104,6 +104,11 @@
             color: #fbbf24;
             border: 1px solid rgba(251,191,36,0.15);
         }
+        .badge.connecting {
+            background: rgba(96,165,250,0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(96,165,250,0.15);
+        }
         .soil-value {
             font-size: 36px;
             font-weight: 700;
@@ -306,6 +311,11 @@
             border: 1px solid rgba(74,222,128,0.2);
             background: rgba(74,222,128,0.03);
         }
+        .wifi-scan-note {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
             .hub-item { flex-direction: column; align-items: flex-start; }
@@ -415,13 +425,19 @@
         
         <div class="form-group">
             <label>Select WiFi Network</label>
-            <div style="display:flex;gap:8px;margin-bottom:8px;">
-                <button class="btn btn-secondary" onclick="scanWiFiNetworks()" style="flex:1;font-size:12px;padding:6px;">
+            <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                <button class="btn btn-secondary" onclick="scanWiFiNetworks()" style="flex:1;font-size:12px;padding:6px;min-width:100px;">
                     🔍 Scan Networks
+                </button>
+                <button class="btn btn-secondary" onclick="getCurrentWiFi()" style="flex:1;font-size:12px;padding:6px;min-width:100px;">
+                    📱 Use Current
                 </button>
             </div>
             <div id="wifiList" class="wifi-list">
                 <div class="scanning-wifi">Click "Scan Networks" to find available WiFi</div>
+            </div>
+            <div class="wifi-scan-note">
+                ⚡ WiFi scanning is done by your browser. The ESP32 only receives credentials.
             </div>
         </div>
         
@@ -433,7 +449,7 @@
             <label>WiFi Password</label>
             <input type="password" id="configPassword" placeholder="Enter WiFi password">
             <div style="font-size:11px;color:#6b7280;margin-top:4px;">
-                ⚠️ Browser cannot auto-fill passwords for security reasons.
+                ⚠️ Browser cannot auto-fill saved passwords for security reasons. Please enter manually.
             </div>
         </div>
         <div class="form-group">
@@ -450,7 +466,7 @@
         </div>
         <div class="modal-actions">
             <button class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
-            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()">💾 Save</button>
+            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()">💾 Configure</button>
         </div>
     </div>
 </div>
@@ -468,7 +484,6 @@
     let currentBleCharacteristic = null;
     let bleServer = null;
     let isConnected = false;
-    let autoReconnect = false;
 
     // BLE Config
     const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
@@ -486,6 +501,21 @@
         const el = document.getElementById('bleStatus');
         el.className = 'ble-status ' + status;
         el.textContent = message || (status === 'connected' ? '🟢 Connected' : status === 'scanning' ? '🔄 Scanning...' : '⚪ Disconnected');
+    }
+
+    function updateHubStatus(hubId, status, message) {
+        // Update status in the hubs list
+        const items = document.querySelectorAll('.hub-item');
+        items.forEach(item => {
+            const idEl = item.querySelector('.hub-id');
+            if (idEl && idEl.textContent === hubId) {
+                const badge = item.querySelector('.badge');
+                if (badge) {
+                    badge.className = 'badge ' + status;
+                    badge.textContent = message || status;
+                }
+            }
+        });
     }
 
     async function apiRequest(endpoint, options = {}) {
@@ -636,7 +666,6 @@
         document.getElementById('dashboardContent').classList.remove('hidden');
         await loadSoil();
         await loadHubs();
-        // Auto-connect to BLE if previously paired
         autoReconnectBle();
     }
 
@@ -711,7 +740,7 @@
     }
 
     // ==========================================
-    // AUTO-RECONNECT BLE - Shows paired devices automatically
+    // AUTO-RECONNECT BLE
     // ==========================================
     async function autoReconnectBle() {
         try {
@@ -720,7 +749,6 @@
                 return;
             }
 
-            // Get all paired devices
             const devices = await navigator.bluetooth.getDevices();
             
             if (devices.length === 0) {
@@ -729,11 +757,9 @@
                 return;
             }
 
-            // Check if any device matches our service
             let foundDevice = null;
             for (const device of devices) {
                 try {
-                    // Try to connect and check if it has our service
                     const server = await device.gatt.connect();
                     const services = await server.getPrimaryServices();
                     
@@ -745,8 +771,6 @@
                     }
                     
                     if (foundDevice) break;
-                    
-                    // Disconnect if it doesn't have our service
                     await device.gatt.disconnect();
                 } catch (e) {
                     console.log('Device check failed:', e);
@@ -760,8 +784,6 @@
             }
 
             console.log('✅ Found paired FarmIOT device:', foundDevice.name);
-            
-            // Connect to it
             await connectBleDevice(foundDevice);
             
         } catch (error) {
@@ -783,7 +805,6 @@
             const characteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
             currentBleCharacteristic = characteristic;
             
-            // Read device info
             const value = await characteristic.readValue();
             const decoder = new TextDecoder('utf-8');
             const info = JSON.parse(decoder.decode(value));
@@ -791,16 +812,13 @@
             currentConfigHubId = info.device_id;
             isConnected = true;
             
-            // Save for auto-reconnect
             localStorage.setItem('ble_device_id', device.id || device.name);
             
             updateBleStatus('connected', '🟢 ' + (device.name || 'Connected'));
             console.log('✅ BLE Connected:', info);
             
-            // Show in discovery list
             showDiscoveredHub(info, device);
             
-            // Auto-open config
             setTimeout(() => {
                 claimBleHub();
             }, 500);
@@ -847,7 +865,7 @@
     }
 
     // ==========================================
-    // BLE SCAN (User click required - browser security)
+    // BLE SCAN
     // ==========================================
     async function scanForHubs() {
         const card = document.getElementById('discoveryCard');
@@ -870,7 +888,7 @@
                 return;
             }
 
-            // First, check if there are already paired devices
+            // Check paired devices first
             const pairedDevices = await navigator.bluetooth.getDevices();
             for (const device of pairedDevices) {
                 try {
@@ -878,7 +896,6 @@
                     const services = await server.getPrimaryServices();
                     for (const service of services) {
                         if (service.uuid === BLE_SERVICE_UUID) {
-                            // Found a paired device!
                             await connectBleDevice(device);
                             return;
                         }
@@ -887,7 +904,7 @@
                 } catch (e) {}
             }
 
-            // If no paired device found, request new device (shows popup)
+            // Request new device
             const device = await navigator.bluetooth.requestDevice({
                 filters: [{ services: [BLE_SERVICE_UUID] }],
                 optionalServices: [BLE_SERVICE_UUID]
@@ -919,90 +936,71 @@
     }
 
     // ==========================================
-    // SCAN WIFI NETWORKS (via BLE) - FIXED
+    // SCAN WIFI NETWORKS (Browser-based)
     // ==========================================
     async function scanWiFiNetworks() {
         const wifiList = document.getElementById('wifiList');
         wifiList.innerHTML = '<div class="scanning-wifi"><span class="spinner"></span> Scanning for WiFi networks...</div>';
         
         try {
-            if (!currentBleCharacteristic) {
+            // Try the Network Information API (limited support)
+            // Most browsers don't expose WiFi scanning for security reasons
+            // So we'll use the built-in WiFi API if available, otherwise fallback to manual entry
+            
+            // Check if the browser supports WiFi scanning
+            if ('wifi' in navigator) {
+                // This is available in some browsers
+                const networks = await navigator.wifi.getNetworks();
+                displayWiFiNetworks(networks);
+            } else {
+                // Fallback: Use manual entry with some common network detection
+                // Browser cannot scan WiFi networks for security reasons
+                // We'll show a message and let users enter manually
                 wifiList.innerHTML = `
-                    <div class="scanning-wifi" style="color:#f87171;">
-                        ❌ No BLE connection. Please scan for a hub first.
+                    <div class="scanning-wifi" style="color:#fbbf24;">
+                        📡 Browsers cannot scan WiFi networks for security reasons.
+                        <br><br>
+                        <div style="font-size:13px;color:#6b7280;">
+                            Please enter your WiFi SSID and password manually below.
+                        </div>
+                        <br>
+                        <div style="font-size:12px;color:#4b5563;padding:8px;background:rgba(255,255,255,0.03);border-radius:6px;">
+                            💡 <strong>Tip:</strong> Check your phone/computer's WiFi settings for the network name.
+                        </div>
                     </div>
                 `;
-                return;
             }
-            
-            // Send scan command via BLE
-            const scanCommand = JSON.stringify({ command: "scan_wifi" });
-            const encoder = new TextEncoder();
-            await currentBleCharacteristic.writeValue(encoder.encode(scanCommand));
-            
-            let responseReceived = false;
-            let timeoutId = null;
-            
-            const handler = (event) => {
-                const value = event.target.value;
-                const decoder = new TextDecoder('utf-8');
-                const response = decoder.decode(value);
-                
-                try {
-                    const data = JSON.parse(response);
-                    if (data.networks && Array.isArray(data.networks)) {
-                        displayWiFiNetworks(data.networks);
-                        responseReceived = true;
-                        clearTimeout(timeoutId);
-                        currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
-                        currentBleCharacteristic.stopNotifications();
-                    }
-                } catch (e) {
-                    // Not a valid response yet - ignore
-                }
-            };
-            
-            await currentBleCharacteristic.startNotifications();
-            currentBleCharacteristic.addEventListener('characteristicvaluechanged', handler);
-            
-            // Timeout after 15 seconds (ESP32 needs time to scan)
-            timeoutId = setTimeout(() => {
-                if (!responseReceived) {
-                    wifiList.innerHTML = `
-                        <div class="scanning-wifi" style="color:#fbbf24;">
-                            ⏳ No response from hub. The ESP32 may not support WiFi scanning yet.
-                            <br><br>
-                            <div style="font-size:12px;color:#6b7280;margin:8px 0;">
-                                Make sure your ESP32 code has the scanWiFiNetworks() function.
-                            </div>
-                            <button class="btn btn-secondary" onclick="scanWiFiNetworks()" style="font-size:12px;padding:4px 12px;">
-                                🔄 Retry
-                            </button>
-                            <br><br>
-                            <div style="font-size:12px;color:#6b7280;">
-                                Or enter SSID and password manually below.
-                            </div>
-                        </div>
-                    `;
-                    try {
-                        currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
-                        currentBleCharacteristic.stopNotifications();
-                    } catch (e) {}
-                }
-            }, 15000);
             
         } catch (error) {
             console.error('WiFi scan error:', error);
             wifiList.innerHTML = `
                 <div class="scanning-wifi" style="color:#f87171;">
-                    ❌ Failed to scan: ${error.message}
+                    ❌ WiFi scanning not supported in this browser.
                     <br><br>
-                    <div style="font-size:12px;color:#6b7280;">
-                        Enter SSID and password manually below.
+                    <div style="font-size:13px;color:#6b7280;">
+                        Please enter your WiFi SSID and password manually below.
                     </div>
                 </div>
             `;
         }
+    }
+
+    // ==========================================
+    // GET CURRENT WIFI (Browser's network)
+    // ==========================================
+    function getCurrentWiFi() {
+        const wifiList = document.getElementById('wifiList');
+        wifiList.innerHTML = `
+            <div class="scanning-wifi" style="color:#fbbf24;">
+                📱 Browsers cannot detect your current WiFi network for security reasons.
+                <br><br>
+                <div style="font-size:13px;color:#6b7280;">
+                    Please enter your WiFi SSID manually below.
+                </div>
+            </div>
+        `;
+        document.getElementById('configSSID').focus();
+        showToast('Please enter your WiFi SSID manually', 'warning');
     }
 
     // ==========================================
@@ -1012,22 +1010,31 @@
         const wifiList = document.getElementById('wifiList');
         
         if (!networks || networks.length === 0) {
-            wifiList.innerHTML = '<div class="scanning-wifi">No WiFi networks found.</div>';
+            wifiList.innerHTML = `
+                <div class="scanning-wifi">
+                    No WiFi networks found.
+                    <br><br>
+                    <div style="font-size:13px;color:#6b7280;">
+                        Please enter your WiFi SSID manually below.
+                    </div>
+                </div>
+            `;
             return;
         }
         
         wifiList.innerHTML = networks.map((network, index) => `
-            <div class="wifi-item ${index === 0 ? 'selected' : ''}" onclick="selectWiFi(this, '${network.ssid}')">
+            <div class="wifi-item ${index === 0 ? 'selected' : ''}" onclick="selectWiFi(this, '${network.ssid || network.SSID || network.name}')">
                 <span>
-                    <span>${network.ssid}</span>
-                    ${network.secured ? '<span class="locked">🔒</span>' : '<span class="unlocked">🔓</span>'}
+                    <span>${network.ssid || network.SSID || network.name}</span>
+                    ${network.secured || network.security ? '<span class="locked">🔒</span>' : '<span class="unlocked">🔓</span>'}
                 </span>
-                <span class="signal">${network.rssi > -60 ? '📶' : network.rssi > -80 ? '📶' : '📶'}</span>
+                <span class="signal">${network.rssi > -60 ? '📶' : '📶'}</span>
             </div>
         `).join('');
         
-        if (networks.length > 0) {
-            document.getElementById('configSSID').value = networks[0].ssid;
+        const firstSsid = networks[0]?.ssid || networks[0]?.SSID || networks[0]?.name || '';
+        if (firstSsid) {
+            document.getElementById('configSSID').value = firstSsid;
         }
     }
 
@@ -1061,14 +1068,16 @@
         document.getElementById('configMQTTPort').value = '1883';
         
         document.getElementById('wifiList').innerHTML = `
-            <div class="scanning-wifi">Click "Scan Networks" to find available WiFi</div>
+            <div class="scanning-wifi">
+                Enter your WiFi credentials below.
+                <br><br>
+                <div style="font-size:12px;color:#6b7280;">
+                    💡 Click "Scan Networks" to see available networks (if supported by your browser).
+                </div>
+            </div>
         `;
         
         openModal('configModal');
-        
-        setTimeout(() => {
-            scanWiFiNetworks();
-        }, 500);
     }
 
     // ==========================================
@@ -1088,7 +1097,7 @@
 
         const btn = document.getElementById('configSaveBtn');
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Sending...';
+        btn.innerHTML = '<span class="spinner"></span> Configuring...';
         document.getElementById('configHubStatus').textContent = '📤 Sending WiFi config via BLE...';
 
         try {
@@ -1096,7 +1105,8 @@
                 ssid: ssid,
                 password: password,
                 mqtt: mqtt,
-                port: port
+                port: port,
+                device_name: name
             };
             const configStr = JSON.stringify(config);
             
@@ -1104,45 +1114,65 @@
             const data = encoder.encode(configStr);
             await currentBleCharacteristic.writeValue(data);
 
-            document.getElementById('configHubStatus').textContent = '⏳ Waiting for confirmation...';
+            document.getElementById('configHubStatus').textContent = '⏳ Waiting for ESP32 to connect...';
+            showToast('📤 Config sent. ESP32 is connecting to WiFi...', 'warning');
             
+            // Listen for connection status
             await currentBleCharacteristic.startNotifications();
-            currentBleCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+            let statusReceived = false;
+            
+            const handler = (event) => {
                 const value = event.target.value;
                 const decoder = new TextDecoder('utf-8');
                 const response = decoder.decode(value);
                 
                 try {
                     const result = JSON.parse(response);
-                    if (result.status === 'success') {
-                        showToast('✅ WiFi configured! Hub is connecting.', 'success');
-                        document.getElementById('configHubStatus').textContent = '✅ Config sent! Hub connecting to WiFi...';
-                        
-                        claimHubInCloud(currentConfigHubId);
-                        
-                        setTimeout(() => {
-                            closeModal('configModal');
-                            loadHubs();
-                        }, 2000);
-                    } else {
-                        showToast('❌ ' + (result.message || 'Configuration failed'), 'error');
+                    if (result.status) {
+                        statusReceived = true;
+                        if (result.status === 'success' || result.status === 'online') {
+                            showToast('✅ WiFi connected! Hub is online.', 'success');
+                            document.getElementById('configHubStatus').textContent = '✅ Connected to WiFi!';
+                            
+                            claimHubInCloud(currentConfigHubId);
+                            
+                            setTimeout(() => {
+                                closeModal('configModal');
+                                loadHubs();
+                            }, 2000);
+                        } else if (result.status === 'failed') {
+                            showToast('❌ WiFi connection failed: ' + (result.message || 'Check credentials'), 'error');
+                            document.getElementById('configHubStatus').textContent = '❌ Connection failed';
+                        }
+                        currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
+                        currentBleCharacteristic.stopNotifications();
                     }
                 } catch (e) {
-                    console.log('BLE response:', response);
+                    // Not a valid response yet
                 }
-            });
-
+            };
+            
+            currentBleCharacteristic.addEventListener('characteristicvaluechanged', handler);
+            
+            // Timeout after 30 seconds
             setTimeout(() => {
-                currentBleCharacteristic.stopNotifications();
-                btn.disabled = false;
-                btn.innerHTML = '💾 Save';
-            }, 5000);
+                if (!statusReceived) {
+                    showToast('⏳ No status received. Check ESP32 serial monitor for details.', 'warning');
+                    document.getElementById('configHubStatus').textContent = '⏳ Status timeout - check ESP32';
+                    btn.disabled = false;
+                    btn.innerHTML = '💾 Configure';
+                    try {
+                        currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
+                        currentBleCharacteristic.stopNotifications();
+                    } catch (e) {}
+                }
+            }, 30000);
 
         } catch (error) {
             console.error('BLE send error:', error);
             showToast('❌ Failed to send config: ' + error.message, 'error');
             btn.disabled = false;
-            btn.innerHTML = '💾 Save';
+            btn.innerHTML = '💾 Configure';
         }
     }
 
@@ -1214,14 +1244,12 @@
                 document.getElementById('configMQTTPort').value = '1883';
                 
                 document.getElementById('wifiList').innerHTML = `
-                    <div class="scanning-wifi">Click "Scan Networks" to find available WiFi</div>
+                    <div class="scanning-wifi">
+                        Enter your WiFi credentials below.
+                    </div>
                 `;
                 
                 openModal('configModal');
-                
-                setTimeout(() => {
-                    scanWiFiNetworks();
-                }, 500);
             } else {
                 showToast('❌ ' + (result.error || 'Failed to add hub'), 'error');
             }
@@ -1247,7 +1275,9 @@
         document.getElementById('configMQTTPort').value = '1883';
         
         document.getElementById('wifiList').innerHTML = `
-            <div class="scanning-wifi">Click "Scan Networks" to find available WiFi</div>
+            <div class="scanning-wifi">
+                Enter your WiFi credentials below.
+            </div>
         `;
         
         try {
