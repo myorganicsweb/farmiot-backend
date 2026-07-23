@@ -16,7 +16,7 @@
         }
         .container { max-width: 960px; margin: 0 auto; }
         
-        /* ===== HEADER ===== */
+        /* HEADER */
         .header {
             display: flex;
             justify-content: space-between;
@@ -64,7 +64,7 @@
             border-radius: 50%;
         }
         
-        /* ===== CARDS ===== */
+        /* CARDS */
         .card {
             background: rgba(17, 24, 39, 0.9);
             backdrop-filter: blur(10px);
@@ -92,14 +92,8 @@
             align-items: center;
             gap: 8px;
         }
-        .card-header .badge {
-            font-size: 11px;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-weight: 500;
-        }
         
-        /* ===== BUTTONS ===== */
+        /* BUTTONS */
         .btn {
             padding: 8px 16px;
             border: none;
@@ -136,14 +130,8 @@
             border: 1px solid rgba(248,113,113,0.15);
         }
         .btn-danger:hover { background: rgba(248,113,113,0.2); transform: translateY(-2px); }
-        .btn-warning {
-            background: rgba(251,191,36,0.1);
-            color: #fbbf24;
-            border: 1px solid rgba(251,191,36,0.15);
-        }
-        .btn-warning:hover { background: rgba(251,191,36,0.2); transform: translateY(-2px); }
         .btn-sm {
-            padding: 5px 10px;
+            padding: 5px 12px;
             font-size: 12px;
             border-radius: 8px;
         }
@@ -158,7 +146,7 @@
             font-size: 14px;
         }
         
-        /* ===== BADGES ===== */
+        /* BADGES */
         .badge {
             display: inline-flex;
             align-items: center;
@@ -183,28 +171,21 @@
             color: #fbbf24;
             border: 1px solid rgba(251,191,36,0.15);
         }
-        .badge.connecting {
-            background: rgba(96,165,250,0.15);
-            color: #60a5fa;
-            border: 1px solid rgba(96,165,250,0.15);
-        }
+        .badge.online .dot { background: #4ade80; animation: pulse 2s infinite; }
+        .badge.pairing .dot { background: #fbbf24; animation: pulse 1.5s infinite; }
+        .badge.offline .dot { background: #f87171; }
         .badge .dot {
             width: 6px;
             height: 6px;
             border-radius: 50%;
             display: inline-block;
         }
-        .badge.online .dot { background: #4ade80; animation: pulse 2s infinite; }
-        .badge.pairing .dot { background: #fbbf24; animation: pulse 1.5s infinite; }
-        .badge.offline .dot { background: #f87171; }
-        .badge.connecting .dot { background: #60a5fa; animation: pulse 0.8s infinite; }
-        
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.5; transform: scale(0.8); }
         }
         
-        /* ===== SOIL METER ===== */
+        /* SOIL */
         .soil-display {
             display: flex;
             align-items: center;
@@ -244,7 +225,7 @@
             width: 45%;
         }
         
-        /* ===== HUB LIST ===== */
+        /* HUB ITEMS */
         .hub-item {
             display: flex;
             justify-content: space-between;
@@ -288,7 +269,30 @@
             flex-wrap: wrap;
         }
         
-        /* ===== STATUS INDICATOR ===== */
+        /* DISCOVERED HUB */
+        .discovered-hub {
+            border: 2px solid rgba(74,222,128,0.3);
+            background: rgba(74,222,128,0.05);
+            padding: 16px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .discovered-hub .info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .discovered-hub .info .icon {
+            font-size: 28px;
+        }
+        
+        /* BLE STATUS */
         .ble-status {
             display: inline-flex;
             align-items: center;
@@ -302,18 +306,7 @@
         .ble-status.disconnected { background: rgba(248,113,113,0.15); color: #f87171; }
         .ble-status.scanning { background: rgba(251,191,36,0.15); color: #fbbf24; }
         
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        .status-dot.online { background: #4ade80; animation: pulse 2s infinite; }
-        .status-dot.pairing { background: #fbbf24; animation: pulse 1.5s infinite; }
-        .status-dot.offline { background: #f87171; }
-        .status-dot.connecting { background: #60a5fa; animation: pulse 0.8s infinite; }
-        
-        /* ===== MODAL ===== */
+        /* MODAL */
         .modal {
             display: none;
             position: fixed;
@@ -349,7 +342,7 @@
             margin-bottom: 20px;
         }
         
-        /* ===== FORM ===== */
+        /* FORM */
         .form-group { margin-bottom: 14px; }
         .form-group label {
             display: block;
@@ -376,14 +369,13 @@
             border-color: #4ade80;
             box-shadow: 0 0 0 3px rgba(74,222,128,0.1);
         }
-        .form-group input::placeholder { color: #4b5563; }
         .form-hint {
             font-size: 11px;
             color: #6b7280;
             margin-top: 4px;
         }
         
-        /* ===== TOAST ===== */
+        /* TOAST */
         .toast {
             position: fixed;
             bottom: 24px;
@@ -409,55 +401,10 @@
         .toast.error { border-left: 3px solid #f87171; }
         .toast.warning { border-left: 3px solid #fbbf24; }
         
-        /* ===== DISCOVERY CARD ===== */
-        .discovered-hub {
-            border: 2px solid rgba(74,222,128,0.2);
-            background: rgba(74,222,128,0.03);
-            padding: 16px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        .discovered-hub .info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 600px) {
-            .header { flex-direction: column; align-items: flex-start; }
-            .hub-item { flex-direction: column; align-items: stretch; }
-            .hub-item .hub-actions { justify-content: flex-start; }
-            .hub-item .hub-actions .btn { flex: 0; }
-            .soil-display { flex-direction: column; align-items: stretch; }
-            .soil-value { font-size: 32px; }
-            .discovered-hub { flex-direction: column; align-items: stretch; }
-            .modal-content { padding: 20px; }
-            .manual-add input { width: 100%; margin-bottom: 8px; }
-            .manual-add .btn { width: 100%; }
-        }
-        
-        /* ===== UTILITY ===== */
         .hidden { display: none !important; }
         .text-center { text-align: center; }
         .text-muted { color: #6b7280; }
-        .mt-8 { margin-top: 8px; }
-        .mt-16 { margin-top: 16px; }
-        .gap-8 { gap: 8px; }
-        .flex { display: flex; }
-        .flex-wrap { flex-wrap: wrap; }
-        .items-center { align-items: center; }
-        
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #6b7280;
-        }
+        .loading { text-align: center; padding: 20px; color: #6b7280; }
         .spinner {
             display: inline-block;
             width: 20px;
@@ -471,20 +418,15 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
         
-        .manual-add {
-            margin-top: 16px;
-            padding: 16px;
-            background: rgba(255,255,255,0.02);
-            border-radius: 12px;
-            border: 1px dashed rgba(255,255,255,0.08);
+        @media (max-width: 600px) {
+            .header { flex-direction: column; align-items: flex-start; }
+            .hub-item { flex-direction: column; align-items: stretch; }
+            .hub-item .hub-actions { justify-content: flex-start; }
+            .soil-display { flex-direction: column; align-items: stretch; }
+            .soil-value { font-size: 32px; }
+            .discovered-hub { flex-direction: column; align-items: stretch; }
+            .modal-content { padding: 20px; }
         }
-        .manual-add .row {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .manual-add .row input { flex: 1; min-width: 150px; }
-        .manual-add .row .btn { flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -500,7 +442,7 @@
         </div>
     </div>
 
-    <!-- AUTH SECTION -->
+    <!-- AUTH -->
     <div id="authSection">
         <div class="card auth-card" id="signinCard">
             <h2 style="font-size:22px;text-align:center;">🌿 Welcome to FarmIOT</h2>
@@ -545,7 +487,7 @@
     <!-- DASHBOARD -->
     <div id="dashboardContent" class="hidden">
         
-        <!-- SOIL MOISTURE -->
+        <!-- SOIL -->
         <div class="card">
             <div class="card-header">
                 <h2>💧 Soil Moisture</h2>
@@ -562,10 +504,10 @@
             </div>
         </div>
 
-        <!-- HUBS -->
+        <!-- HUBS - UNIFIED -->
         <div class="card">
             <div class="card-header">
-                <h2>📡 My Hubs</h2>
+                <h2>📡 Hubs</h2>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                     <button class="btn btn-primary btn-sm" onclick="scanForHubs()">🔍 Scan</button>
                     <button class="btn btn-secondary btn-sm" onclick="loadHubs()">🔄 Refresh</button>
@@ -574,24 +516,6 @@
             </div>
             <div id="hubList">
                 <div class="loading"><div class="spinner"></div>Loading hubs...</div>
-            </div>
-        </div>
-
-        <!-- DISCOVERY -->
-        <div class="card" id="discoveryCard" style="display:none;">
-            <div class="card-header">
-                <h2>🔍 Discovered Hubs</h2>
-                <button class="btn btn-secondary btn-sm" onclick="scanForHubs()">🔄 Scan Again</button>
-            </div>
-            <div id="discoveryList">
-                <div class="loading">Scanning...</div>
-            </div>
-            <div class="manual-add">
-                <div style="font-size:12px;color:#6b7280;margin-bottom:8px;">📶 Or add hub manually by IP:</div>
-                <div class="row">
-                    <input type="text" id="manualHubIp" placeholder="192.168.1.100">
-                    <button class="btn btn-success btn-sm" onclick="manualAddHub()">➕ Add</button>
-                </div>
             </div>
         </div>
     </div>
@@ -640,6 +564,7 @@
     let currentBleDevice = null;
     let currentBleCharacteristic = null;
     let isConnected = false;
+    let bleStatusCheckInterval = null;
 
     const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
     const BLE_CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
@@ -763,6 +688,7 @@
             if (currentBleDevice?.gatt) try { currentBleDevice.gatt.disconnect(); } catch(e) {}
             isConnected = false;
             updateBleStatus('disconnected');
+            if (bleStatusCheckInterval) { clearInterval(bleStatusCheckInterval); bleStatusCheckInterval = null; }
         };
     }
 
@@ -795,47 +721,76 @@
         }
     }
 
+    // ===== LOAD HUBS (Unified) =====
     async function loadHubs() {
         const container = document.getElementById('hubList');
         container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading hubs...</div>';
+        
         try {
+            // Get user's hubs from cloud
             const response = await fetch(`${API_BASE}/api/hubs`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) throw new Error('Failed to load hubs');
             const hubs = await response.json();
 
-            if (!Array.isArray(hubs) || hubs.length === 0) {
-                container.innerHTML = `
+            let html = '';
+
+            // Show discovered hub if BLE connected and NOT in cloud list
+            if (isConnected && currentConfigHubId) {
+                const exists = hubs.some(h => h.hub_id === currentConfigHubId || h.hub_id === currentConfigHubId.split(' ')[0]);
+                if (!exists) {
+                    html += `
+                        <div class="discovered-hub">
+                            <div class="info">
+                                <span class="icon">📡</span>
+                                <div>
+                                    <div style="font-weight:600;">${currentConfigHubId}</div>
+                                    <div style="font-size:12px;color:#6b7280;">Discovered via Bluetooth</div>
+                                </div>
+                                <span class="badge pairing"><span class="dot"></span> PAIRING</span>
+                            </div>
+                            <button class="btn btn-success btn-sm" onclick="claimBleHub()">⚙️ Configure</button>
+                        </div>
+                    `;
+                }
+            }
+
+            // Show configured hubs
+            if (hubs && hubs.length > 0) {
+                html += hubs.map(hub => {
+                    const status = hub.status || 'offline';
+                    const statusClass = status === 'online' ? 'online' : status === 'pairing' ? 'pairing' : 'offline';
+                    return `
+                        <div class="hub-item">
+                            <div class="hub-info">
+                                <span class="hub-name">${hub.device_name || hub.hub_id}</span>
+                                <span class="badge ${statusClass}"><span class="dot"></span> ${status}</span>
+                                <span class="hub-id">${hub.hub_id}</span>
+                                ${hub.ip_address ? `<span class="hub-ip">📡 ${hub.ip_address}</span>` : ''}
+                            </div>
+                            <div class="hub-actions">
+                                ${status === 'pairing' ? 
+                                    `<button class="btn btn-success btn-sm" onclick="openConfig('${hub.hub_id}')">⚙️ Configure</button>` :
+                                    `<button class="btn btn-secondary btn-sm" onclick="rebootHub('${hub.hub_id}')">🔄 Reboot</button>`
+                                }
+                                <button class="btn btn-danger btn-sm btn-icon" onclick="deleteHub('${hub.hub_id}')" title="Delete">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            if (!html) {
+                html = `
                     <div style="text-align:center;padding:20px;color:#6b7280;">
-                        🌿 No hubs configured yet.<br>
+                        🌿 No hubs found.<br>
                         <span style="font-size:13px;">Click "Scan" to discover a hub via Bluetooth.</span>
                     </div>
                 `;
-                return;
             }
 
-            container.innerHTML = hubs.map(hub => {
-                const status = hub.status || 'offline';
-                const statusClass = status === 'online' ? 'online' : status === 'pairing' ? 'pairing' : 'offline';
-                const icon = status === 'online' ? '🟢' : status === 'pairing' ? '🟡' : '🔴';
-                return `
-                <div class="hub-item">
-                    <div class="hub-info">
-                        <span class="hub-name">${hub.device_name || hub.hub_id}</span>
-                        <span class="badge ${statusClass}"><span class="dot"></span> ${status}</span>
-                        <span class="hub-id">${hub.hub_id}</span>
-                        ${hub.ip_address ? `<span class="hub-ip">📡 ${hub.ip_address}</span>` : ''}
-                    </div>
-                    <div class="hub-actions">
-                        ${status === 'pairing' ? 
-                            `<button class="btn btn-success btn-sm" onclick="openConfig('${hub.hub_id}')">⚙️ Configure</button>` :
-                            `<button class="btn btn-secondary btn-sm" onclick="rebootHub('${hub.hub_id}')">🔄 Reboot</button>`
-                        }
-                        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteHub('${hub.hub_id}')" title="Delete">🗑️</button>
-                    </div>
-                </div>
-            `}).join('');
+            container.innerHTML = html;
 
         } catch (error) {
             container.innerHTML = `
@@ -884,63 +839,82 @@
             currentBleDevice = device;
             currentBleCharacteristic = characteristic;
 
+            // Read device info
             const value = await characteristic.readValue();
             const decoder = new TextDecoder('utf-8');
             const info = JSON.parse(decoder.decode(value));
 
-            currentConfigHubId = info.id || info.device_id;
+            currentConfigHubId = info.id || info.device_id || 'FarmIOT_Hub_001';
             isConnected = true;
             localStorage.setItem('ble_device_id', device.id || device.name);
             updateBleStatus('connected', device.name || 'Connected');
 
-            showDiscoveredHub(info, device);
-            setTimeout(() => claimBleHub(), 500);
+            // Check if device already has WiFi (status = online)
+            if (info.status === 'online') {
+                showToast('✅ Hub is already online!', 'success');
+                // Claim in cloud if not already
+                await claimHubInCloud(currentConfigHubId);
+                // Disconnect BLE since WiFi is connected
+                setTimeout(() => {
+                    if (currentBleDevice?.gatt) {
+                        currentBleDevice.gatt.disconnect();
+                        isConnected = false;
+                        updateBleStatus('disconnected');
+                    }
+                }, 2000);
+            } else {
+                // Show discovered hub for configuration
+                showDiscoveredHub(info);
+            }
+            
+            await loadHubs();
             return true;
         } catch (error) {
+            console.error('BLE connect error:', error);
             isConnected = false;
             updateBleStatus('disconnected');
             return false;
         }
     }
 
-    function showDiscoveredHub(info, device) {
-        const card = document.getElementById('discoveryCard');
-        const list = document.getElementById('discoveryList');
-        card.style.display = 'block';
-
+    function showDiscoveredHub(info) {
+        const container = document.getElementById('hubList');
         const name = info.device_name || info.name || info.id || 'FarmIOT Hub';
         const id = info.id || info.device_id || 'Unknown';
 
-        list.innerHTML = `
+        // Check if already in list
+        const existing = container.querySelector('.discovered-hub');
+        if (existing) return;
+
+        const html = `
             <div class="discovered-hub">
                 <div class="info">
-                    <span style="font-size:24px;">📡</span>
+                    <span class="icon">📡</span>
                     <div>
                         <div style="font-weight:600;">${name}</div>
-                        <div style="font-size:12px;color:#6b7280;">${id} · ${device ? device.name || 'BLE' : 'BLE'}</div>
+                        <div style="font-size:12px;color:#6b7280;">${id}</div>
                     </div>
                     <span class="badge pairing"><span class="dot"></span> PAIRING</span>
                 </div>
                 <button class="btn btn-success btn-sm" onclick="claimBleHub()">⚙️ Configure</button>
             </div>
-            <div style="font-size:12px;color:#6b7280;margin-top:8px;">
+            <div style="font-size:12px;color:#6b7280;margin:-4px 0 12px 0;">
                 💡 Connected via Bluetooth. Enter WiFi credentials to set up the hub.
             </div>
         `;
+
+        // Insert at top of hub list
+        const existingContent = container.innerHTML;
+        container.innerHTML = html + existingContent;
     }
 
     async function scanForHubs() {
-        const card = document.getElementById('discoveryCard');
-        const list = document.getElementById('discoveryList');
-        card.style.display = 'block';
-        list.innerHTML = '<div class="loading"><div class="spinner"></div>Scanning for BLE hubs...</div>';
         updateBleStatus('scanning', 'Scanning...');
+        showToast('🔍 Scanning for BLE hubs...', 'warning');
 
         try {
             if (!navigator.bluetooth) {
-                list.innerHTML = `<div style="text-align:center;padding:20px;color:#f87171;">
-                    ❌ Web Bluetooth not supported. Please use Chrome or Edge.
-                </div>`;
+                showToast('❌ Web Bluetooth not supported. Use Chrome/Edge.', 'error');
                 updateBleStatus('disconnected');
                 return;
             }
@@ -952,7 +926,10 @@
                     const s = await d.gatt.connect();
                     const services = await s.getPrimaryServices();
                     for (const svc of services) {
-                        if (svc.uuid === BLE_SERVICE_UUID) { await connectBleDevice(d); return; }
+                        if (svc.uuid === BLE_SERVICE_UUID) {
+                            await connectBleDevice(d);
+                            return;
+                        }
                     }
                     await d.gatt.disconnect();
                 } catch (e) {}
@@ -965,7 +942,7 @@
             });
 
             if (!device) {
-                list.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;">No devices found.</div>';
+                showToast('❌ No devices found', 'error');
                 updateBleStatus('disconnected');
                 return;
             }
@@ -974,17 +951,7 @@
 
         } catch (error) {
             updateBleStatus('disconnected');
-            list.innerHTML = `
-                <div style="text-align:center;padding:20px;color:#f87171;">
-                    ❌ ${error.message || 'Scan failed'}
-                    <div style="font-size:13px;color:#6b7280;margin-top:8px;">
-                        Make sure Bluetooth is enabled and ESP32 is powered on.
-                    </div>
-                    <div style="margin-top:12px;">
-                        <button class="btn btn-secondary btn-sm" onclick="scanForHubs()">🔄 Try Again</button>
-                    </div>
-                </div>
-            `;
+            showToast('❌ Scan failed: ' + error.message, 'error');
         }
     }
 
@@ -1023,8 +990,10 @@
             document.getElementById('configHubStatus').textContent = '⏳ ESP32 connecting to WiFi...';
             showToast('📤 Config sent. ESP32 is connecting...', 'warning');
 
+            // Listen for status updates from ESP32
             await currentBleCharacteristic.startNotifications();
             let received = false;
+            let statusCheckCount = 0;
 
             const handler = (event) => {
                 const value = event.target.value;
@@ -1032,15 +1001,25 @@
                 const response = decoder.decode(value);
                 try {
                     const result = JSON.parse(response);
+                    console.log('BLE Response:', result);
+                    
                     if (result.status === 'online') {
                         received = true;
                         showToast('✅ WiFi Connected! Hub is online.', 'success');
                         document.getElementById('configHubStatus').textContent = '✅ Online!';
+                        
+                        // Claim in cloud
                         claimHubInCloud(currentConfigHubId);
+                        
                         setTimeout(() => {
                             closeModal('configModal');
                             loadHubs();
-                            if (currentBleDevice?.gatt) currentBleDevice.gatt.disconnect();
+                            // Disconnect BLE since WiFi is connected
+                            if (currentBleDevice?.gatt) {
+                                currentBleDevice.gatt.disconnect();
+                                isConnected = false;
+                                updateBleStatus('disconnected');
+                            }
                         }, 2000);
                     } else if (result.status === 'failed') {
                         received = true;
@@ -1049,15 +1028,54 @@
                     }
                     currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
                     currentBleCharacteristic.stopNotifications();
-                } catch (e) {}
+                } catch (e) {
+                    // Not a valid JSON response yet
+                }
             };
 
             currentBleCharacteristic.addEventListener('characteristicvaluechanged', handler);
 
+            // Also poll BLE status every 2 seconds as fallback
+            let pollInterval = setInterval(async () => {
+                try {
+                    const val = await currentBleCharacteristic.readValue();
+                    const decoder = new TextDecoder('utf-8');
+                    const response = decoder.decode(val);
+                    const result = JSON.parse(response);
+                    
+                    if (result.status === 'online') {
+                        clearInterval(pollInterval);
+                        received = true;
+                        showToast('✅ WiFi Connected! Hub is online.', 'success');
+                        document.getElementById('configHubStatus').textContent = '✅ Online!';
+                        claimHubInCloud(currentConfigHubId);
+                        setTimeout(() => {
+                            closeModal('configModal');
+                            loadHubs();
+                            if (currentBleDevice?.gatt) {
+                                currentBleDevice.gatt.disconnect();
+                                isConnected = false;
+                                updateBleStatus('disconnected');
+                            }
+                        }, 2000);
+                        try {
+                            currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
+                            currentBleCharacteristic.stopNotifications();
+                        } catch (e) {}
+                    } else if (result.status === 'failed') {
+                        clearInterval(pollInterval);
+                        received = true;
+                        showToast('❌ WiFi failed. Check credentials.', 'error');
+                        document.getElementById('configHubStatus').textContent = '❌ Connection failed';
+                    }
+                } catch (e) {}
+            }, 2000);
+
             setTimeout(() => {
+                clearInterval(pollInterval);
                 if (!received) {
                     showToast('⏳ No status received. Check ESP32 serial monitor.', 'warning');
-                    document.getElementById('configHubStatus').textContent = '⏳ Timeout';
+                    document.getElementById('configHubStatus').textContent = '⏳ Timeout - check ESP32';
                     btn.disabled = false;
                     btn.innerHTML = '💾 Retry';
                     try {
@@ -1076,46 +1094,20 @@
 
     async function claimHubInCloud(hubId) {
         try {
-            await apiRequest('/api/hubs/add', {
-                method: 'POST',
-                body: JSON.stringify({ hub_id: hubId, ip_address: null, name: hubId })
-            });
-        } catch (e) {}
-    }
-
-    // ===== MANUAL ADD =====
-    async function manualAddHub() {
-        const ip = document.getElementById('manualHubIp').value.trim();
-        if (!ip) { showToast('❌ Please enter an IP address', 'error'); return; }
-
-        showToast(`📥 Trying to discover hub at ${ip}...`, 'warning');
-        try {
-            const response = await fetch(`http://${ip}/api/discovery`, {
-                mode: 'cors',
-                signal: AbortSignal.timeout(3000)
-            });
-            if (!response.ok) throw new Error('Hub not responding');
-
-            const data = await response.json();
-            const hubId = data.device_id || data.id || `hub_${ip.replace(/\./g, '_')}`;
-
             const result = await apiRequest('/api/hubs/add', {
                 method: 'POST',
-                body: JSON.stringify({
-                    hub_id: hubId,
-                    ip_address: ip,
-                    name: data.device_name || data.name || hubId
+                body: JSON.stringify({ 
+                    hub_id: hubId, 
+                    ip_address: null, 
+                    name: hubId 
                 })
             });
-
             if (result.success) {
-                showToast('✅ Hub added!', 'success');
+                console.log('✅ Hub claimed in cloud');
                 loadHubs();
-            } else {
-                showToast('❌ ' + (result.error || 'Failed to add hub'), 'error');
             }
-        } catch (error) {
-            showToast(`❌ Cannot reach hub: ${error.message}`, 'error');
+        } catch (e) {
+            console.error('Cloud claim error:', e);
         }
     }
 
