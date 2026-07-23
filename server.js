@@ -3,7 +3,6 @@ const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 
 const app = express();
@@ -65,7 +64,7 @@ const authenticate = async (req, res, next) => {
 };
 
 // ==========================================
-// GOOGLE SSO
+// GOOGLE SSO - FIXED (Uses email as ID)
 // ==========================================
 app.post('/api/auth/google', async (req, res) => {
   console.log('========================================');
@@ -94,6 +93,10 @@ app.post('/api/auth/google', async (req, res) => {
     
     console.log(`👤 Google user: ${email} (${google_id})`);
     
+    // ==========================================
+    // FIX: Use email as the primary key
+    // ==========================================
+    
     // Check if user exists in profiles by google_id or email
     let { data: existingUser } = await supabase
       .from('profiles')
@@ -118,7 +121,7 @@ app.post('/api/auth/google', async (req, res) => {
             picture: picture || userByEmail.picture,
             last_login: new Date().toISOString()
           })
-          .eq('id', userByEmail.id)
+          .eq('email', email)
           .select()
           .single();
         existingUser = updated;
@@ -128,18 +131,19 @@ app.post('/api/auth/google', async (req, res) => {
     let user;
     
     if (existingUser) {
-      console.log(`✅ User found in profiles: ${existingUser.id}`);
+      console.log(`✅ User found in profiles: ${existingUser.email}`);
       user = existingUser;
     } else {
       console.log('📝 Creating new user...');
       
-      const userId = uuidv4();
-      console.log(`📝 Generated UUID: ${userId}`);
+      // Use email as the ID (since it's unique)
+      const userId = email;
+      console.log(`📝 Using email as ID: ${userId}`);
       
       const { data: newUser, error: createError } = await supabase
         .from('profiles')
         .insert({
-          id: userId,
+          id: userId,  // Using email as ID
           google_id: google_id,
           email: email,
           name: name || email.split('@')[0],
@@ -152,11 +156,12 @@ app.post('/api/auth/google', async (req, res) => {
       if (createError) {
         console.log('❌ Profile create error:', createError.message);
         
+        // If profile already exists, fetch it
         if (createError.message.includes('duplicate key')) {
           const { data: existing } = await supabase
             .from('profiles')
             .select('*')
-            .eq('google_id', google_id)
+            .eq('email', email)
             .single();
           
           if (existing) {
@@ -255,8 +260,8 @@ app.post('/api/auth/register', async (req, res) => {
     const { data: profile } = await supabase
       .from('profiles')
       .insert({
-        id: authUser.user.id,
-        email,
+        id: email,
+        email: email,
         name: name || email.split('@')[0],
         last_login: new Date().toISOString()
       })
@@ -306,15 +311,15 @@ app.post('/api/auth/login', async (req, res) => {
     let { data: profile } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', authData.user.id)
+      .eq('id', email)
       .single();
     
     if (!profile) {
       const { data: newProfile } = await supabase
         .from('profiles')
         .insert({
-          id: authData.user.id,
-          email,
+          id: email,
+          email: email,
           name: authData.user.user_metadata?.full_name || email.split('@')[0],
           last_login: new Date().toISOString()
         })
