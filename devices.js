@@ -36,7 +36,7 @@ const authenticate = async (req, res, next) => {
 router.get('/soil/latest', authenticate, async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('soil_moisture')
+      .from('soil_readings')  // Using existing table name
       .select('*')
       .order('timestamp', { ascending: false })
       .limit(1);
@@ -64,7 +64,7 @@ router.post('/soil', async (req, res) => {
     }
 
     const { data, error } = await supabase
-      .from('soil_moisture')
+      .from('soil_readings')  // Using existing table name
       .insert([{
         hub_id,
         value,
@@ -168,7 +168,6 @@ router.post('/hubs/register', async (req, res) => {
 // Discover hubs (unclaimed hubs on network)
 router.get('/hubs/discover', async (req, res) => {
   try {
-    // Return hubs that aren't claimed
     const { data, error } = await supabase
       .from('hubs')
       .select('*')
@@ -209,7 +208,6 @@ router.post('/hubs/add', authenticate, async (req, res) => {
     if (error) throw error;
     
     if (!data || data.length === 0) {
-      // If hub doesn't exist or is already claimed, create it
       const { data: newData, error: insertError } = await supabase
         .from('hubs')
         .insert([{
@@ -246,7 +244,6 @@ router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
 
     if (error && error.code !== 'PGRST116') throw error;
     
-    // If no config found, return defaults
     if (!data) {
       return res.json({ config: {
         ssid: '',
@@ -273,7 +270,6 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'SSID required' });
     }
 
-    // Check if hub belongs to user
     const { data: hub, error: hubError } = await supabase
       .from('hubs')
       .select('id, ip_address')
@@ -285,7 +281,6 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Hub not found or not owned by user' });
     }
 
-    // Save config
     const { data, error } = await supabase
       .from('hub_config')
       .upsert({
@@ -301,7 +296,6 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
 
     if (error) throw error;
     
-    // Update hub name
     await supabase
       .from('hubs')
       .update({ device_name: device_name || hubId, status: 'online' })
@@ -321,7 +315,6 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
         console.log(`✅ Config sent to hub ${hubId} at ${hub.ip_address}`);
       } catch (sendError) {
         console.log(`⚠️ Could not send config to hub ${hubId}:`, sendError.message);
-        // Hub will pull config on next check-in
       }
     }
 
@@ -337,7 +330,6 @@ router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
   try {
     const { hubId } = req.params;
     
-    // Check if hub belongs to user
     const { data: hub, error: hubError } = await supabase
       .from('hubs')
       .select('ip_address')
@@ -349,7 +341,6 @@ router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Hub not found or not owned by user' });
     }
 
-    // Try to send reboot command via HTTP if we have IP
     let rebooted = false;
     if (hub.ip_address) {
       try {
