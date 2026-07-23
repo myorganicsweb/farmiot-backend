@@ -1,10 +1,9 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 
 const router = express.Router();
-
-// Initialize Supabase
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
@@ -19,14 +18,8 @@ const authenticate = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({ error: 'No token provided' });
     }
-    
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    
-    // Your auth.js uses 'user_id' in the JWT
-    req.user = {
-      id: decoded.user_id,  // This will be the email (since your auth uses email as ID)
-      email: decoded.email
-    };
+    req.user = decoded;
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token' });
@@ -34,81 +27,78 @@ const authenticate = async (req, res, next) => {
 };
 
 // ==========================================
-// SOIL MOISTURE ROUTES
+// CHECK ESP32 STATUS (Server polls ESP32)
 // ==========================================
-
-// Get latest soil moisture reading
-router.get('/soil/latest', authenticate, async (req, res) => {
+async function checkHubStatus(hub) {
   try {
-    const { data, error } = await supabase
-      .from('soil_readings')
-      .select('*')
-      .order('timestamp', { ascending: false })
-      .limit(1);
-
-    if (error) throw error;
+    // Try to reach ESP32's health endpoint
+    const url = `http://${hub.ip_address}/api/health`;
+    const response = await axios.get(url, { timeout: 3000 });
     
-    if (data && data.length > 0) {
-      res.json(data[0]);
-    } else {
-      res.json({ value: '—', timestamp: new Date().toISOString() });
+    if (response.status === 200) {
+      // ESP32 is online - update database
+      await supabase
+        .from('hubs')
+        .update({
+          status: 'online',
+          last_seen: new Date().toISOString()
+        })
+        .eq('hub_id', hub.hub_id);
+      return true;
     }
   } catch (error) {
-    console.error('Error fetching soil data:', error);
-    res.status(500).json({ error: 'Failed to fetch soil data' });
+    // ESP32 is offline - update database
+    await supabase
+      .from('hubs')
+      .update({
+        status: 'offline',
+        last_seen: new Date().toISOString()
+      })
+      .eq('hub_id', hub.hub_id);
+    return false;
   }
-});
-
-// Add soil moisture reading (from ESP32)
-router.post('/soil', async (req, res) => {
-  try {
-    const { hub_id, value } = req.body;
-    
-    if (!hub_id || value === undefined) {
-      return res.status(400).json({ error: 'hub_id and value required' });
-    }
-
-    const { data, error } = await supabase
-      .from('soil_readings')
-      .insert([{
-        hub_id,
-        value,
-        timestamp: new Date().toISOString()
-      }]);
-
-    if (error) throw error;
-    
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error saving soil data:', error);
-    res.status(500).json({ error: 'Failed to save soil data' });
-  }
-});
+}
 
 // ==========================================
-// HUB ROUTES
+// GET ALL HUBS (With status check)
 // ==========================================
-
-// Get all hubs for a user
 router.get('/hubs', authenticate, async (req, res) => {
   try {
-    // req.user.id is the email (since your auth uses email as ID)
-    const { data, error } = await supabase
+    // Get all hubs for this user
+    const { data: hubs, error } = await supabase
       .from('hubs')
       .select('*')
-      .eq('user_id', req.user.id)  // user_id in hubs table stores the email
+      .eq('user_id', req.user.id)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    
-    res.json(data || []);
+
+    // Check status of each hub (if it has an IP)
+    for (const hub of hubs) {
+      if (hub.ip_address) {
+        await checkHubStatus(hub);
+      }
+    }
+
+    // Get updated status from database
+    const { data: updatedHubs, error: updateError } = await supabase
+      .from('hubs')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false });
+
+    if (updateError) throw updateError;
+
+    res.json(updatedHubs || []);
   } catch (error) {
     console.error('Error fetching hubs:', error);
     res.status(500).json({ error: 'Failed to fetch hubs' });
   }
 });
 
-// Register hub (ESP32 calls this)
+// ==========================================
+// REGISTER HUB (Discovery - no POST from ESP32)
+// ==========================================
 router.post('/hubs/register', async (req, res) => {
   try {
     const { hub_id, ip_address, mac_address, status, device_name } = req.body;
@@ -128,7 +118,6 @@ router.post('/hubs/register', async (req, res) => {
       throw checkError;
     }
 
-    let result;
     if (existing) {
       // Update existing hub
       const { data, error } = await supabase
@@ -144,9 +133,9 @@ router.post('/hubs/register', async (req, res) => {
         .select();
       
       if (error) throw error;
-      result = data;
+      res.json({ success: true, hub: data });
     } else {
-      // Create new hub (unclaimed) - user_id is null initially
+      // Create new hub (unclaimed)
       const { data, error } = await supabase
         .from('hubs')
         .insert([{
@@ -161,17 +150,17 @@ router.post('/hubs/register', async (req, res) => {
         .select();
       
       if (error) throw error;
-      result = data;
+      res.status(201).json({ success: true, hub: data });
     }
-
-    res.status(201).json({ success: true, hub: result });
   } catch (error) {
     console.error('Error registering hub:', error);
     res.status(500).json({ error: 'Failed to register hub' });
   }
 });
 
-// Discover hubs (unclaimed hubs on network)
+// ==========================================
+// DISCOVER HUBS (Unclaimed hubs)
+// ==========================================
 router.get('/hubs/discover', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -183,14 +172,33 @@ router.get('/hubs/discover', async (req, res) => {
 
     if (error) throw error;
     
-    res.json(data || []);
+    // Check status of discovered hubs
+    for (const hub of data || []) {
+      if (hub.ip_address) {
+        await checkHubStatus(hub);
+      }
+    }
+
+    // Get updated status
+    const { data: updated, error: updateError } = await supabase
+      .from('hubs')
+      .select('*')
+      .is('user_id', null)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (updateError) throw updateError;
+
+    res.json(updated || []);
   } catch (error) {
     console.error('Error discovering hubs:', error);
     res.status(500).json({ error: 'Failed to discover hubs' });
   }
 });
 
-// Add/claim hub
+// ==========================================
+// ADD/CLAIM HUB
+// ==========================================
 router.post('/hubs/add', authenticate, async (req, res) => {
   try {
     const { hub_id, ip_address, name } = req.body;
@@ -199,36 +207,33 @@ router.post('/hubs/add', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'hub_id required' });
     }
 
-    // Update hub - claim it with the user's email
     const { data, error } = await supabase
       .from('hubs')
       .update({
-        user_id: req.user.id,  // This is the email from your auth
+        user_id: req.user.id,
         device_name: name || hub_id,
         ip_address: ip_address || null,
-        status: 'online'
+        status: 'pairing'
       })
       .eq('hub_id', hub_id)
-      .is('user_id', null)  // Only claim if not already claimed
+      .is('user_id', null)
       .select();
 
     if (error) throw error;
     
     if (!data || data.length === 0) {
-      // If hub doesn't exist or is already claimed, create it
       const { data: newData, error: insertError } = await supabase
         .from('hubs')
         .insert([{
           hub_id,
-          user_id: req.user.id,  // This is the email from your auth
+          user_id: req.user.id,
           device_name: name || hub_id,
           ip_address: ip_address || null,
-          status: 'online'
+          status: 'pairing'
         }])
         .select();
 
       if (insertError) throw insertError;
-      
       return res.json({ success: true, hub: newData[0] });
     }
 
@@ -239,36 +244,9 @@ router.post('/hubs/add', authenticate, async (req, res) => {
   }
 });
 
-// Get hub config
-router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
-  try {
-    const { hubId } = req.params;
-    
-    const { data, error } = await supabase
-      .from('hub_config')
-      .select('*')
-      .eq('hub_id', hubId)
-      .single();
-
-    if (error && error.code !== 'PGRST116') throw error;
-    
-    if (!data) {
-      return res.json({ config: {
-        ssid: '',
-        mqtt_server: 'broker.hivemq.com',
-        mqtt_port: 1883,
-        device_name: hubId
-      }});
-    }
-    
-    res.json({ config: data });
-  } catch (error) {
-    console.error('Error fetching config:', error);
-    res.status(500).json({ error: 'Failed to fetch config' });
-  }
-});
-
-// Configure hub
+// ==========================================
+// CONFIGURE HUB (Server sends config to ESP32)
+// ==========================================
 router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
   try {
     const { hubId } = req.params;
@@ -283,20 +261,20 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
       .from('hubs')
       .select('id, ip_address')
       .eq('hub_id', hubId)
-      .eq('user_id', req.user.id)  // user_id stores the email
+      .eq('user_id', req.user.id)
       .single();
 
     if (hubError || !hub) {
       return res.status(403).json({ error: 'Hub not found or not owned by user' });
     }
 
-    // Save config
+    // Save config in cloud (without password - security)
     const { data, error } = await supabase
       .from('hub_config')
       .upsert({
         hub_id: hubId,
         ssid,
-        password,
+        // password NOT stored in cloud (security)
         mqtt_server: mqtt_server || 'broker.hivemq.com',
         mqtt_port: mqtt_port || 1883,
         device_name: device_name || hubId,
@@ -306,37 +284,51 @@ router.post('/hubs/:hubId/configure', authenticate, async (req, res) => {
 
     if (error) throw error;
     
-    // Update hub name
-    await supabase
-      .from('hubs')
-      .update({ device_name: device_name || hubId, status: 'online' })
-      .eq('hub_id', hubId);
-
-    // Try to send config to hub via HTTP if we have IP
+    // Try to send config to ESP32 via HTTP
+    let sentToHub = false;
     if (hub.ip_address) {
       try {
         const axios = require('axios');
-        const configData = {
-          ssid,
-          password,
-          mqtt: mqtt_server || 'broker.hivemq.com',
-          port: mqtt_port || 1883
-        };
-        await axios.post(`http://${hub.ip_address}/api/config`, configData, { timeout: 5000 });
-        console.log(`✅ Config sent to hub ${hubId} at ${hub.ip_address}`);
+        const formData = new URLSearchParams();
+        formData.append('ssid', ssid);
+        formData.append('password', password);
+        formData.append('mqtt', mqtt_server || 'broker.hivemq.com');
+        formData.append('port', mqtt_port || 1883);
+        
+        await axios.post(`http://${hub.ip_address}/api/config`, formData, {
+          timeout: 5000,
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        sentToHub = true;
+        console.log(`✅ Config sent to hub ${hubId}`);
       } catch (sendError) {
-        console.log(`⚠️ Could not send config to hub ${hubId}:`, sendError.message);
+        console.log(`⚠️ Could not send config to hub:`, sendError.message);
       }
     }
 
-    res.json({ success: true, config: data });
+    // Update hub status
+    await supabase
+      .from('hubs')
+      .update({ 
+        device_name: device_name || hubId, 
+        status: sentToHub ? 'online' : 'pairing' 
+      })
+      .eq('hub_id', hubId);
+
+    res.json({ 
+      success: true, 
+      message: sentToHub ? 'Config sent to hub' : 'Config saved (hub offline)',
+      config: data 
+    });
   } catch (error) {
     console.error('Error configuring hub:', error);
     res.status(500).json({ error: 'Failed to configure hub' });
   }
 });
 
-// Reboot hub
+// ==========================================
+// REBOOT HUB
+// ==========================================
 router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
   try {
     const { hubId } = req.params;
@@ -345,7 +337,7 @@ router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
       .from('hubs')
       .select('ip_address')
       .eq('hub_id', hubId)
-      .eq('user_id', req.user.id)  // user_id stores the email
+      .eq('user_id', req.user.id)
       .single();
 
     if (hubError || !hub) {
@@ -355,18 +347,14 @@ router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
     let rebooted = false;
     if (hub.ip_address) {
       try {
-        const axios = require('axios');
         await axios.post(`http://${hub.ip_address}/api/reboot`, {}, { timeout: 5000 });
         rebooted = true;
-        console.log(`✅ Reboot command sent to hub ${hubId}`);
-      } catch (sendError) {
-        console.log(`⚠️ Could not send reboot to hub ${hubId}:`, sendError.message);
-      }
+      } catch (sendError) {}
     }
 
     res.json({ 
       success: true, 
-      message: rebooted ? 'Reboot command sent' : 'Reboot command queued (hub may be offline)'
+      message: rebooted ? 'Reboot command sent' : 'Reboot queued (hub may be offline)'
     });
   } catch (error) {
     console.error('Error rebooting hub:', error);
@@ -374,7 +362,9 @@ router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
   }
 });
 
-// Delete/remove hub
+// ==========================================
+// DELETE HUB
+// ==========================================
 router.delete('/hubs/:hubId', authenticate, async (req, res) => {
   try {
     const { hubId } = req.params;
@@ -383,10 +373,9 @@ router.delete('/hubs/:hubId', authenticate, async (req, res) => {
       .from('hubs')
       .update({ user_id: null, status: 'pairing' })
       .eq('hub_id', hubId)
-      .eq('user_id', req.user.id);  // user_id stores the email
+      .eq('user_id', req.user.id);
 
     if (error) throw error;
-    
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting hub:', error);
