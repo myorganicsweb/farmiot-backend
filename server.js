@@ -8,6 +8,8 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 443;
 
+console.log('🚀 SERVER STARTING...');
+
 // ==========================================
 // SUPABASE
 // ==========================================
@@ -15,6 +17,16 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
+console.log('✅ Supabase connected');
+
+// ==========================================
+// GOOGLE CLIENT
+// ==========================================
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET
+);
+console.log('✅ Google client initialized');
 
 // ==========================================
 // MIDDLEWARE
@@ -27,6 +39,9 @@ app.use(express.static(__dirname));
 // Log requests
 app.use((req, res, next) => {
   console.log(`📥 ${req.method} ${req.url}`);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('📦 Body:', req.body);
+  }
   next();
 });
 
@@ -52,34 +67,53 @@ const authenticate = async (req, res, next) => {
 // GOOGLE SSO
 // ==========================================
 app.post('/api/auth/google', async (req, res) => {
-  console.log('📥 Google SSO request');
+  console.log('========================================');
+  console.log('📥 GOOGLE SSO REQUEST');
+  console.log('📦 Body:', req.body);
   
   try {
     const { id_token } = req.body;
     
     if (!id_token) {
-      return res.status(400).json({ success: false, error: 'No token provided' });
+      console.log('❌ No ID token provided');
+      return res.status(400).json({ 
+        success: false, 
+        error: 'No ID token provided' 
+      });
     }
     
-    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-    const ticket = await client.verifyIdToken({
+    console.log('🔍 Verifying Google token...');
+    
+    // Verify the ID token
+    const ticket = await googleClient.verifyIdToken({
       idToken: id_token,
       audience: process.env.GOOGLE_CLIENT_ID
     });
     
     const payload = ticket.getPayload();
+    console.log('📊 Token payload:', {
+      email: payload.email,
+      name: payload.name,
+      sub: payload.sub
+    });
+    
     const { sub: google_id, email, name, picture } = payload;
     
-    console.log(`👤 Google user: ${email}`);
-    
-    // Check if user exists
-    let { data: existingUser } = await supabase
+    // Check if user exists by google_id
+    console.log('🔍 Checking if user exists...');
+    let { data: existingUser, error: findError } = await supabase
       .from('profiles')
       .select('*')
       .eq('google_id', google_id)
       .single();
     
+    if (findError && findError.code !== 'PGRST116') {
+      console.log('⚠️ Find error:', findError.message);
+    }
+    
+    // If not found by google_id, check by email
     if (!existingUser) {
+      console.log('🔍 Checking by email...');
       const { data: userByEmail } = await supabase
         .from('profiles')
         .select('*')
@@ -87,9 +121,13 @@ app.post('/api/auth/google', async (req, res) => {
         .single();
       
       if (userByEmail) {
+        console.log('📝 Updating existing user with google_id...');
         const { data: updated } = await supabase
           .from('profiles')
-          .update({ google_id, picture })
+          .update({ 
+            google_id: google_id, 
+            picture: picture || userByEmail.picture 
+          })
           .eq('id', userByEmail.id)
           .select()
           .single();
@@ -102,6 +140,7 @@ app.post('/api/auth/google', async (req, res) => {
     if (!existingUser) {
       console.log('📝 Creating new user...');
       
+      // Check if user exists in auth.users
       const { data: authUsers } = await supabase
         .from('auth.users')
         .select('id')
@@ -112,23 +151,41 @@ app.post('/api/auth/google', async (req, res) => {
       
       if (authUsers) {
         userId = authUsers.id;
+        console.log('✅ User exists in auth:', userId);
       } else {
-        const { data: newAuthUser } = await supabase.auth.signUp({
+        console.log('📝 Creating user in auth...');
+        const { data: newAuthUser, error: authError } = await supabase.auth.signUp({
           email: email,
           password: Math.random().toString(36).slice(-12),
-          options: { data: { full_name: name || email.split('@')[0] } }
+          options: { 
+            data: { 
+              full_name: name || email.split('@')[0] 
+            } 
+          }
         });
-        userId = newAuthUser?.user?.id;
         
-        if (!userId) {
-          return res.status(500).json({ 
+        if (authError) {
+          console.log('❌ Auth error:', authError.message);
+          return res.status(400).json({ 
             success: false, 
-            error: 'Failed to create user' 
+            error: authError.message 
           });
         }
+        userId = newAuthUser?.user?.id;
+        console.log('✅ User created in auth:', userId);
       }
       
-      const { data: newUser } = await supabase
+      if (!userId) {
+        console.log('❌ No user ID');
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to create user' 
+        });
+      }
+      
+      // Create profile
+      console.log('📝 Creating profile...');
+      const { data: newUser, error: createError } = await supabase
         .from('profiles')
         .insert({
           id: userId,
@@ -141,8 +198,18 @@ app.post('/api/auth/google', async (req, res) => {
         .select()
         .single();
       
+      if (createError) {
+        console.log('❌ Profile create error:', createError.message);
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to create profile: ' + createError.message 
+        });
+      }
+      
       user = newUser;
+      console.log('✅ Profile created:', user.id);
     } else {
+      console.log('📝 Updating existing user...');
       const { data: updated } = await supabase
         .from('profiles')
         .update({
@@ -154,17 +221,23 @@ app.post('/api/auth/google', async (req, res) => {
         .select()
         .single();
       user = updated || existingUser;
+      console.log('✅ User updated:', user.id);
     }
     
+    // Create JWT
+    console.log('📝 Creating JWT...');
     const token = jwt.sign(
       { user_id: user.id, email: user.email },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
     
+    console.log('✅ Google SSO successful');
+    console.log('========================================');
+    
     res.json({
       success: true,
-      token,
+      token: token,
       user: {
         id: user.id,
         email: user.email,
@@ -174,8 +247,13 @@ app.post('/api/auth/google', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Google SSO error:', error);
+    console.error('Stack:', error.stack);
+    console.log('========================================');
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Internal server error' 
+    });
   }
 });
 
@@ -347,48 +425,8 @@ app.get('/api/discover', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// DEVICES API
+// SOIL API
 // ==========================================
-
-// Register device
-app.post('/api/devices/register', async (req, res) => {
-  const { hub_id, device_id } = req.body;
-  
-  if (!hub_id || !device_id) {
-    return res.status(400).json({ error: 'hub_id and device_id required' });
-  }
-  
-  try {
-    await supabase
-      .from('devices')
-      .upsert({
-        hub_id,
-        device_id,
-        name: device_id,
-        status: 'online',
-        last_seen: new Date().toISOString()
-      }, { onConflict: 'hub_id, device_id' });
-    
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get devices
-app.get('/api/hubs/:hubId/devices', authenticate, async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('devices')
-      .select('*')
-      .eq('hub_id', req.params.hubId);
-    
-    if (error) throw error;
-    res.json(data || []);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // Add soil reading
 app.post('/api/soil', async (req, res) => {
