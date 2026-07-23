@@ -99,7 +99,7 @@
             color: #f87171;
             border: 1px solid rgba(248,113,113,0.15);
         }
-        .badge.discovering {
+        .badge.pairing {
             background: rgba(251,191,36,0.1);
             color: #fbbf24;
             border: 1px solid rgba(251,191,36,0.15);
@@ -229,35 +229,16 @@
         .modal-content h2 { margin-bottom: 16px; font-size: 22px; }
         .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
         .modal-actions .btn { flex: 1; justify-content: center; }
-        .discovery-instructions {
-            background: rgba(251,191,36,0.06);
-            border: 1px solid rgba(251,191,36,0.1);
-            border-radius: 10px;
-            padding: 16px;
+        .ble-info {
+            background: rgba(59,130,246,0.08);
+            border: 1px solid rgba(59,130,246,0.1);
+            border-radius: 8px;
+            padding: 10px 14px;
             margin-bottom: 12px;
-            font-size: 14px;
-            line-height: 1.6;
+            font-size: 13px;
+            color: #60a5fa;
         }
-        .discovery-instructions strong { color: #fbbf24; }
-        .discovery-instructions .step {
-            display: flex;
-            gap: 10px;
-            align-items: flex-start;
-            margin: 6px 0;
-        }
-        .discovery-instructions .step-num {
-            background: rgba(251,191,36,0.15);
-            color: #fbbf24;
-            border-radius: 50%;
-            width: 22px;
-            height: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 700;
-            flex-shrink: 0;
-        }
+        .ble-info strong { color: #93bbfc; }
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
             .hub-item { flex-direction: column; align-items: flex-start; }
@@ -390,6 +371,13 @@
     let user = JSON.parse(localStorage.getItem('user') || 'null');
     let authMode = 'login';
     let currentConfigHubId = null;
+
+    // BLE Config
+    const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+    const BLE_CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+    let bleCharacteristic = null;
+    let bleDeviceId = null;
+    let isBLESetup = false;
 
     function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
@@ -580,7 +568,7 @@
                 <div class="hub-item">
                     <div>
                         <span class="hub-name">${hub.name || hub.hub_id}</span>
-                        <span class="badge ${hub.status === 'online' ? 'online' : hub.status === 'discovering' ? 'discovering' : 'offline'}">
+                        <span class="badge ${hub.status === 'online' ? 'online' : hub.status === 'pairing' ? 'pairing' : 'offline'}">
                             ${hub.status || 'offline'}
                         </span>
                         <span class="hub-id">${hub.hub_id}</span>
@@ -600,52 +588,46 @@
     }
 
     // ==========================================
-    // MDNS DISCOVERY - FIXED
+    // BLE DISCOVERY
     // ==========================================
-    async function discoverMDNS() {
+    async function discoverBLE() {
         try {
-            const devices = [];
-            const hubNames = ['farmiot-hub.local', 'farmiot-hub-001.local', 'farmiot-hub', 'farmiot-hub-001'];
+            // Request BLE device with timeout
+            const device = await Promise.race([
+                navigator.bluetooth.requestDevice({
+                    filters: [{ services: [BLE_SERVICE_UUID] }],
+                    optionalServices: [BLE_SERVICE_UUID]
+                }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
+            ]);
             
-            for (const name of hubNames) {
-                try {
-                    const url = `http://${name}/api/discovery`;
-                    console.log(`🔍 Trying: ${url}`);
-                    
-                    // Use fetch with no-cors mode to bypass mixed content
-                    // But we won't be able to read the response
-                    const response = await fetch(url, {
-                        method: 'GET',
-                        headers: { 'Accept': 'application/json' },
-                        mode: 'no-cors',
-                        cache: 'no-cache'
-                    });
-                    
-                    // With no-cors, we can't read the response body
-                    // So we'll just assume it worked if there's no error
-                    // and try to get the IP address from the connection
-                    console.log(`✅ Connected to ${name}`);
-                    devices.push({
-                        device_id: `FarmIOT_Hub_${Date.now()}`,
-                        device_name: name,
-                        ip: '192.168.4.1',
-                        mac: ''
-                    });
-                    break;
-                } catch (e) {
-                    console.log(`⚠️ ${name}: ${e.message}`);
-                }
-            }
+            if (!device) return null;
             
-            return devices;
+            console.log('📱 BLE Device found:', device.name);
+            
+            // Connect and read device info
+            const server = await device.gatt.connect();
+            const service = await server.getPrimaryService(BLE_SERVICE_UUID);
+            const characteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
+            
+            const value = await characteristic.read();
+            const decoder = new TextDecoder('utf-8');
+            const info = JSON.parse(decoder.decode(value));
+            
+            // Store for later use
+            bleCharacteristic = characteristic;
+            bleDeviceId = info.device_id;
+            isBLESetup = true;
+            
+            return info;
         } catch (error) {
-            console.log('mDNS discovery error:', error);
-            return [];
+            console.log('BLE scan error:', error.message);
+            return null;
         }
     }
 
     // ==========================================
-    // SCAN FOR HUBS - UPDATED
+    // SCAN FOR HUBS (BLE + Server)
     // ==========================================
     async function scanForHubs() {
         const card = document.getElementById('discoveryCard');
@@ -655,47 +637,50 @@
         
         try {
             let hubs = [];
-            let mdnsFound = false;
-            let instructions = false;
+            let bleFound = false;
             
-            // 1. Try server discovery first
-            try {
-                const serverHubs = await apiRequest('/api/hubs/discover');
-                if (serverHubs && serverHubs.length > 0) {
-                    hubs = serverHubs;
-                    console.log('✅ Server found hubs:', hubs);
+            // Check if Web Bluetooth is supported
+            const isBluetoothSupported = 'bluetooth' in navigator;
+            
+            // 1. Try BLE discovery
+            if (isBluetoothSupported) {
+                try {
+                    const bleInfo = await discoverBLE();
+                    if (bleInfo) {
+                        bleFound = true;
+                        list.innerHTML = `
+                            <div class="ble-info">
+                                📱 <strong>BLE Device Found!</strong> Ready to pair.
+                            </div>
+                            <div class="hub-item" style="border:1px solid rgba(74,222,128,0.3);background:rgba(74,222,128,0.03);">
+                                <div>
+                                    <span class="hub-name">${bleInfo.device_name || bleInfo.device_id}</span>
+                                    <span class="badge pairing">PAIRING</span>
+                                    <span class="hub-id">${bleInfo.device_id}</span>
+                                </div>
+                                <div class="hub-actions">
+                                    <button class="btn btn-success" onclick="claimBLE()">➕ Claim & Configure</button>
+                                </div>
+                            </div>
+                        `;
+                        return;
+                    }
+                } catch (e) {
+                    console.log('BLE scan failed:', e);
                 }
-            } catch (e) {
-                console.log('Server discovery failed:', e);
             }
             
-            // 2. Try mDNS discovery via browser
-            try {
-                const mdnsDevices = await discoverMDNS();
-                if (mdnsDevices && mdnsDevices.length > 0) {
-                    mdnsFound = true;
-                    for (const device of mdnsDevices) {
-                        try {
-                            const result = await apiRequest('/api/hubs/register', {
-                                method: 'POST',
-                                body: JSON.stringify({
-                                    hub_id: device.device_id,
-                                    ip_address: device.ip || 'unknown',
-                                    mac_address: device.mac || '',
-                                    status: 'discovering',
-                                    device_name: device.device_name || device.device_id
-                                })
-                            });
-                            if (result.success && result.hub) {
-                                hubs.push(result.hub);
-                            }
-                        } catch (e) {
-                            console.log('Failed to register device:', e);
-                        }
+            // 2. If no BLE, try server discovery
+            if (!bleFound) {
+                try {
+                    const serverHubs = await apiRequest('/api/hubs/discover');
+                    if (serverHubs && serverHubs.length > 0) {
+                        hubs = serverHubs;
+                        console.log('✅ Server found hubs:', hubs);
                     }
+                } catch (e) {
+                    console.log('Server discovery failed:', e);
                 }
-            } catch (e) {
-                console.log('mDNS discovery failed:', e);
             }
             
             // Filter hubs not owned by user
@@ -708,82 +693,93 @@
             const userHubIds = new Set(userHubs.map(h => h.hub_id));
             const available = hubs.filter(h => !userHubIds.has(h.hub_id));
             
-            if (available.length === 0) {
-                let message = hubs.length === 0 
-                    ? '🔍 No hubs found on your network.' 
-                    : 'All discovered hubs are already in your account.';
-                
-                // Show instructions if no hubs found
-                if (hubs.length === 0 && !mdnsFound) {
-                    instructions = true;
-                    list.innerHTML = `
-                        <div style="text-align:center;padding:10px 20px;color:#6b7280;">
-                            <div class="discovery-instructions" style="text-align:left;">
-                                <strong>🔍 To discover your ESP32 hub:</strong>
-                                <div class="step">
-                                    <span class="step-num">1</span>
-                                    <span>Connect your device to the WiFi network: <strong>FarmIOT_Hub_001</strong></span>
-                                </div>
-                                <div class="step">
-                                    <span class="step-num">2</span>
-                                    <span>Return to this page and click "Scan" again.</span>
-                                </div>
-                                <div style="margin-top:8px;font-size:12px;color:#6b7280;">
-                                    💡 The ESP32 creates this network when no WiFi is configured.
-                                </div>
-                                <div style="margin-top:8px;font-size:12px;color:#4b5563;">
-                                    ⚠️ If you see mixed content errors, try opening the dashboard via HTTP or use a browser that allows mixed content.
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    return;
-                }
-                
+            if (available.length === 0 && !bleFound) {
                 list.innerHTML = `
                     <div style="text-align:center;padding:20px;color:#6b7280;">
-                        ${message}
+                        🔍 No hubs found.<br><br>
+                        <div style="font-size:13px;color:#4b5563;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;">
+                            <strong style="color:#fbbf24;">Discovery Options:</strong><br>
+                            ${!isBluetoothSupported ? 
+                                '⚠️ Web Bluetooth not supported. Try Chrome or Edge browser.' :
+                                '1. Make sure your ESP32 is powered on<br>2. Click "Scan" again<br>3. If using BLE, ensure Bluetooth is enabled'
+                            }
+                        </div>
                     </div>
                 `;
                 return;
             }
             
-            list.innerHTML = available.map(hub => `
-                <div class="hub-item" style="border:1px solid rgba(251,191,36,0.2);background:rgba(251,191,36,0.03);">
-                    <div>
-                        <span class="hub-name">${hub.name || hub.hub_id}</span>
-                        <span class="badge discovering">DISCOVERING</span>
-                        <span class="hub-id">${hub.hub_id}</span>
-                        ${hub.ip_address ? `<span class="hub-ip">· ${hub.ip_address}</span>` : ''}
+            if (available.length > 0) {
+                list.innerHTML = available.map(hub => `
+                    <div class="hub-item" style="border:1px solid rgba(251,191,36,0.2);background:rgba(251,191,36,0.03);">
+                        <div>
+                            <span class="hub-name">${hub.name || hub.hub_id}</span>
+                            <span class="badge pairing">PAIRING</span>
+                            <span class="hub-id">${hub.hub_id}</span>
+                            ${hub.ip_address ? `<span class="hub-ip">· ${hub.ip_address}</span>` : ''}
+                        </div>
+                        <div class="hub-actions">
+                            <button class="btn btn-success" onclick="addHub('${hub.hub_id}', '${hub.ip_address || ''}')">➕ Add</button>
+                        </div>
                     </div>
-                    <div class="hub-actions">
-                        <button class="btn btn-success" onclick="addHub('${hub.hub_id}', '${hub.ip_address || ''}')">➕ Add</button>
-                    </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
             
         } catch (error) {
             console.error('Scan error:', error);
             list.innerHTML = `
                 <div style="text-align:center;padding:20px;color:#f87171;">
                     ❌ Scan failed: ${error.message}
-                    <br><br>
-                    <div class="discovery-instructions" style="text-align:left;">
-                        <strong>Try this:</strong>
-                        <div class="step">
-                            <span class="step-num">1</span>
-                            <span>Connect your device to: <strong>FarmIOT_Hub_001</strong></span>
-                        </div>
-                        <div class="step">
-                            <span class="step-num">2</span>
-                            <span>Click "Scan" again</span>
-                        </div>
-                    </div>
                 </div>
             `;
         }
     }
 
+    // ==========================================
+    // CLAIM BLE DEVICE
+    // ==========================================
+    async function claimBLE() {
+        if (!isBLESetup || !bleDeviceId) {
+            showToast('❌ No BLE device found. Please scan first.', 'error');
+            return;
+        }
+        
+        // Claim via server
+        try {
+            const result = await apiRequest('/api/hubs/add', {
+                method: 'POST',
+                body: JSON.stringify({
+                    hub_id: bleDeviceId,
+                    ip_address: null,
+                    name: bleDeviceId
+                })
+            });
+            
+            if (result.success) {
+                showToast('✅ Hub claimed! Now configure WiFi.', 'success');
+                // Open config modal
+                currentConfigHubId = bleDeviceId;
+                document.getElementById('configHubId').textContent = bleDeviceId;
+                document.getElementById('configSSID').value = '';
+                document.getElementById('configPassword').value = '';
+                document.getElementById('configDeviceName').value = bleDeviceId;
+                document.getElementById('configMQTT').value = 'broker.hivemq.com';
+                document.getElementById('configMQTTPort').value = '1883';
+                
+                // Override save to use BLE
+                window.bleConfigMode = true;
+                openModal('configModal');
+            } else {
+                showToast('❌ Failed to claim hub: ' + (result.error || 'Unknown error'), 'error');
+            }
+        } catch (error) {
+            showToast('❌ Error claiming hub: ' + error.message, 'error');
+        }
+    }
+
+    // ==========================================
+    // ADD HUB
+    // ==========================================
     async function addHub(hubId, ipAddress) {
         showToast('📥 Adding hub...', 'warning');
         
@@ -809,6 +805,9 @@
         }
     }
 
+    // ==========================================
+    // CONFIGURE HUB
+    // ==========================================
     async function openConfig(hubId) {
         currentConfigHubId = hubId;
         document.getElementById('configHubId').textContent = hubId;
@@ -830,6 +829,8 @@
             // Ignore - use defaults
         }
         
+        // Reset BLE flag
+        window.bleConfigMode = false;
         openModal('configModal');
     }
 
@@ -851,17 +852,50 @@
         btn.innerHTML = '<span class="spinner"></span> Saving...';
         
         try {
-            const result = await apiRequest(`/api/hubs/${hubId}/configure`, {
-                method: 'POST',
-                body: JSON.stringify({ ssid, password, mqtt_server: mqtt, mqtt_port: port, device_name: name })
-            });
-            
-            if (result.success) {
-                showToast('✅ Configuration saved!', 'success');
-                closeModal('configModal');
-                loadHubs();
+            // If this is a BLE device, send via BLE
+            if (window.bleConfigMode && bleCharacteristic) {
+                const config = JSON.stringify({
+                    ssid: ssid,
+                    password: password,
+                    mqtt: mqtt,
+                    port: port
+                });
+                
+                const encoder = new TextEncoder();
+                const data = encoder.encode(config);
+                
+                await bleCharacteristic.writeValue(data);
+                
+                // Wait for confirmation
+                await bleCharacteristic.startNotifications();
+                bleCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    const value = event.target.value;
+                    const decoder = new TextDecoder('utf-8');
+                    const response = JSON.parse(decoder.decode(value));
+                    console.log('BLE response:', response);
+                    
+                    if (response.status === 'success') {
+                        showToast('✅ WiFi configured! Device will reboot.', 'success');
+                        closeModal('configModal');
+                        loadHubs();
+                    }
+                });
+                
+                showToast('📤 WiFi config sent via BLE', 'warning');
             } else {
-                showToast('❌ ' + (result.error || 'Failed to save'), 'error');
+                // Regular API call
+                const result = await apiRequest(`/api/hubs/${hubId}/configure`, {
+                    method: 'POST',
+                    body: JSON.stringify({ ssid, password, mqtt_server: mqtt, mqtt_port: port, device_name: name })
+                });
+                
+                if (result.success) {
+                    showToast('✅ Configuration saved!', 'success');
+                    closeModal('configModal');
+                    loadHubs();
+                } else {
+                    showToast('❌ ' + (result.error || 'Failed to save'), 'error');
+                }
             }
         } catch (error) {
             showToast('❌ Error: ' + error.message, 'error');
@@ -871,6 +905,9 @@
         btn.innerHTML = '💾 Save';
     }
 
+    // ==========================================
+    // REBOOT HUB
+    // ==========================================
     async function rebootHub(hubId) {
         if (!confirm(`Reboot ${hubId}?`)) return;
         
@@ -888,6 +925,9 @@
         }
     }
 
+    // ==========================================
+    // DELETE HUB
+    // ==========================================
     async function deleteHub(hubId) {
         if (!confirm(`Delete ${hubId}?`)) return;
         
@@ -922,6 +962,11 @@
         setInterval(() => {
             if (token) loadSoil();
         }, 30000);
+        
+        // Auto-scan after login
+        setTimeout(() => {
+            if (token) scanForHubs();
+        }, 2000);
     });
 </script>
 </body>
