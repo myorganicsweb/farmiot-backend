@@ -1,655 +1,561 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FarmIOT</title>
-    <script src="https://accounts.google.com/gsi/client"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #0a0e17;
-            color: #e5e7eb;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            min-height: 100vh;
-            padding: 16px;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        
-        /* HEADER */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-        .header h1 {
-            font-size: 22px;
-            background: linear-gradient(135deg, #4ade80, #22d3ee);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .header h1 .subtitle {
-            font-size: 12px;
-            color: #6b7280;
-            -webkit-text-fill-color: #6b7280;
-            font-weight: 400;
-        }
-        
-        /* USER PROFILE DROPDOWN */
-        .user-profile {
-            position: relative;
-            cursor: pointer;
-        }
-        .user-profile .avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: rgba(74,222,128,0.15);
-            border: 2px solid rgba(74,222,128,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-        .user-profile .avatar:hover {
-            border-color: #4ade80;
-        }
-        .user-profile .avatar img {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-        .user-dropdown {
-            position: absolute;
-            top: 44px;
-            right: 0;
-            background: #1a1f2e;
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 12px;
-            padding: 12px 0;
-            min-width: 280px;
-            display: none;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            z-index: 100;
-        }
-        .user-dropdown.active { display: block; }
-        .user-dropdown .user-info {
-            padding: 0 16px 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-        .user-dropdown .user-info .name {
-            font-weight: 600;
-            font-size: 14px;
-        }
-        .user-dropdown .user-info .email {
-            font-size: 12px;
-            color: #6b7280;
-        }
-        .user-dropdown .divider {
-            height: 1px;
-            background: rgba(255,255,255,0.06);
-            margin: 6px 12px;
-        }
-        .user-dropdown .dropdown-item {
-            padding: 8px 16px;
-            font-size: 13px;
-            color: #e5e7eb;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border: none;
-            background: none;
-            width: 100%;
-            text-align: left;
-            font-family: inherit;
-        }
-        .user-dropdown .dropdown-item:hover {
-            background: rgba(255,255,255,0.04);
-        }
-        .user-dropdown .dropdown-item.danger { color: #f87171; }
-        .user-dropdown .dropdown-item.danger:hover { background: rgba(248,113,113,0.1); }
-        .user-dropdown .dropdown-item .label {
-            color: #6b7280;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .user-dropdown .dropdown-item select {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 6px;
-            color: #e5e7eb;
-            padding: 4px 8px;
-            font-size: 12px;
-            font-family: inherit;
-            cursor: pointer;
-            margin-left: auto;
-        }
-        .user-dropdown .dropdown-item select:focus {
-            outline: none;
-            border-color: #4ade80;
-        }
-        .user-dropdown .dropdown-item .note {
-            font-size: 10px;
-            color: #4b5563;
-            margin-left: 8px;
-        }
-        
-        /* SEARCH BAR */
-        .search-bar {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-        .search-bar input {
-            flex: 1;
-            min-width: 200px;
-            padding: 8px 14px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 10px;
-            color: #e5e7eb;
-            font-size: 13px;
-            font-family: inherit;
-            transition: all 0.3s;
-        }
-        .search-bar input:focus {
-            outline: none;
-            border-color: #4ade80;
-            box-shadow: 0 0 0 3px rgba(74,222,128,0.08);
-        }
-        .search-bar input::placeholder { color: #4b5563; }
-        .search-bar .stats {
-            font-size: 12px;
-            color: #6b7280;
-            white-space: nowrap;
-        }
-        .search-bar .refresh-indicator {
-            font-size: 11px;
-            color: #4b5563;
-            white-space: nowrap;
-        }
-        
-        /* BUTTONS */
-        .btn {
-            padding: 6px 14px;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-family: inherit;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #4ade80, #22d3ee);
-            color: #0a0e17;
-        }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(74,222,128,0.2); }
-        .btn-secondary {
-            background: rgba(255,255,255,0.06);
-            color: #9ca3af;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .btn-secondary:hover { background: rgba(255,255,255,0.1); }
-        .btn-success {
-            background: rgba(74,222,128,0.15);
-            color: #4ade80;
-            border: 1px solid rgba(74,222,128,0.15);
-        }
-        .btn-success:hover { background: rgba(74,222,128,0.25); }
-        .btn-danger {
-            background: rgba(248,113,113,0.1);
-            color: #f87171;
-            border: 1px solid rgba(248,113,113,0.15);
-        }
-        .btn-danger:hover { background: rgba(248,113,113,0.2); }
-        .btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 6px; }
-        
-        /* BADGES */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 2px 10px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .badge.online { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.15); }
-        .badge.offline { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.15); }
-        .badge.pairing { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.15); }
-        .badge .dot {
-            width: 5px;
-            height: 5px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        .badge.online .dot { background: #4ade80; animation: pulse 2s infinite; }
-        .badge.pairing .dot { background: #fbbf24; animation: pulse 1.5s infinite; }
-        .badge.offline .dot { background: #f87171; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.8); }
-        }
-        
-        /* DEVICE CARDS (GRID) */
-        .device-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 14px;
-        }
-        .device-card {
-            background: rgba(17, 24, 39, 0.9);
-            backdrop-filter: blur(10px);
-            padding: 16px 18px;
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.06);
-            transition: all 0.3s;
-            position: relative;
-        }
-        .device-card:hover {
-            border-color: rgba(255,255,255,0.12);
-            transform: translateY(-2px);
-        }
-        .device-card .card-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 8px;
-        }
-        .device-card .device-icon {
-            font-size: 24px;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255,255,255,0.03);
-            border-radius: 10px;
-        }
-        .device-card .device-name {
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: 2px;
-        }
-        .device-card .device-id {
-            font-size: 10px;
-            color: #4b5563;
-            font-family: monospace;
-            margin-bottom: 6px;
-        }
-        .device-card .device-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 8px;
-        }
-        .device-card .device-soil {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-        .device-card .device-soil .value {
-            font-size: 20px;
-            font-weight: 700;
-            color: #fbbf24;
-        }
-        .device-card .device-soil .unit {
-            font-size: 12px;
-            color: #6b7280;
-        }
-        .device-card .device-soil .mini-bar {
-            flex: 1;
-            height: 4px;
-            background: rgba(255,255,255,0.06);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .device-card .device-soil .mini-bar .fill {
-            height: 100%;
-            border-radius: 4px;
-            background: linear-gradient(90deg, #f87171, #fbbf24, #4ade80);
-            transition: width 0.8s ease;
-            width: 45%;
-        }
-        .device-card .device-details {
-            font-size: 11px;
-            color: #6b7280;
-            margin-bottom: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px 12px;
-        }
-        .device-card .device-details .detail {
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
-        .device-card .device-actions {
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-            border-top: 1px solid rgba(255,255,255,0.04);
-            padding-top: 10px;
-        }
-        
-        /* DISCOVERED HUB CARD */
-        .discovered-card {
-            border: 2px solid rgba(251,191,36,0.2);
-            background: rgba(251,191,36,0.03);
-            padding: 14px 16px;
-            border-radius: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .discovered-card .info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .discovered-card .info .icon { font-size: 22px; }
-        
-        /* BLE STATUS */
-        .ble-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 2px 10px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .ble-status.connected { background: rgba(74,222,128,0.15); color: #4ade80; }
-        .ble-status.disconnected { background: rgba(248,113,113,0.15); color: #f87171; }
-        .ble-status.scanning { background: rgba(251,191,36,0.15); color: #fbbf24; }
-        
-        /* EMPTY STATE */
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #6b7280;
-        }
-        .empty-state .icon { font-size: 40px; margin-bottom: 10px; }
-        .empty-state .title { font-size: 16px; font-weight: 600; color: #e5e7eb; }
-        .empty-state .sub { font-size: 13px; }
-        
-        /* MODAL */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(12px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal.active { display: flex; }
-        .modal-content {
-            background: #1a1f2e;
-            border-radius: 20px;
-            padding: 28px;
-            max-width: 440px;
-            width: 90%;
-            border: 1px solid rgba(255,255,255,0.06);
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        .modal-content h2 { font-size: 18px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
-        .modal-content .sub { color: #6b7280; font-size: 13px; margin-bottom: 16px; }
-        .form-group { margin-bottom: 12px; }
-        .form-group label {
-            display: block;
-            font-size: 10px;
-            font-weight: 600;
-            color: #9ca3af;
-            margin-bottom: 3px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 8px 12px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 8px;
-            color: #e5e7eb;
-            font-size: 13px;
-            font-family: inherit;
-        }
-        .form-group input:focus { outline: none; border-color: #4ade80; }
-        .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
-        .modal-actions .btn { flex: 1; justify-content: center; }
-        
-        /* TOAST */
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 10px 16px;
-            border-radius: 10px;
-            background: rgba(17,24,39,0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.08);
-            color: #e5e7eb;
-            font-size: 13px;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            z-index: 2000;
-            max-width: 90%;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .toast.show { transform: translateY(0); opacity: 1; }
-        .toast.success { border-left: 3px solid #4ade80; }
-        .toast.error { border-left: 3px solid #f87171; }
-        .toast.warning { border-left: 3px solid #fbbf24; }
-        
-        .hidden { display: none !important; }
-        .loading { text-align: center; padding: 20px; color: #6b7280; }
-        .spinner {
-            display: inline-block;
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(255,255,255,0.1);
-            border-top-color: #4ade80;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 6px;
-            vertical-align: middle;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        
-        @media (max-width: 600px) {
-            .header { flex-direction: column; align-items: flex-start; }
-            .device-grid { grid-template-columns: 1fr; }
-            .search-bar { flex-direction: column; align-items: stretch; }
-            .search-bar .stats { text-align: right; }
-            .user-dropdown { right: -20px; min-width: 260px; }
-        }
-    </style>
-</head>
-<body>
+const express = require('express');
+const { createClient } = require('@supabase/supabase-js');
+const jwt = require('jsonwebtoken');
+const axios = require('axios');
+const mqtt = require('mqtt');
 
-<div class="container">
-    <!-- HEADER -->
-    <div class="header">
-        <div class="header-left">
-            <h1>🌿 FarmIOT <span class="subtitle">Smart Agriculture</span></h1>
-        </div>
-        <div class="user-profile" id="userProfile">
-            <div class="avatar" id="avatarBtn" onclick="toggleDropdown()">
-                <span id="avatarText">👤</span>
-                <img id="avatarImg" style="display:none;" alt="Profile">
-            </div>
-            <div class="user-dropdown" id="userDropdown">
-                <div class="user-info">
-                    <div class="name" id="dropdownName">User</div>
-                    <div class="email" id="dropdownEmail">user@example.com</div>
-                </div>
-                <div class="divider"></div>
-                
-                <!-- Refresh Frequency Settings -->
-                <div class="dropdown-item">
-                    <span>🔄 Active UI Refresh</span>
-                    <select id="activeRefreshRate" onchange="saveRefreshSettings()">
-                        <option value="60">1 min</option>
-                        <option value="120">2 min</option>
-                        <option value="300" selected>5 min</option>
-                        <option value="1800">30 min</option>
-                        <option value="3600">1 hr</option>
-                        <option value="10800">3 hr</option>
-                        <option value="21600">6 hr</option>
-                        <option value="43200">12 hr</option>
-                        <option value="86400">24 hr</option>
-                    </select>
-                </div>
-                <div class="dropdown-item">
-                    <span>💤 Inactive UI Refresh</span>
-                    <select id="inactiveRefreshRate" onchange="saveRefreshSettings()">
-                        <option value="60">1 min</option>
-                        <option value="120">2 min</option>
-                        <option value="300">5 min</option>
-                        <option value="1800">30 min</option>
-                        <option value="3600" selected>1 hr</option>
-                        <option value="10800">3 hr</option>
-                        <option value="21600">6 hr</option>
-                        <option value="43200">12 hr</option>
-                        <option value="86400">24 hr</option>
-                    </select>
-                </div>
-                <div class="dropdown-item" style="font-size:11px;color:#4b5563;padding:4px 16px;">
-                    <span>⏱️ Next refresh in: <span id="nextRefreshCountdown">--</span></span>
-                </div>
-                
-                <div class="divider"></div>
-                <button class="dropdown-item" onclick="forceRefreshNow()">🔄 Refresh Now</button>
-                <button class="dropdown-item danger" onclick="logoutUser()">🚪 Sign Out</button>
-            </div>
-        </div>
-    </div>
+const router = express.Router();
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
 
-    <!-- AUTH CARD -->
-    <div id="authSection">
-        <div class="card auth-card" id="signinCard" style="background:rgba(17,24,39,0.9);padding:32px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);max-width:420px;margin:0 auto;">
-            <h2 style="font-size:20px;text-align:center;">🌿 Welcome to FarmIOT</h2>
-            <p style="text-align:center;color:#6b7280;font-size:14px;margin-bottom:20px;">Sign in to manage your smart farm devices</p>
-            <div id="googleBtn" style="display:flex;justify-content:center;"></div>
-            <div style="display:flex;align-items:center;margin:14px 0;color:#374151;font-size:12px;">
-                <span style="flex:1;border-bottom:1px solid rgba(255,255,255,0.06);"></span>
-                <span style="padding:0 12px;">or</span>
-                <span style="flex:1;border-bottom:1px solid rgba(255,255,255,0.06);"></span>
-            </div>
-            <div style="text-align:left;">
-                <div style="display:flex;gap:4px;background:rgba(255,255,255,0.03);border-radius:8px;padding:3px;margin-bottom:14px;border:1px solid rgba(255,255,255,0.04);">
-                    <button class="active" id="loginTab" onclick="setAuthMode('login')" style="flex:1;padding:6px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Sign In</button>
-                    <button id="registerTab" onclick="setAuthMode('register')" style="flex:1;padding:6px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Register</button>
-                </div>
-                <form id="authForm" onsubmit="handleAuthSubmit(event)">
-                    <div class="form-group">
-                        <label>📧 Email</label>
-                        <input type="email" id="email" placeholder="Enter your email" required>
-                    </div>
-                    <div class="form-group">
-                        <label>🔒 Password</label>
-                        <input type="password" id="password" placeholder="Enter your password" minlength="6" required>
-                    </div>
-                    <div class="form-group" id="confirmGroup" style="display:none;">
-                        <label>🔒 Confirm Password</label>
-                        <input type="password" id="confirmPassword" placeholder="Confirm your password" minlength="6">
-                    </div>
-                    <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;padding:10px;justify-content:center;">Sign In</button>
-                </form>
-                <div id="authStatus" style="margin-top:10px;padding:8px;border-radius:8px;font-size:13px;display:none;"></div>
-            </div>
-        </div>
-    </div>
+// ==========================================
+// MQTT Client
+// ==========================================
+const mqttClient = mqtt.connect('mqtt://broker.hivemq.com', {
+  clientId: 'farmiot_server_' + Math.random().toString(16).substr(2, 6)
+});
 
-    <!-- DASHBOARD -->
-    <div id="dashboardContent" class="hidden">
-        <!-- Search & Controls -->
-        <div class="search-bar">
-            <input type="text" id="searchInput" placeholder="🔍 Search devices by name or ID..." oninput="filterDevices()">
-            <button class="btn btn-primary btn-sm" onclick="scanForHubs()">🔍 Scan</button>
-            <button class="btn btn-secondary btn-sm" onclick="forceRefreshNow()">🔄 Refresh</button>
-            <span id="bleStatus" class="ble-status disconnected">⚪ Offline</span>
-            <span class="stats" id="deviceCount"></span>
-            <span class="refresh-indicator" id="refreshIndicator">⏱️ Refresh in: --</span>
-        </div>
+mqttClient.on('connect', () => {
+  console.log('✅ Server connected to MQTT broker');
+  mqttClient.subscribe('farmiot/hub/response/#', (err) => {
+    if (!err) console.log('📡 Subscribed to hub responses');
+  });
+});
 
-        <!-- Device Grid -->
-        <div id="deviceGrid" class="device-grid">
-            <div class="loading"><div class="spinner"></div>Loading devices...</div>
-        </div>
-    </div>
-</div>
+mqttClient.on('message', async (topic, message) => {
+  const payload = message.toString();
+  console.log(`📥 MQTT message on ${topic}:`, payload);
+  
+  try {
+    const data = JSON.parse(payload);
+    const hubId = topic.split('/').pop();
+    
+    if (data.status === 'online') {
+      await supabase
+        .from('hubs')
+        .update({
+          status: 'online',
+          ip_address: data.ip || null,
+          last_seen: new Date().toISOString(),
+          soil_moisture: data.soil || null
+        })
+        .eq('hub_id', hubId);
+      console.log(`✅ Hub ${hubId} status updated: ONLINE`);
+    }
+  } catch (error) {
+    console.error('MQTT message error:', error);
+  }
+});
 
-<!-- CONFIG MODAL -->
-<div class="modal" id="configModal">
-    <div class="modal-content">
-        <h2>⚙️ Configure Hub</h2>
-        <div class="sub" id="configHubInfo">
-            Configuring: <strong id="configHubId">—</strong>
-            <span id="configHubStatus" style="color:#6b7280;font-size:12px;display:block;margin-top:4px;"></span>
-        </div>
-        <div class="form-group">
-            <label>📶 WiFi SSID</label>
-            <input type="text" id="configSSID" placeholder="Enter WiFi SSID" required>
-        </div>
-        <div class="form-group">
-            <label>🔑 WiFi Password</label>
-            <input type="password" id="configPassword" placeholder="Enter WiFi password" required>
-        </div>
-        <div class="form-group">
-            <label>🏷️ Device Name</label>
-            <input type="text" id="configDeviceName" placeholder="My Hub">
-        </div>
-        <div class="modal-actions">
-            <button class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
-            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()">💾 Save</button>
-        </div>
-    </div>
-</div>
+// ==========================================
+// AUTHENTICATION MIDDLEWARE
+// ==========================================
+const authenticate = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
 
-<!-- TOAST -->
-<div id="toast" class="toast"></div>
+// ==========================================
+// POLL HUB VIA MQTT
+// ==========================================
+async function pollHubViaMQTT(hubId) {
+  return new Promise((resolve) => {
+    const topic = `farmiot/hub/request/${hubId}`;
+    const responseTopic = `farmiot/hub/response/${hubId}`;
+    
+    const timeout = setTimeout(() => {
+      console.log(`⏰ Poll timeout for ${hubId}`);
+      resolve({ online: false, error: 'Timeout' });
+    }, 5000);
 
-<script src="dashboard.js"></script>
-</body>
-</html>
+    const handler = (topic, message) => {
+      if (topic === responseTopic) {
+        clearTimeout(timeout);
+        try {
+          const data = JSON.parse(message.toString());
+          console.log(`✅ Poll response from ${hubId}:`, data);
+          resolve({ online: true, data });
+        } catch (e) {
+          resolve({ online: false, error: 'Invalid response' });
+        }
+        mqttClient.removeListener('message', handler);
+      }
+    };
+
+    mqttClient.on('message', handler);
+    
+    const request = JSON.stringify({ command: 'status' });
+    mqttClient.publish(topic, request);
+    console.log(`📤 Polling ${hubId} via MQTT...`);
+  });
+}
+
+// ==========================================
+// POLL HUB VIA HTTP (Fallback)
+// ==========================================
+async function pollHubViaHTTP(ip) {
+  try {
+    const url = `http://${ip}/api/health`;
+    const response = await axios.get(url, { timeout: 3000 });
+    return { online: true, data: response.data };
+  } catch (error) {
+    return { online: false, error: error.message };
+  }
+}
+
+// ==========================================
+// GET USER SETTINGS
+// ==========================================
+router.get('/settings', authenticate, async (req, res) => {
+  try {
+    const userEmail = req.user.id || req.user.email;
+    
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', userEmail)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    if (!data) {
+      const defaultSettings = {
+        user_id: userEmail,
+        active_refresh_interval: 300,
+        inactive_refresh_interval: 3600,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const { data: newData, error: insertError } = await supabase
+        .from('user_settings')
+        .insert([defaultSettings])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      return res.json(newData);
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// ==========================================
+// UPDATE USER SETTINGS
+// ==========================================
+router.post('/settings', authenticate, async (req, res) => {
+  try {
+    const userEmail = req.user.id || req.user.email;
+    const { active_refresh_interval, inactive_refresh_interval } = req.body;
+
+    const validIntervals = [60, 120, 300, 1800, 3600, 10800, 21600, 43200, 86400];
+    if (active_refresh_interval && !validIntervals.includes(active_refresh_interval)) {
+      return res.status(400).json({ error: 'Invalid active refresh interval' });
+    }
+    if (inactive_refresh_interval && !validIntervals.includes(inactive_refresh_interval)) {
+      return res.status(400).json({ error: 'Invalid inactive refresh interval' });
+    }
+
+    const { data: existing, error: checkError } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', userEmail)
+      .maybeSingle();
+
+    let result;
+
+    if (existing) {
+      const { data, error } = await supabase
+        .from('user_settings')
+        .update({
+          active_refresh_interval: active_refresh_interval || existing.active_refresh_interval,
+          inactive_refresh_interval: inactive_refresh_interval || existing.inactive_refresh_interval,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userEmail)
+        .select()
+        .single();
+
+      if (error) throw error;
+      result = data;
+    } else {
+      const { data, error } = await supabase
+        .from('user_settings')
+        .insert([{
+          user_id: userEmail,
+          active_refresh_interval: active_refresh_interval || 300,
+          inactive_refresh_interval: inactive_refresh_interval || 3600,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      result = data;
+    }
+
+    res.json({ success: true, settings: result });
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+// ==========================================
+// GET ALL HUBS
+// ==========================================
+router.get('/hubs', authenticate, async (req, res) => {
+  try {
+    const userEmail = req.user.id || req.user.email;
+    
+    const { data: hubs, error } = await supabase
+      .from('hubs')
+      .select('*')
+      .eq('user_id', userEmail)
+      .order('status', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    for (const hub of hubs || []) {
+      if (!hub.hub_id) continue;
+      
+      let online = false;
+      let statusData = null;
+      
+      const mqttResult = await pollHubViaMQTT(hub.hub_id);
+      if (mqttResult.online) {
+        online = true;
+        statusData = mqttResult.data;
+      } else if (hub.ip_address) {
+        const httpResult = await pollHubViaHTTP(hub.ip_address);
+        if (httpResult.online) {
+          online = true;
+          statusData = httpResult.data;
+        }
+      }
+      
+      if (online) {
+        await supabase
+          .from('hubs')
+          .update({
+            status: 'online',
+            last_seen: new Date().toISOString(),
+            soil_moisture: statusData?.soil || hub.soil_moisture
+          })
+          .eq('hub_id', hub.hub_id);
+        hub.status = 'online';
+      } else {
+        await supabase
+          .from('hubs')
+          .update({
+            status: 'offline',
+            last_seen: new Date().toISOString()
+          })
+          .eq('hub_id', hub.hub_id);
+        hub.status = 'offline';
+      }
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from('hubs')
+      .select('*')
+      .eq('user_id', userEmail)
+      .order('status', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (updateError) throw updateError;
+
+    res.json(updated || []);
+  } catch (error) {
+    console.error('Error fetching hubs:', error);
+    res.status(500).json({ error: 'Failed to fetch hubs' });
+  }
+});
+
+// ==========================================
+// REGISTER HUB
+// ==========================================
+router.post('/hubs/register', async (req, res) => {
+  try {
+    const { hub_id, ip_address, mac_address, status, device_name } = req.body;
+    
+    if (!hub_id) {
+      return res.status(400).json({ error: 'hub_id required' });
+    }
+
+    const { data: existing, error: checkError } = await supabase
+      .from('hubs')
+      .select('*')
+      .eq('hub_id', hub_id)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    if (existing) {
+      const { data, error } = await supabase
+        .from('hubs')
+        .update({
+          ip_address,
+          mac_address,
+          status: status || 'online',
+          device_name: device_name || hub_id,
+          last_seen: new Date().toISOString()
+        })
+        .eq('hub_id', hub_id)
+        .select();
+      
+      if (error) throw error;
+      res.json({ success: true, hub: data });
+    } else {
+      const { data, error } = await supabase
+        .from('hubs')
+        .insert([{
+          hub_id,
+          ip_address,
+          mac_address,
+          status: status || 'online',
+          device_name: device_name || hub_id,
+          user_id: null,
+          last_seen: new Date().toISOString()
+        }])
+        .select();
+      
+      if (error) throw error;
+      res.status(201).json({ success: true, hub: data });
+    }
+  } catch (error) {
+    console.error('Error registering hub:', error);
+    res.status(500).json({ error: 'Failed to register hub' });
+  }
+});
+
+// ==========================================
+// CLAIM HUB
+// ==========================================
+router.post('/hubs/claim', authenticate, async (req, res) => {
+  try {
+    const { hub_id } = req.body;
+    const userEmail = req.user.id || req.user.email;
+    
+    if (!hub_id) {
+      return res.status(400).json({ error: 'hub_id required' });
+    }
+
+    const { data, error } = await supabase
+      .from('hubs')
+      .update({
+        user_id: userEmail,
+        status: 'online'
+      })
+      .eq('hub_id', hub_id)
+      .select();
+
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'Hub not found' });
+    }
+
+    res.json({ success: true, hub: data[0] });
+  } catch (error) {
+    console.error('Error claiming hub:', error);
+    res.status(500).json({ error: 'Failed to claim hub' });
+  }
+});
+
+// ==========================================
+// DISCOVER HUBS
+// ==========================================
+router.get('/hubs/discover', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('hubs')
+      .select('*')
+      .is('user_id', null)
+      .eq('status', 'online')
+      .order('last_seen', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error) {
+    console.error('Error discovering hubs:', error);
+    res.status(500).json({ error: 'Failed to discover hubs' });
+  }
+});
+
+// ==========================================
+// ADD/CLAIM HUB (via BLE)
+// ==========================================
+router.post('/hubs/add', authenticate, async (req, res) => {
+  try {
+    const { hub_id, ip_address, name } = req.body;
+    const userEmail = req.user.id || req.user.email;
+    
+    if (!hub_id) {
+      return res.status(400).json({ error: 'hub_id required' });
+    }
+
+    const { data: existing, error: checkError } = await supabase
+      .from('hubs')
+      .select('*')
+      .eq('hub_id', hub_id)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    if (existing) {
+      const { data, error } = await supabase
+        .from('hubs')
+        .update({
+          user_id: userEmail,
+          device_name: name || hub_id,
+          ip_address: ip_address || existing.ip_address || null,
+          status: 'online'
+        })
+        .eq('hub_id', hub_id)
+        .select();
+      
+      if (error) throw error;
+      res.json({ success: true, hub: data[0] });
+    } else {
+      const { data, error } = await supabase
+        .from('hubs')
+        .insert([{
+          hub_id,
+          user_id: userEmail,
+          device_name: name || hub_id,
+          ip_address: ip_address || null,
+          status: 'pairing'
+        }])
+        .select();
+      
+      if (error) throw error;
+      res.json({ success: true, hub: data[0] });
+    }
+  } catch (error) {
+    console.error('Error adding hub:', error);
+    res.status(500).json({ error: 'Failed to add hub' });
+  }
+});
+
+// ==========================================
+// REBOOT HUB
+// ==========================================
+router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
+  try {
+    const { hubId } = req.params;
+    
+    const { data: hub, error: hubError } = await supabase
+      .from('hubs')
+      .select('ip_address')
+      .eq('hub_id', hubId)
+      .single();
+
+    if (hubError || !hub) {
+      return res.status(404).json({ error: 'Hub not found' });
+    }
+
+    const topic = `farmiot/hub/request/${hubId}`;
+    const command = JSON.stringify({ command: 'reboot' });
+    mqttClient.publish(topic, command);
+    console.log(`📤 Reboot command sent to ${hubId} via MQTT`);
+
+    if (hub.ip_address) {
+      try {
+        await axios.post(
+          `http://${hub.ip_address}/api/reboot`,
+          {},
+          { timeout: 3000 }
+        );
+        console.log(`📤 Reboot sent to ${hubId} via HTTP`);
+      } catch (httpError) {
+        console.log(`⚠️ HTTP reboot failed:`, httpError.message);
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Reboot command sent'
+    });
+  } catch (error) {
+    console.error('Error rebooting hub:', error);
+    res.status(500).json({ error: 'Failed to reboot hub' });
+  }
+});
+
+// ==========================================
+// GET HUB CONFIG
+// ==========================================
+router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
+  try {
+    const { hubId } = req.params;
+    
+    const { data, error } = await supabase
+      .from('hub_config')
+      .select('*')
+      .eq('hub_id', hubId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    
+    if (!data) {
+      return res.json({ config: {
+        ssid: '',
+        mqtt_server: 'broker.hivemq.com',
+        mqtt_port: 1883,
+        device_name: hubId
+      }});
+    }
+    
+    res.json({ config: data });
+  } catch (error) {
+    console.error('Error fetching config:', error);
+    res.status(500).json({ error: 'Failed to fetch config' });
+  }
+});
+
+// ==========================================
+// DELETE HUB
+// ==========================================
+router.delete('/hubs/:hubId', authenticate, async (req, res) => {
+  try {
+    const { hubId } = req.params;
+    
+    const { error } = await supabase
+      .from('hubs')
+      .update({ user_id: null, status: 'offline' })
+      .eq('hub_id', hubId);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting hub:', error);
+    res.status(500).json({ error: 'Failed to delete hub' });
+  }
+});
+
+module.exports = router;
