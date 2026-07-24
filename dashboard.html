@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FarmIOT</title>
-    <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -474,6 +474,17 @@
             .search-bar .stats { text-align: right; }
             .user-dropdown { right: -20px; min-width: 260px; }
         }
+        
+        /* Google Sign-In button container */
+        #googleBtn {
+            display: flex;
+            justify-content: center;
+            margin: 8px 0 12px 0;
+            min-height: 40px;
+        }
+        #googleBtn iframe {
+            margin: 0 auto !important;
+        }
     </style>
 </head>
 <body>
@@ -544,9 +555,12 @@
     <div id="authSection">
         <div class="card auth-card" id="signinCard" style="background:rgba(17,24,39,0.9);padding:32px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);max-width:420px;margin:0 auto;">
             <h2 style="font-size:20px;text-align:center;">🌿 Welcome to FarmIOT</h2>
-            <p style="text-align:center;color:#6b7280;font-size:14px;margin-bottom:20px;">Sign in to manage your smart farm devices</p>
-            <div id="googleBtn" style="display:flex;justify-content:center;"></div>
-            <div style="display:flex;align-items:center;margin:14px 0;color:#374151;font-size:12px;">
+            <p style="text-align:center;color:#6b7280;font-size:14px;margin-bottom:8px;">Sign in to manage your smart farm devices</p>
+            
+            <!-- GOOGLE SSO BUTTON -->
+            <div id="googleBtn"></div>
+            
+            <div style="display:flex;align-items:center;margin:12px 0;color:#374151;font-size:12px;">
                 <span style="flex:1;border-bottom:1px solid rgba(255,255,255,0.06);"></span>
                 <span style="padding:0 12px;">or</span>
                 <span style="flex:1;border-bottom:1px solid rgba(255,255,255,0.06);"></span>
