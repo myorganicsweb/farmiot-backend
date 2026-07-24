@@ -165,7 +165,8 @@ router.post('/settings', authenticate, async (req, res) => {
     const userEmail = req.user.id || req.user.email;
     const { active_refresh_interval, inactive_refresh_interval } = req.body;
 
-    const validIntervals = [60, 120, 300, 1800, 3600, 10800, 21600, 43200, 86400];
+    // Updated valid intervals with 5s and 30s
+    const validIntervals = [5, 30, 60, 120, 300, 1800, 3600, 10800, 21600, 43200, 86400];
     if (active_refresh_interval && !validIntervals.includes(active_refresh_interval)) {
       return res.status(400).json({ error: 'Invalid active refresh interval' });
     }

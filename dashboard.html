@@ -496,10 +496,12 @@
                 </div>
                 <div class="divider"></div>
                 
-                <!-- Refresh Frequency Settings -->
+                <!-- Refresh Frequency Settings with 5s and 30s -->
                 <div class="dropdown-item">
                     <span>🔄 Active UI Refresh</span>
                     <select id="activeRefreshRate" onchange="saveRefreshSettings()">
+                        <option value="5">5 sec</option>
+                        <option value="30">30 sec</option>
                         <option value="60">1 min</option>
                         <option value="120">2 min</option>
                         <option value="300">5 min</option>
@@ -514,6 +516,8 @@
                 <div class="dropdown-item">
                     <span>💤 Inactive UI Refresh</span>
                     <select id="inactiveRefreshRate" onchange="saveRefreshSettings()">
+                        <option value="5">5 sec</option>
+                        <option value="30">30 sec</option>
                         <option value="60">1 min</option>
                         <option value="120">2 min</option>
                         <option value="300">5 min</option>
