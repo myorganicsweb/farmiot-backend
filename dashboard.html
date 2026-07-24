@@ -720,113 +720,133 @@
     }
 
     // ===== LOAD DEVICES (Standalone Cards) =====
-    async function loadDevices() {
-        const container = document.getElementById('deviceList');
-        const countEl = document.getElementById('deviceCount');
-        
-        // Show loading only on first load
-        if (isFirstLoad) {
-            container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading devices...</div>';
-        }
-        
-        try {
-            const response = await fetch(`${API_BASE}/api/hubs`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) throw new Error('Failed to load devices');
-            const hubs = await response.json();
+   async function loadDevices() {
+    const container = document.getElementById('deviceList');
+    const countEl = document.getElementById('deviceCount');
+    
+    if (isFirstLoad) {
+        container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading devices...</div>';
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/hubs`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to load devices');
+        const hubs = await response.json();
 
-            // Update device count
-            const onlineCount = hubs.filter(h => h.status === 'online').length;
-            countEl.textContent = `(${hubs.length} devices · ${onlineCount} online)`;
+        // Separate claimed and unclaimed hubs
+        const claimed = hubs.filter(h => h.user_id === user?.id || h.user_id === user?.email);
+        const unclaimed = hubs.filter(h => h.user_id === null && h.status === 'online');
 
-            let html = '';
+        const totalDevices = claimed.length + unclaimed.length;
+        const onlineCount = hubs.filter(h => h.status === 'online').length;
+        countEl.textContent = `(${totalDevices} devices · ${onlineCount} online)`;
 
-            // Show discovered hub if BLE connected and NOT in cloud list
-            if (isConnected && currentConfigHubId) {
-                const exists = hubs.some(h => h.hub_id === currentConfigHubId || h.hub_id === currentConfigHubId.split(' ')[0]);
-                if (!exists) {
-                    html += `
-                        <div class="discovered-hub">
-                            <div class="info">
-                                <span class="icon">📡</span>
-                                <div>
-                                    <div style="font-weight:600;">${currentConfigHubId}</div>
-                                    <div style="font-size:12px;color:#6b7280;">Discovered via Bluetooth</div>
+        let html = '';
+
+        // Show claimed devices
+        if (claimed.length > 0) {
+            html += claimed.map(hub => {
+                const status = hub.status || 'offline';
+                const statusClass = status === 'online' ? 'online' : status === 'pairing' ? 'pairing' : 'offline';
+                const deviceIcon = status === 'online' ? '🌿' : '📡';
+                const soilValue = hub.soil_moisture || '--';
+                
+                return `
+                    <div class="device-card">
+                        <div class="device-info">
+                            <div class="device-icon">${deviceIcon}</div>
+                            <div class="device-details">
+                                <div class="device-name">${hub.device_name || hub.hub_id}</div>
+                                <div class="device-meta">
+                                    <span class="badge ${statusClass}"><span class="dot"></span> ${status}</span>
+                                    ${hub.ip_address ? `<span class="ip">📡 ${hub.ip_address}</span>` : ''}
+                                    <span>🆔 ${hub.hub_id}</span>
                                 </div>
-                                <span class="badge pairing"><span class="dot"></span> PAIRING</span>
-                            </div>
-                            <button class="btn btn-success btn-sm" onclick="claimBleHub()">⚙️ Configure</button>
-                        </div>
-                    `;
-                }
-            }
-
-            // Show configured devices as standalone cards
-            if (hubs && hubs.length > 0) {
-                html += hubs.map(hub => {
-                    const status = hub.status || 'offline';
-                    const statusClass = status === 'online' ? 'online' : status === 'pairing' ? 'pairing' : 'offline';
-                    const statusIcon = status === 'online' ? '🟢' : status === 'pairing' ? '🟡' : '🔴';
-                    const deviceIcon = status === 'online' ? '🌿' : status === 'pairing' ? '📡' : '📡';
-                    const soilValue = hub.soil_moisture || '--';
-                    
-                    return `
-                        <div class="device-card">
-                            <div class="device-info">
-                                <div class="device-icon">${deviceIcon}</div>
-                                <div class="device-details">
-                                    <div class="device-name">${hub.device_name || hub.hub_id}</div>
-                                    <div class="device-meta">
-                                        <span class="badge ${statusClass}"><span class="dot"></span> ${status}</span>
-                                        ${hub.ip_address ? `<span class="ip">📡 ${hub.ip_address}</span>` : '<span class="ip">⚪ No IP</span>'}
-                                        <span>🆔 ${hub.hub_id}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="device-soil">
-                                <span class="value">${soilValue}</span>
-                                <span class="unit">%</span>
-                                <div class="mini-bar">
-                                    <div class="fill" style="width:${Math.min(soilValue, 100)}%;"></div>
-                                </div>
-                            </div>
-                            <div class="device-actions">
-                                ${status === 'pairing' ? 
-                                    `<button class="btn btn-success btn-sm" onclick="openConfig('${hub.hub_id}')">⚙️ Configure</button>` :
-                                    `<button class="btn btn-secondary btn-sm" onclick="rebootHub('${hub.hub_id}')">🔄 Reboot</button>`
-                                }
-                                <button class="btn btn-danger btn-sm" onclick="deleteHub('${hub.hub_id}')" title="Delete">🗑️</button>
                             </div>
                         </div>
-                    `;
-                }).join('');
-            }
-
-            if (!html) {
-                html = `
-                    <div class="empty-state">
-                        <div class="icon">🌿</div>
-                        <div class="title">No devices yet</div>
-                        <div class="sub">Click "Scan" to discover a hub via Bluetooth.</div>
+                        <div class="device-soil">
+                            <span class="value">${soilValue}</span>
+                            <span class="unit">%</span>
+                            <div class="mini-bar">
+                                <div class="fill" style="width:${Math.min(soilValue, 100)}%;"></div>
+                            </div>
+                        </div>
+                        <div class="device-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="rebootHub('${hub.hub_id}')">🔄 Reboot</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteHub('${hub.hub_id}')" title="Delete">🗑️</button>
+                        </div>
                     </div>
                 `;
-            }
+            }).join('');
+        }
 
-            container.innerHTML = html;
-            isFirstLoad = false;
+        // Show unclaimed online hubs (discoverable)
+        if (unclaimed.length > 0) {
+            html += `<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);">
+                        <div style="font-size:12px;color:#6b7280;margin-bottom:8px;">🔍 Discovered Hubs (Click to Claim)</div>
+                     </div>`;
+            html += unclaimed.map(hub => `
+                <div class="discovered-hub">
+                    <div class="info">
+                        <span class="icon">📡</span>
+                        <div>
+                            <div style="font-weight:600;">${hub.device_name || hub.hub_id}</div>
+                            <div style="font-size:12px;color:#6b7280;">${hub.ip_address || 'No IP'} · Online</div>
+                        </div>
+                        <span class="badge online"><span class="dot"></span> ONLINE</span>
+                    </div>
+                    <button class="btn btn-success btn-sm" onclick="claimHub('${hub.hub_id}')">📥 Claim</button>
+                </div>
+            `).join('');
+        }
 
-        } catch (error) {
-            container.innerHTML = `
-                <div style="text-align:center;padding:20px;color:#f87171;">
-                    ❌ ${error.message || 'Failed to load devices'}
-                    <br><br>
-                    <button class="btn btn-secondary btn-sm" onclick="loadDevices()">🔄 Retry</button>
+        if (!html) {
+            html = `
+                <div class="empty-state">
+                    <div class="icon">🌿</div>
+                    <div class="title">No devices yet</div>
+                    <div class="sub">Set up your ESP32 hub and it will appear here automatically.</div>
                 </div>
             `;
         }
-    }
 
+        container.innerHTML = html;
+        isFirstLoad = false;
+
+    } catch (error) {
+        container.innerHTML = `
+            <div style="text-align:center;padding:20px;color:#f87171;">
+                ❌ ${error.message || 'Failed to load devices'}
+                <br><br>
+                <button class="btn btn-secondary btn-sm" onclick="loadDevices()">🔄 Retry</button>
+            </div>
+        `;
+    }
+}
+
+// ==========================================
+// CLAIM HUB (From Discovered list)
+// ==========================================
+async function claimHub(hubId) {
+    showToast('📥 Claiming hub...', 'warning');
+    try {
+        const result = await apiRequest('/api/hubs/claim', {
+            method: 'POST',
+            body: JSON.stringify({ hub_id: hubId })
+        });
+        
+        if (result.success) {
+            showToast('✅ Hub claimed successfully!', 'success');
+            loadDevices();
+        } else {
+            showToast('❌ ' + (result.error || 'Failed to claim hub'), 'error');
+        }
+    } catch (error) {
+        showToast('❌ Error: ' + error.message, 'error');
+    }
+}
     // ===== BLE FUNCTIONS =====
     async function autoReconnectBle() {
         try {
