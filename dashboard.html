@@ -211,6 +211,12 @@
             border: 1px solid rgba(248,113,113,0.15);
         }
         .btn-danger:hover { background: rgba(248,113,113,0.2); }
+        .btn-warning {
+            background: rgba(251,191,36,0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251,191,36,0.15);
+        }
+        .btn-warning:hover { background: rgba(251,191,36,0.25); }
         .btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 6px; }
         
         .badge {
@@ -227,6 +233,7 @@
         .badge.online { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.15); }
         .badge.offline { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.15); }
         .badge.pairing { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.15); }
+        .badge.linked { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.15); }
         .badge .dot {
             width: 5px;
             height: 5px;
@@ -236,6 +243,7 @@
         .badge.online .dot { background: #4ade80; animation: pulse 2s infinite; }
         .badge.pairing .dot { background: #fbbf24; animation: pulse 1.5s infinite; }
         .badge.offline .dot { background: #f87171; }
+        .badge.linked .dot { background: #60a5fa; animation: pulse 2s infinite; }
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.5; transform: scale(0.8); }
@@ -475,7 +483,6 @@
             .user-dropdown { right: -20px; min-width: 260px; }
         }
         
-        /* Google Sign-In button container */
         #googleBtn {
             display: flex;
             justify-content: center;
@@ -485,6 +492,17 @@
         #googleBtn iframe {
             margin: 0 auto !important;
         }
+        
+        .device-type-badge {
+            font-size: 9px;
+            padding: 1px 8px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.04);
+            color: #6b7280;
+            margin-left: 4px;
+        }
+        .device-type-badge.hub { color: #4ade80; border: 1px solid rgba(74,222,128,0.15); }
+        .device-type-badge.sensor { color: #60a5fa; border: 1px solid rgba(96,165,250,0.15); }
     </style>
 </head>
 <body>
@@ -507,7 +525,6 @@
                 </div>
                 <div class="divider"></div>
                 
-                <!-- Refresh Frequency Settings with 5s and 30s -->
                 <div class="dropdown-item">
                     <span>🔄 Active UI Refresh</span>
                     <select id="activeRefreshRate" onchange="saveRefreshSettings()">
@@ -556,10 +573,7 @@
         <div class="card auth-card" id="signinCard" style="background:rgba(17,24,39,0.9);padding:32px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);max-width:420px;margin:0 auto;">
             <h2 style="font-size:20px;text-align:center;">🌿 Welcome to FarmIOT</h2>
             <p style="text-align:center;color:#6b7280;font-size:14px;margin-bottom:8px;">Sign in to manage your smart farm devices</p>
-            
-            <!-- GOOGLE SSO BUTTON -->
             <div id="googleBtn"></div>
-            
             <div style="display:flex;align-items:center;margin:12px 0;color:#374151;font-size:12px;">
                 <span style="flex:1;border-bottom:1px solid rgba(255,255,255,0.06);"></span>
                 <span style="padding:0 12px;">or</span>
@@ -594,8 +608,8 @@
     <div id="dashboardContent" class="hidden">
         <div class="search-bar">
             <input type="text" id="searchInput" placeholder="🔍 Search devices by name or ID..." oninput="filterDevices()">
-            <button class="btn btn-primary btn-sm" onclick="scanForHubs()">🔍 Scan</button>
-            <button class="btn btn-secondary btn-sm" onclick="forceRefreshNow()">🔄 Refresh</button>
+            <button class="btn btn-primary btn-sm" onclick="scanForDevices()">🔍 Scan</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadDevices()">🔄 Refresh</button>
             <span id="bleStatus" class="ble-status disconnected">⚪ Offline</span>
             <span class="stats" id="deviceCount"></span>
             <span class="refresh-indicator" id="refreshIndicator">⏱️ Refresh in: --</span>
@@ -610,7 +624,7 @@
 <!-- CONFIG MODAL -->
 <div class="modal" id="configModal">
     <div class="modal-content">
-        <h2>⚙️ Configure Hub</h2>
+        <h2>⚙️ Configure Device</h2>
         <div class="sub" id="configHubInfo">
             Configuring: <strong id="configHubId">—</strong>
             <span id="configHubStatus" style="color:#6b7280;font-size:12px;display:block;margin-top:4px;"></span>
@@ -625,11 +639,17 @@
         </div>
         <div class="form-group">
             <label>🏷️ Device Name</label>
-            <input type="text" id="configDeviceName" placeholder="My Hub">
+            <input type="text" id="configDeviceName" placeholder="My Device">
+        </div>
+        <div class="form-group" id="hubSelectGroup">
+            <label>🔗 Link to Hub</label>
+            <select id="hubSelect" style="width:100%;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:8px;color:#e5e7eb;font-size:13px;font-family:inherit;">
+                <option value="">Select a hub...</option>
+            </select>
         </div>
         <div class="modal-actions">
             <button class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
-            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()">💾 Save</button>
+            <button class="btn btn-primary" id="configSaveBtn" onclick="saveDeviceConfig()">💾 Save</button>
         </div>
     </div>
 </div>

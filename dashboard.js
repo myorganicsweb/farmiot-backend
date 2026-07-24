@@ -6,7 +6,7 @@ const API_BASE = window.location.origin;
 let token = localStorage.getItem('token') || null;
 let user = JSON.parse(localStorage.getItem('user') || 'null');
 let authMode = 'login';
-let currentConfigHubId = null;
+let currentConfigDeviceId = null;
 let currentBleDevice = null;
 let currentBleCharacteristic = null;
 let isConnected = false;
@@ -15,9 +15,12 @@ let allDevices = [];
 let isUIActive = true;
 let refreshCountdown = 0;
 let countdownInterval = null;
+let currentDeviceType = 'hub';
 
-const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-const BLE_CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+const BLE_SERVICE_UUID_HUB = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+const BLE_CHARACTERISTIC_UUID_HUB = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+const BLE_SERVICE_UUID_SENSOR = "4fafc201-1fb5-459e-8fcc-c5c9c331914c";
+const BLE_CHARACTERISTIC_UUID_SENSOR = "beb5483e-36e1-4688-b7f5-ea07361b26a9";
 
 // ===== TOAST =====
 function showToast(message, type) {
@@ -221,7 +224,6 @@ async function handleAuthSubmit(e) {
 function initGoogleSSO() {
     console.log('🔑 Initializing Google SSO...');
     
-    // Check if Google API is loaded
     if (typeof google === 'undefined' || typeof google.accounts === 'undefined') {
         console.log('⏳ Waiting for Google API to load...');
         setTimeout(initGoogleSSO, 500);
@@ -371,7 +373,7 @@ function filterDevices() {
     document.getElementById('deviceCount').textContent = visibleCount + ' devices shown';
 }
 
-// ===== LOAD DEVICES =====
+// ===== LOAD DEVICES (Hubs + Sensors) =====
 async function loadDevices() {
     var grid = document.getElementById('deviceGrid');
     var countEl = document.getElementById('deviceCount');
@@ -381,64 +383,89 @@ async function loadDevices() {
     }
     
     try {
-        var response = await fetch(API_BASE + '/api/hubs', {
+        // Load both hubs and sensors
+        var hubsResponse = await fetch(API_BASE + '/api/hubs', {
             headers: { 'Authorization': 'Bearer ' + token }
         });
-        if (!response.ok) throw new Error('Failed to load devices');
-        var hubs = await response.json();
-        allDevices = hubs;
+        var hubs = hubsResponse.ok ? await hubsResponse.json() : [];
+        
+        var sensorsResponse = await fetch(API_BASE + '/api/sensors', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        var sensors = sensorsResponse.ok ? await sensorsResponse.json() : [];
+        
+        // Combine devices
+        var allDevices = [];
+        
+        // Add hubs with type
+        (hubs || []).forEach(function(hub) {
+            hub._type = 'hub';
+            allDevices.push(hub);
+        });
+        
+        // Add sensors with type
+        (sensors || []).forEach(function(sensor) {
+            sensor._type = 'sensor';
+            allDevices.push(sensor);
+        });
+        
+        allDevices = allDevices;
 
-        var claimed = hubs.filter(function(h) { return h.user_id === user.id || h.user_id === user.email; });
-        var unclaimed = hubs.filter(function(h) { return h.user_id === null && h.status === 'online'; });
-
-        var total = claimed.length + unclaimed.length;
-        var online = hubs.filter(function(h) { return h.status === 'online'; }).length;
+        var total = allDevices.length;
+        var online = allDevices.filter(function(d) { return d.status === 'online'; }).length;
         countEl.textContent = total + ' devices · ' + online + ' online';
 
         var html = '';
 
-        if (claimed.length > 0) {
-            claimed.forEach(function(hub) {
-                var status = hub.status || 'offline';
+        if (allDevices.length > 0) {
+            allDevices.forEach(function(device) {
+                var isHub = device._type === 'hub';
+                var status = device.status || 'offline';
                 var statusClass = status === 'online' ? 'online' : status === 'pairing' ? 'pairing' : 'offline';
-                var icon = status === 'online' ? '🌿' : '📡';
-                var soil = hub.soil_moisture || '--';
-                var ip = hub.ip_address || 'No IP';
-                var id = hub.hub_id;
-                var name = hub.device_name || hub.hub_id;
+                var icon = isHub ? (status === 'online' ? '🌿' : '📡') : '📟';
+                var typeLabel = isHub ? 'HUB' : 'SENSOR';
+                var typeClass = isHub ? 'hub' : 'sensor';
+                var soil = device.soil_moisture || device.latestSoil || '--';
+                var ip = device.ip_address || 'No IP';
+                var id = device.device_id || device.hub_id;
+                var name = device.device_name || device.hub_id || id;
+                var hubLink = device.hub_id || 'Not linked';
+                var isLinked = device.hub_id && device.hub_id.length > 0;
                 
                 html += '<div class="device-card" data-name="' + name.toLowerCase() + '" data-id="' + id.toLowerCase() + '">';
                 html += '<div class="card-top"><div class="device-icon">' + icon + '</div>';
-                html += '<div><span class="badge ' + statusClass + '"><span class="dot"></span> ' + status + '</span></div></div>';
+                html += '<div><span class="badge ' + statusClass + '"><span class="dot"></span> ' + status + '</span>';
+                html += '<span class="device-type-badge ' + typeClass + '">' + typeLabel + '</span></div></div>';
                 html += '<div class="device-name">' + name + '</div>';
                 html += '<div class="device-id">🆔 ' + id + '</div>';
                 html += '<div class="device-status"><span class="detail">📡 ' + ip + '</span></div>';
+                
+                // Show linked hub for sensors
+                if (!isHub) {
+                    html += '<div class="device-details"><span class="detail">🔗 ' + hubLink + '</span></div>';
+                }
+                
                 html += '<div class="device-soil"><span class="value">' + soil + '</span><span class="unit">%</span>';
                 html += '<div class="mini-bar"><div class="fill" style="width:' + Math.min(soil, 100) + '%;"></div></div></div>';
-                html += '<div class="device-details"><span class="detail">🕐 ' + (hub.last_seen ? new Date(hub.last_seen).toLocaleTimeString() : 'Never') + '</span></div>';
+                html += '<div class="device-details"><span class="detail">🕐 ' + (device.last_seen ? new Date(device.last_seen).toLocaleTimeString() : 'Never') + '</span></div>';
                 html += '<div class="device-actions">';
                 html += '<button class="btn btn-secondary btn-sm" onclick="refreshDevice(\'' + id + '\')" title="Refresh status">🔄</button>';
-                html += '<button class="btn btn-secondary btn-sm" onclick="openConfig(\'' + id + '\')" title="Configure">⚙️</button>';
-                html += '<button class="btn btn-secondary btn-sm" onclick="rebootHub(\'' + id + '\')" title="Reboot">🔁</button>';
-                html += '<button class="btn btn-danger btn-sm" onclick="deleteHub(\'' + id + '\')" title="Delete">🗑️</button>';
+                
+                if (isHub) {
+                    html += '<button class="btn btn-secondary btn-sm" onclick="openConfig(\'' + id + '\', \'hub\')" title="Configure">⚙️</button>';
+                    html += '<button class="btn btn-secondary btn-sm" onclick="rebootHub(\'' + id + '\')" title="Reboot">🔁</button>';
+                } else {
+                    html += '<button class="btn btn-secondary btn-sm" onclick="openConfig(\'' + id + '\', \'sensor\')" title="Configure">⚙️</button>';
+                    if (!isLinked) {
+                        html += '<button class="btn btn-warning btn-sm" onclick="linkSensor(\'' + id + '\')" title="Link to Hub">🔗</button>';
+                    }
+                }
+                
+                html += '<button class="btn btn-danger btn-sm" onclick="deleteDevice(\'' + id + '\', \'' + device._type + '\')" title="Delete">🗑️</button>';
                 html += '</div></div>';
             });
-        }
-
-        if (unclaimed.length > 0) {
-            html += '<div style="grid-column:1/-1;padding:8px 0 4px;font-size:12px;color:#6b7280;border-top:1px solid rgba(255,255,255,0.06);">🔍 Discovered (Click to Claim)</div>';
-            unclaimed.forEach(function(hub) {
-                html += '<div class="discovered-card" style="grid-column:1/-1;">';
-                html += '<div class="info"><span class="icon">📡</span>';
-                html += '<div><div style="font-weight:600;">' + (hub.device_name || hub.hub_id) + '</div>';
-                html += '<div style="font-size:11px;color:#6b7280;">' + (hub.ip_address || 'No IP') + ' · <span class="badge online"><span class="dot"></span> online</span></div></div></div>';
-                html += '<button class="btn btn-success btn-sm" onclick="claimHub(\'' + hub.hub_id + '\')">📥 Claim</button>';
-                html += '</div>';
-            });
-        }
-
-        if (!html) {
-            html = '<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🌿</div><div class="title">No devices yet</div><div class="sub">Set up your ESP32 hub and it will appear here automatically.</div></div>';
+        } else {
+            html = '<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🌿</div><div class="title">No devices yet</div><div class="sub">Click "Scan" to discover a hub or sensor via Bluetooth.</div></div>';
         }
 
         grid.innerHTML = html;
@@ -450,8 +477,8 @@ async function loadDevices() {
 }
 
 // ===== REFRESH SINGLE DEVICE =====
-async function refreshDevice(hubId) {
-    showToast('🔄 Checking ' + hubId + '...', 'warning');
+async function refreshDevice(deviceId) {
+    showToast('🔄 Checking ' + deviceId + '...', 'warning');
     try {
         await loadDevices();
         showToast('✅ Device status updated', 'success');
@@ -460,22 +487,202 @@ async function refreshDevice(hubId) {
     }
 }
 
-// ===== CLAIM HUB =====
-async function claimHub(hubId) {
-    showToast('📥 Claiming hub...', 'warning');
+// ===== DELETE DEVICE =====
+async function deleteDevice(deviceId, type) {
+    if (!confirm('Delete ' + deviceId + '?')) return;
+    showToast('🗑️ Deleting...', 'warning');
     try {
-        var result = await apiRequest('/api/hubs/claim', {
-            method: 'POST',
-            body: JSON.stringify({ hub_id: hubId })
-        });
+        var endpoint = type === 'hub' ? '/api/hubs/' + deviceId : '/api/sensors/' + deviceId;
+        var result = await apiRequest(endpoint, { method: 'DELETE' });
         if (result.success) {
-            showToast('✅ Hub claimed!', 'success');
+            showToast('✅ Device deleted', 'success');
             loadDevices();
         } else {
             showToast('❌ ' + (result.error || 'Failed'), 'error');
         }
     } catch (error) {
         showToast('❌ Error: ' + error.message, 'error');
+    }
+}
+
+// ==========================================
+// SENSOR FUNCTIONS
+// ==========================================
+
+// ===== LINK SENSOR TO HUB =====
+async function linkSensor(sensorId) {
+    try {
+        // Get list of hubs to link to
+        var hubsResponse = await fetch(API_BASE + '/api/hubs', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        var hubs = hubsResponse.ok ? await hubsResponse.json() : [];
+        
+        if (hubs.length === 0) {
+            showToast('❌ No hubs available to link. Please set up a hub first.', 'error');
+            return;
+        }
+        
+        // Show hub selection modal
+        var select = document.getElementById('hubSelect');
+        select.innerHTML = '<option value="">Select a hub...</option>';
+        hubs.forEach(function(hub) {
+            select.innerHTML += '<option value="' + hub.hub_id + '">' + (hub.device_name || hub.hub_id) + '</option>';
+        });
+        
+        currentConfigDeviceId = sensorId;
+        currentDeviceType = 'sensor';
+        document.getElementById('configHubId').textContent = sensorId;
+        document.getElementById('configHubStatus').textContent = '🔗 Select a hub to link this sensor to';
+        document.getElementById('hubSelectGroup').style.display = 'block';
+        document.getElementById('configSSID').value = '';
+        document.getElementById('configPassword').value = '';
+        document.getElementById('configDeviceName').value = '';
+        document.getElementById('configSaveBtn').textContent = '🔗 Link & Configure';
+        openModal('configModal');
+        
+    } catch (error) {
+        showToast('❌ Error: ' + error.message, 'error');
+    }
+}
+
+// ===== SAVE DEVICE CONFIG =====
+async function saveDeviceConfig() {
+    var deviceId = currentConfigDeviceId;
+    var ssid = document.getElementById('configSSID').value.trim();
+    var password = document.getElementById('configPassword').value.trim();
+    var name = document.getElementById('configDeviceName').value.trim() || deviceId;
+    var hubId = document.getElementById('hubSelect').value;
+    
+    if (!ssid || !password) {
+        showToast('❌ WiFi SSID and Password required', 'error');
+        return;
+    }
+    
+    var btn = document.getElementById('configSaveBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending...';
+    document.getElementById('configHubStatus').textContent = '📤 Sending config...';
+    
+    try {
+        // Send WiFi config + link command via BLE
+        var config = {
+            command: 'configure_wifi',
+            ssid: ssid,
+            password: password,
+            mqtt: 'broker.hivemq.com',
+            port: 1883
+        };
+        
+        if (currentDeviceType === 'sensor' && hubId) {
+            // Also link to hub
+            config.link = true;
+            config.hub_id = hubId;
+        }
+        
+        var encoder = new TextEncoder();
+        await currentBleCharacteristic.writeValue(encoder.encode(JSON.stringify(config)));
+        
+        showToast('✅ Config sent! Device is connecting...', 'success');
+        document.getElementById('configHubStatus').textContent = '✅ Sent!';
+        
+        // Also register in cloud
+        if (currentDeviceType === 'sensor' && hubId) {
+            var linkResult = await apiRequest('/api/sensors/link', {
+                method: 'POST',
+                body: JSON.stringify({
+                    sensor_id: deviceId,
+                    hub_id: hubId
+                })
+            });
+        }
+        
+        setTimeout(function() {
+            closeModal('configModal');
+            loadDevices();
+            if (currentBleDevice && currentBleDevice.gatt) { 
+                currentBleDevice.gatt.disconnect(); 
+            }
+            isConnected = false;
+            updateBleStatus('disconnected', '');
+        }, 2000);
+        
+    } catch (error) {
+        showToast('❌ Failed: ' + error.message, 'error');
+    }
+    btn.disabled = false; 
+    btn.innerHTML = currentDeviceType === 'sensor' && document.getElementById('hubSelect').value ? '🔗 Link & Configure' : '💾 Save';
+}
+
+// ==========================================
+// SCAN FOR DEVICES (Hubs + Sensors)
+// ==========================================
+async function scanForDevices() {
+    updateBleStatus('scanning', 'Scanning...');
+    showToast('🔍 Scanning for BLE devices...', 'warning');
+    
+    try {
+        if (!navigator.bluetooth) {
+            showToast('❌ Web Bluetooth not supported. Use Chrome/Edge.', 'error');
+            updateBleStatus('disconnected', '');
+            return;
+        }
+        
+        // Try to find both Hubs and Sensors
+        var device = await navigator.bluetooth.requestDevice({
+            filters: [
+                { services: [BLE_SERVICE_UUID_HUB] },
+                { services: [BLE_SERVICE_UUID_SENSOR] }
+            ],
+            optionalServices: [BLE_SERVICE_UUID_HUB, BLE_SERVICE_UUID_SENSOR]
+        });
+        
+        if (!device) { 
+            showToast('❌ No devices found', 'error'); 
+            updateBleStatus('disconnected', ''); 
+            return; 
+        }
+        
+        await connectBleDevice(device);
+        showToast('✅ Connected to ' + (device.name || 'device'), 'success');
+        
+        // Determine device type from service UUID
+        var services = await device.gatt.getPrimaryServices();
+        var deviceType = 'hub';
+        for (var i = 0; i < services.length; i++) {
+            if (services[i].uuid === BLE_SERVICE_UUID_SENSOR) {
+                deviceType = 'sensor';
+                break;
+            }
+        }
+        
+        currentDeviceType = deviceType;
+        currentConfigDeviceId = device.name || (deviceType === 'hub' ? 'FarmIOT_Hub_001' : 'FarmIOT_Sensor_001');
+        document.getElementById('configHubId').textContent = currentConfigDeviceId;
+        document.getElementById('configHubStatus').textContent = '📡 Connected via Bluetooth - ' + deviceType.toUpperCase();
+        document.getElementById('configSSID').value = '';
+        document.getElementById('configPassword').value = '';
+        document.getElementById('configDeviceName').value = currentConfigDeviceId;
+        document.getElementById('hubSelectGroup').style.display = deviceType === 'sensor' ? 'block' : 'none';
+        document.getElementById('configSaveBtn').textContent = deviceType === 'sensor' ? '🔗 Link & Configure' : '💾 Configure';
+        
+        // Load hubs for dropdown if sensor
+        if (deviceType === 'sensor') {
+            var hubsResponse = await fetch(API_BASE + '/api/hubs', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            var hubs = hubsResponse.ok ? await hubsResponse.json() : [];
+            var select = document.getElementById('hubSelect');
+            select.innerHTML = '<option value="">Select a hub...</option>';
+            hubs.forEach(function(hub) {
+                select.innerHTML += '<option value="' + hub.hub_id + '">' + (hub.device_name || hub.hub_id) + '</option>';
+            });
+        }
+        
+        openModal('configModal');
+        
+    } catch (error) {
+        updateBleStatus('disconnected', '');
+        showToast('❌ Scan failed: ' + error.message, 'error');
     }
 }
 
@@ -493,7 +700,10 @@ async function autoReconnectBle() {
                 var s = await d.gatt.connect();
                 var services = await s.getPrimaryServices();
                 for (var j = 0; j < services.length; j++) {
-                    if (services[j].uuid === BLE_SERVICE_UUID) { found = d; break; }
+                    if (services[j].uuid === BLE_SERVICE_UUID_HUB || services[j].uuid === BLE_SERVICE_UUID_SENSOR) { 
+                        found = d; 
+                        break; 
+                    }
                 }
                 if (found) break;
                 await d.gatt.disconnect();
@@ -510,8 +720,24 @@ async function autoReconnectBle() {
 async function connectBleDevice(device) {
     try {
         var server = await device.gatt.connect();
-        var service = await server.getPrimaryService(BLE_SERVICE_UUID);
-        var characteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
+        var services = await server.getPrimaryServices();
+        var characteristic = null;
+        
+        for (var i = 0; i < services.length; i++) {
+            var svc = services[i];
+            if (svc.uuid === BLE_SERVICE_UUID_HUB) {
+                characteristic = await svc.getCharacteristic(BLE_CHARACTERISTIC_UUID_HUB);
+                break;
+            } else if (svc.uuid === BLE_SERVICE_UUID_SENSOR) {
+                characteristic = await svc.getCharacteristic(BLE_CHARACTERISTIC_UUID_SENSOR);
+                break;
+            }
+        }
+        
+        if (!characteristic) {
+            throw new Error('No matching characteristic found');
+        }
+        
         currentBleDevice = device;
         currentBleCharacteristic = characteristic;
         isConnected = true;
@@ -524,87 +750,43 @@ async function connectBleDevice(device) {
     }
 }
 
-async function scanForHubs() {
-    updateBleStatus('scanning', 'Scanning...');
-    showToast('🔍 Scanning for BLE hubs...', 'warning');
-    try {
-        if (!navigator.bluetooth) {
-            showToast('❌ Web Bluetooth not supported. Use Chrome/Edge.', 'error');
-            updateBleStatus('disconnected', '');
-            return;
-        }
-        var device = await navigator.bluetooth.requestDevice({
-            filters: [{ services: [BLE_SERVICE_UUID] }],
-            optionalServices: [BLE_SERVICE_UUID]
-        });
-        if (!device) { showToast('❌ No devices found', 'error'); updateBleStatus('disconnected', ''); return; }
-        await connectBleDevice(device);
-        showToast('✅ Connected to ' + (device.name || 'device'), 'success');
-        currentConfigHubId = device.name || 'FarmIOT_Hub_001';
-        document.getElementById('configHubId').textContent = currentConfigHubId;
-        document.getElementById('configHubStatus').textContent = '📡 Connected via Bluetooth';
-        document.getElementById('configSSID').value = '';
-        document.getElementById('configPassword').value = '';
-        document.getElementById('configDeviceName').value = currentConfigHubId;
-        openModal('configModal');
-    } catch (error) {
-        updateBleStatus('disconnected', '');
-        showToast('❌ Scan failed: ' + error.message, 'error');
-    }
-}
-
-// ===== CONFIG =====
-async function saveConfig() {
-    var ssid = document.getElementById('configSSID').value.trim();
-    var password = document.getElementById('configPassword').value.trim();
-    if (!ssid || !password) {
-        showToast('❌ WiFi SSID and Password required', 'error');
-        return;
-    }
-
-    var btn = document.getElementById('configSaveBtn');
-    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending...';
-    document.getElementById('configHubStatus').textContent = '📤 Sending...';
-
-    try {
-        var config = { ssid: ssid, password: password };
-        var encoder = new TextEncoder();
-        await currentBleCharacteristic.writeValue(encoder.encode(JSON.stringify(config)));
-        showToast('✅ Config sent! ESP32 is connecting...', 'success');
-        document.getElementById('configHubStatus').textContent = '✅ Sent!';
-        setTimeout(function() {
-            closeModal('configModal');
-            loadDevices();
-            if (currentBleDevice && currentBleDevice.gatt) { currentBleDevice.gatt.disconnect(); }
-            isConnected = false;
-            updateBleStatus('disconnected', '');
-        }, 2000);
-    } catch (error) {
-        showToast('❌ Failed: ' + error.message, 'error');
-    }
-    btn.disabled = false; btn.innerHTML = '💾 Save';
-}
-
-async function openConfig(hubId) {
-    currentConfigHubId = hubId;
-    document.getElementById('configHubId').textContent = hubId;
+// ===== OPEN CONFIG =====
+async function openConfig(deviceId, type) {
+    currentConfigDeviceId = deviceId;
+    currentDeviceType = type || 'hub';
+    document.getElementById('configHubId').textContent = deviceId;
     document.getElementById('configHubStatus').textContent = 'Loading...';
     document.getElementById('configSSID').value = '';
     document.getElementById('configPassword').value = '';
-    document.getElementById('configDeviceName').value = hubId;
-
+    document.getElementById('configDeviceName').value = deviceId;
+    document.getElementById('hubSelectGroup').style.display = type === 'sensor' ? 'block' : 'none';
+    document.getElementById('configSaveBtn').textContent = type === 'sensor' ? '🔗 Link & Configure' : '💾 Configure';
+    
+    if (type === 'sensor') {
+        var hubsResponse = await fetch(API_BASE + '/api/hubs', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        var hubs = hubsResponse.ok ? await hubsResponse.json() : [];
+        var select = document.getElementById('hubSelect');
+        select.innerHTML = '<option value="">Select a hub...</option>';
+        hubs.forEach(function(hub) {
+            select.innerHTML += '<option value="' + hub.hub_id + '">' + (hub.device_name || hub.hub_id) + '</option>';
+        });
+    }
+    
     try {
-        var data = await apiRequest('/api/hubs/' + hubId + '/config');
+        var endpoint = type === 'hub' ? '/api/hubs/' + deviceId + '/config' : '/api/sensors/' + deviceId + '/config';
+        var data = await apiRequest(endpoint);
         if (data.config) {
             document.getElementById('configSSID').value = data.config.ssid || '';
-            document.getElementById('configDeviceName').value = data.config.device_name || hubId;
+            document.getElementById('configDeviceName').value = data.config.device_name || deviceId;
         }
     } catch (e) {}
     document.getElementById('configHubStatus').textContent = 'Ready';
     openModal('configModal');
 }
 
-// ===== HUB MANAGEMENT =====
+// ===== REBOOT HUB =====
 async function rebootHub(hubId) {
     if (!confirm('Reboot ' + hubId + '?')) return;
     showToast('🔄 Rebooting...', 'warning');
@@ -613,22 +795,6 @@ async function rebootHub(hubId) {
         if (result.success) {
             showToast('✅ Reboot command sent', 'success');
             setTimeout(loadDevices, 3000);
-        } else {
-            showToast('❌ ' + (result.error || 'Failed'), 'error');
-        }
-    } catch (error) {
-        showToast('❌ Error: ' + error.message, 'error');
-    }
-}
-
-async function deleteHub(hubId) {
-    if (!confirm('Delete ' + hubId + '?')) return;
-    showToast('🗑️ Deleting...', 'warning');
-    try {
-        var result = await apiRequest('/api/hubs/' + hubId, { method: 'DELETE' });
-        if (result.success) {
-            showToast('✅ Hub deleted', 'success');
-            loadDevices();
         } else {
             showToast('❌ ' + (result.error || 'Failed'), 'error');
         }
@@ -648,12 +814,9 @@ document.querySelectorAll('.modal').forEach(function(modal) {
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📱 FarmIOT Dashboard loaded');
-    
-    // Initialize Google SSO with a small delay to ensure DOM is ready
     setTimeout(function() {
         initGoogleSSO();
     }, 100);
-    
     checkSession();
     setAuthMode('login');
 });
