@@ -16,7 +16,7 @@
         }
         .container { max-width: 1200px; margin: 0 auto; }
         
-        /* ===== HEADER ===== */
+        /* HEADER */
         .header {
             display: flex;
             justify-content: space-between;
@@ -48,7 +48,7 @@
             font-weight: 400;
         }
         
-        /* ===== USER PROFILE DROPDOWN ===== */
+        /* USER PROFILE DROPDOWN */
         .user-profile {
             position: relative;
             cursor: pointer;
@@ -126,7 +126,7 @@
         .user-dropdown .dropdown-item.danger { color: #f87171; }
         .user-dropdown .dropdown-item.danger:hover { background: rgba(248,113,113,0.1); }
         
-        /* ===== SEARCH BAR ===== */
+        /* SEARCH BAR */
         .search-bar {
             display: flex;
             gap: 10px;
@@ -158,7 +158,7 @@
             white-space: nowrap;
         }
         
-        /* ===== BUTTONS ===== */
+        /* BUTTONS */
         .btn {
             padding: 6px 14px;
             border: none;
@@ -197,7 +197,7 @@
         .btn-danger:hover { background: rgba(248,113,113,0.2); }
         .btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 6px; }
         
-        /* ===== BADGES ===== */
+        /* BADGES */
         .badge {
             display: inline-flex;
             align-items: center;
@@ -226,7 +226,7 @@
             50% { opacity: 0.5; transform: scale(0.8); }
         }
         
-        /* ===== DEVICE CARDS (GRID) ===== */
+        /* DEVICE CARDS (GRID) */
         .device-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -329,7 +329,7 @@
             padding-top: 10px;
         }
         
-        /* ===== DISCOVERED HUB CARD ===== */
+        /* DISCOVERED HUB CARD */
         .discovered-card {
             border: 2px solid rgba(251,191,36,0.2);
             background: rgba(251,191,36,0.03);
@@ -350,7 +350,7 @@
         }
         .discovered-card .info .icon { font-size: 22px; }
         
-        /* ===== BLE STATUS ===== */
+        /* BLE STATUS */
         .ble-status {
             display: inline-flex;
             align-items: center;
@@ -366,7 +366,7 @@
         .ble-status.disconnected { background: rgba(248,113,113,0.15); color: #f87171; }
         .ble-status.scanning { background: rgba(251,191,36,0.15); color: #fbbf24; }
         
-        /* ===== EMPTY STATE ===== */
+        /* EMPTY STATE */
         .empty-state {
             text-align: center;
             padding: 40px 20px;
@@ -376,7 +376,7 @@
         .empty-state .title { font-size: 16px; font-weight: 600; color: #e5e7eb; }
         .empty-state .sub { font-size: 13px; }
         
-        /* ===== MODAL ===== */
+        /* MODAL */
         .modal {
             display: none;
             position: fixed;
@@ -424,7 +424,7 @@
         .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
         .modal-actions .btn { flex: 1; justify-content: center; }
         
-        /* ===== TOAST ===== */
+        /* TOAST */
         .toast {
             position: fixed;
             bottom: 20px;
@@ -707,7 +707,6 @@
         img.src = userData.picture || '';
         document.getElementById('dropdownName').textContent = userData.name || 'User';
         document.getElementById('dropdownEmail').textContent = userData.email;
-        // Remove signout from dropdown
     }
 
     function logoutUser() {
@@ -729,7 +728,6 @@
         document.getElementById('userDropdown').classList.toggle('active');
     }
 
-    // Close dropdown on click outside
     document.addEventListener('click', (e) => {
         const profile = document.getElementById('userProfile');
         if (!profile.contains(e.target)) {
@@ -748,22 +746,22 @@
         if (autoRefreshInterval) { clearInterval(autoRefreshInterval); }
         autoRefreshInterval = setInterval(() => {
             if (token && user) loadDevices();
-        }, 15000);
+        }, 30000); // Refresh every 30 seconds
     }
 
     // ===== FILTER DEVICES =====
     function filterDevices() {
         const query = document.getElementById('searchInput').value.toLowerCase();
         const cards = document.querySelectorAll('.device-card');
+        let visibleCount = 0;
         cards.forEach(card => {
             const name = card.dataset.name?.toLowerCase() || '';
             const id = card.dataset.id?.toLowerCase() || '';
             const match = name.includes(query) || id.includes(query);
             card.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
         });
-        // Update visible count
-        const visible = document.querySelectorAll('.device-card:not([style*="display: none"])').length;
-        document.getElementById('deviceCount').textContent = `(${visible} devices shown)`;
+        document.getElementById('deviceCount').textContent = `${visibleCount} devices shown`;
     }
 
     // ===== LOAD DEVICES =====
@@ -824,11 +822,12 @@
                                 </div>
                             </div>
                             <div class="device-details">
-                                <span class="detail">📶 ${hub.last_seen ? new Date(hub.last_seen).toLocaleTimeString() : 'Never'}</span>
+                                <span class="detail">🕐 ${hub.last_seen ? new Date(hub.last_seen).toLocaleTimeString() : 'Never'}</span>
                             </div>
                             <div class="device-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="refreshDevice('${id}')" title="Refresh status">🔄</button>
                                 <button class="btn btn-secondary btn-sm" onclick="openConfig('${id}')" title="Configure">⚙️</button>
-                                <button class="btn btn-secondary btn-sm" onclick="rebootHub('${id}')" title="Reboot">🔄</button>
+                                <button class="btn btn-secondary btn-sm" onclick="rebootHub('${id}')" title="Reboot">🔁</button>
                                 <button class="btn btn-danger btn-sm" onclick="deleteHub('${id}')" title="Delete">🗑️</button>
                             </div>
                         </div>
@@ -876,6 +875,17 @@
                     <button class="btn btn-secondary btn-sm" onclick="loadDevices()">🔄 Retry</button>
                 </div>
             `;
+        }
+    }
+
+    // ===== REFRESH SINGLE DEVICE =====
+    async function refreshDevice(hubId) {
+        showToast('🔄 Checking ' + hubId + '...', 'warning');
+        try {
+            await loadDevices();
+            showToast('✅ Device status updated', 'success');
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
         }
     }
 
@@ -958,7 +968,6 @@
             if (!device) { showToast('❌ No devices found', 'error'); updateBleStatus('disconnected'); return; }
             await connectBleDevice(device);
             showToast('✅ Connected to ' + (device.name || 'device'), 'success');
-            // After BLE connect, check if we need to show config
             currentConfigHubId = device.name || 'FarmIOT_Hub_001';
             document.getElementById('configHubId').textContent = currentConfigHubId;
             document.getElementById('configHubStatus').textContent = '📡 Connected via Bluetooth';

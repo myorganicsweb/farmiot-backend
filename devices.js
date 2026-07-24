@@ -1,6 +1,7 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 
 const router = express.Router();
 const supabase = createClient(
@@ -26,45 +27,69 @@ const authenticate = async (req, res, next) => {
 };
 
 // ==========================================
-// GET ALL HUBS - SHOW ONLINE + USER'S HUBS
+// POLL ESP32 FOR STATUS (Server checks hub)
+// ==========================================
+async function pollHubStatus(hub) {
+  try {
+    if (!hub.ip_address) return false;
+    
+    const url = `http://${hub.ip_address}/api/health`;
+    const response = await axios.get(url, { timeout: 3000 });
+    
+    if (response.status === 200) {
+      // Update last_seen in database
+      await supabase
+        .from('hubs')
+        .update({
+          status: 'online',
+          last_seen: new Date().toISOString()
+        })
+        .eq('hub_id', hub.hub_id);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    // Hub is offline
+    await supabase
+      .from('hubs')
+      .update({
+        status: 'offline',
+        last_seen: new Date().toISOString()
+      })
+      .eq('hub_id', hub.hub_id);
+    return false;
+  }
+}
+
+// ==========================================
+// GET ALL HUBS
 // ==========================================
 router.get('/hubs', authenticate, async (req, res) => {
   try {
     const userEmail = req.user.id || req.user.email;
     
-    // Get ALL hubs that are:
-    // 1. Online (connected to WiFi) - regardless of user_id
-    // 2. Already claimed by this user
+    // Get all hubs for this user
     const { data: hubs, error } = await supabase
       .from('hubs')
       .select('*')
-      .or(`status.eq.online,user_id.eq.${userEmail}`)
+      .eq('user_id', userEmail)
       .order('status', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    // Mark hubs as offline if last_seen is too old (> 2 minutes)
-    const now = new Date();
+    // Poll each hub for status (if it has an IP)
     for (const hub of hubs || []) {
-      if (hub.last_seen) {
-        const lastSeen = new Date(hub.last_seen);
-        const diff = (now - lastSeen) / 1000;
-        if (diff > 120 && hub.status === 'online') {
-          await supabase
-            .from('hubs')
-            .update({ status: 'offline' })
-            .eq('hub_id', hub.hub_id);
-          hub.status = 'offline';
-        }
+      if (hub.ip_address) {
+        await pollHubStatus(hub);
       }
     }
 
-    // Get updated status
+    // Get updated status from database
     const { data: updated, error: updateError } = await supabase
       .from('hubs')
       .select('*')
-      .or(`status.eq.online,user_id.eq.${userEmail}`)
+      .eq('user_id', userEmail)
       .order('status', { ascending: false })
       .order('created_at', { ascending: false });
 
@@ -137,7 +162,7 @@ router.post('/hubs/register', async (req, res) => {
 });
 
 // ==========================================
-// CLAIM HUB (User claims an online hub)
+// CLAIM HUB
 // ==========================================
 router.post('/hubs/claim', authenticate, async (req, res) => {
   try {
@@ -171,7 +196,7 @@ router.post('/hubs/claim', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// DISCOVER HUBS (Unclaimed online hubs)
+// DISCOVER HUBS
 // ==========================================
 router.get('/hubs/discover', async (req, res) => {
   try {
@@ -249,6 +274,61 @@ router.post('/hubs/add', authenticate, async (req, res) => {
 });
 
 // ==========================================
+// REBOOT HUB
+// ==========================================
+router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
+  try {
+    const { hubId } = req.params;
+    
+    const { data: hub, error: hubError } = await supabase
+      .from('hubs')
+      .select('ip_address')
+      .eq('hub_id', hubId)
+      .single();
+
+    if (hubError || !hub) {
+      return res.status(404).json({ error: 'Hub not found' });
+    }
+
+    if (!hub.ip_address) {
+      return res.json({ 
+        success: true, 
+        message: 'Reboot command queued (hub has no IP)'
+      });
+    }
+
+    try {
+      const response = await axios.post(
+        `http://${hub.ip_address}/api/reboot`,
+        {},
+        { timeout: 5000 }
+      );
+      
+      if (response.status === 200) {
+        res.json({ 
+          success: true, 
+          message: 'Reboot command sent successfully'
+        });
+      } else {
+        res.json({ 
+          success: true, 
+          message: 'Reboot command sent (unexpected response)'
+        });
+      }
+    } catch (error) {
+      console.error('Reboot error:', error.message);
+      res.json({ 
+        success: true, 
+        message: 'Reboot command sent (hub may be offline)'
+      });
+    }
+  } catch (error) {
+    console.error('Error rebooting hub:', error);
+    res.status(500).json({ error: 'Failed to reboot hub' });
+  }
+});
+
+// ==========================================
 // GET HUB CONFIG
 // ==========================================
 router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
@@ -276,42 +356,6 @@ router.get('/hubs/:hubId/config', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error fetching config:', error);
     res.status(500).json({ error: 'Failed to fetch config' });
-  }
-});
-
-// ==========================================
-// REBOOT HUB
-// ==========================================
-router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
-  try {
-    const { hubId } = req.params;
-    
-    const { data: hub, error: hubError } = await supabase
-      .from('hubs')
-      .select('ip_address')
-      .eq('hub_id', hubId)
-      .single();
-
-    if (hubError) throw hubError;
-
-    let rebooted = false;
-    if (hub?.ip_address) {
-      try {
-        const axios = require('axios');
-        await axios.post(`http://${hub.ip_address}/api/reboot`, {}, { timeout: 5000 });
-        rebooted = true;
-      } catch (sendError) {
-        console.log('Reboot via HTTP failed:', sendError.message);
-      }
-    }
-
-    res.json({ 
-      success: true, 
-      message: rebooted ? 'Reboot command sent' : 'Reboot queued (hub may be offline)'
-    });
-  } catch (error) {
-    console.error('Error rebooting hub:', error);
-    res.status(500).json({ error: 'Failed to reboot hub' });
   }
 });
 
