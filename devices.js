@@ -11,7 +11,7 @@ const supabase = createClient(
 );
 
 // ==========================================
-// MQTT Client (Server connects to broker)
+// MQTT Client
 // ==========================================
 const mqttClient = mqtt.connect('mqtt://broker.hivemq.com', {
   clientId: 'farmiot_server_' + Math.random().toString(16).substr(2, 6)
@@ -19,7 +19,6 @@ const mqttClient = mqtt.connect('mqtt://broker.hivemq.com', {
 
 mqttClient.on('connect', () => {
   console.log('✅ Server connected to MQTT broker');
-  // Subscribe to responses from hubs
   mqttClient.subscribe('farmiot/hub/response/#', (err) => {
     if (!err) console.log('📡 Subscribed to hub responses');
   });
@@ -34,7 +33,6 @@ mqttClient.on('message', async (topic, message) => {
     const hubId = topic.split('/').pop();
     
     if (data.status === 'online') {
-      // Update hub status in database
       await supabase
         .from('hubs')
         .update({
@@ -69,20 +67,18 @@ const authenticate = async (req, res, next) => {
 };
 
 // ==========================================
-// POLL HUB STATUS (Server asks ESP32 via MQTT)
+// POLL HUB VIA MQTT
 // ==========================================
 async function pollHubViaMQTT(hubId) {
   return new Promise((resolve) => {
     const topic = `farmiot/hub/request/${hubId}`;
     const responseTopic = `farmiot/hub/response/${hubId}`;
     
-    // Timeout after 5 seconds
     const timeout = setTimeout(() => {
       console.log(`⏰ Poll timeout for ${hubId}`);
       resolve({ online: false, error: 'Timeout' });
     }, 5000);
 
-    // Listen for response
     const handler = (topic, message) => {
       if (topic === responseTopic) {
         clearTimeout(timeout);
@@ -99,7 +95,6 @@ async function pollHubViaMQTT(hubId) {
 
     mqttClient.on('message', handler);
     
-    // Send poll request
     const request = JSON.stringify({ command: 'status' });
     mqttClient.publish(topic, request);
     console.log(`📤 Polling ${hubId} via MQTT...`);
@@ -120,13 +115,93 @@ async function pollHubViaHTTP(ip) {
 }
 
 // ==========================================
-// GET ALL HUBS (Poll each hub)
+// GET USER SETTINGS
+// ==========================================
+router.get('/settings', authenticate, async (req, res) => {
+  try {
+    const userEmail = req.user.id || req.user.email;
+    
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', userEmail)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    // Default settings if not found
+    if (!data) {
+      const defaultSettings = {
+        user_id: userEmail,
+        active_refresh_interval: 300, // 5 minutes
+        inactive_refresh_interval: 3600, // 1 hour
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const { data: newData, error: insertError } = await supabase
+        .from('user_settings')
+        .insert([defaultSettings])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      return res.json(newData);
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// ==========================================
+// UPDATE USER SETTINGS
+// ==========================================
+router.post('/settings', authenticate, async (req, res) => {
+  try {
+    const userEmail = req.user.id || req.user.email;
+    const { active_refresh_interval, inactive_refresh_interval } = req.body;
+
+    // Validate values
+    const validIntervals = [60, 120, 300, 1800, 3600, 10800, 21600, 43200, 86400];
+    if (active_refresh_interval && !validIntervals.includes(active_refresh_interval)) {
+      return res.status(400).json({ error: 'Invalid active refresh interval' });
+    }
+    if (inactive_refresh_interval && !validIntervals.includes(inactive_refresh_interval)) {
+      return res.status(400).json({ error: 'Invalid inactive refresh interval' });
+    }
+
+    const { data, error } = await supabase
+      .from('user_settings')
+      .upsert({
+        user_id: userEmail,
+        active_refresh_interval: active_refresh_interval || 300,
+        inactive_refresh_interval: inactive_refresh_interval || 3600,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, settings: data });
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+// ==========================================
+// GET ALL HUBS
 // ==========================================
 router.get('/hubs', authenticate, async (req, res) => {
   try {
     const userEmail = req.user.id || req.user.email;
     
-    // Get all hubs for this user
     const { data: hubs, error } = await supabase
       .from('hubs')
       .select('*')
@@ -143,13 +218,11 @@ router.get('/hubs', authenticate, async (req, res) => {
       let online = false;
       let statusData = null;
       
-      // Try MQTT first
       const mqttResult = await pollHubViaMQTT(hub.hub_id);
       if (mqttResult.online) {
         online = true;
         statusData = mqttResult.data;
       } else if (hub.ip_address) {
-        // Fallback to HTTP
         const httpResult = await pollHubViaHTTP(hub.ip_address);
         if (httpResult.online) {
           online = true;
@@ -158,7 +231,6 @@ router.get('/hubs', authenticate, async (req, res) => {
       }
       
       if (online) {
-        // Update database with online status
         await supabase
           .from('hubs')
           .update({
@@ -168,9 +240,7 @@ router.get('/hubs', authenticate, async (req, res) => {
           })
           .eq('hub_id', hub.hub_id);
         hub.status = 'online';
-        hub.last_seen = new Date().toISOString();
       } else {
-        // Mark as offline in database
         await supabase
           .from('hubs')
           .update({
@@ -182,7 +252,6 @@ router.get('/hubs', authenticate, async (req, res) => {
       }
     }
 
-    // Get updated status from database
     const { data: updated, error: updateError } = await supabase
       .from('hubs')
       .select('*')
@@ -314,7 +383,64 @@ router.get('/hubs/discover', async (req, res) => {
 });
 
 // ==========================================
-// REBOOT HUB (via MQTT)
+// ADD/CLAIM HUB (via BLE)
+// ==========================================
+router.post('/hubs/add', authenticate, async (req, res) => {
+  try {
+    const { hub_id, ip_address, name } = req.body;
+    const userEmail = req.user.id || req.user.email;
+    
+    if (!hub_id) {
+      return res.status(400).json({ error: 'hub_id required' });
+    }
+
+    const { data: existing, error: checkError } = await supabase
+      .from('hubs')
+      .select('*')
+      .eq('hub_id', hub_id)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    if (existing) {
+      const { data, error } = await supabase
+        .from('hubs')
+        .update({
+          user_id: userEmail,
+          device_name: name || hub_id,
+          ip_address: ip_address || existing.ip_address || null,
+          status: 'online'
+        })
+        .eq('hub_id', hub_id)
+        .select();
+      
+      if (error) throw error;
+      res.json({ success: true, hub: data[0] });
+    } else {
+      const { data, error } = await supabase
+        .from('hubs')
+        .insert([{
+          hub_id,
+          user_id: userEmail,
+          device_name: name || hub_id,
+          ip_address: ip_address || null,
+          status: 'pairing'
+        }])
+        .select();
+      
+      if (error) throw error;
+      res.json({ success: true, hub: data[0] });
+    }
+  } catch (error) {
+    console.error('Error adding hub:', error);
+    res.status(500).json({ error: 'Failed to add hub' });
+  }
+});
+
+// ==========================================
+// REBOOT HUB
 // ==========================================
 router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
   try {
@@ -330,14 +456,13 @@ router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Hub not found' });
     }
 
-    // Send reboot command via MQTT
+    // Send reboot via MQTT
     const topic = `farmiot/hub/request/${hubId}`;
     const command = JSON.stringify({ command: 'reboot' });
-    
     mqttClient.publish(topic, command);
     console.log(`📤 Reboot command sent to ${hubId} via MQTT`);
 
-    // Also try HTTP as fallback
+    // HTTP fallback
     if (hub.ip_address) {
       try {
         await axios.post(
@@ -345,15 +470,15 @@ router.post('/hubs/:hubId/reboot', authenticate, async (req, res) => {
           {},
           { timeout: 3000 }
         );
-        console.log(`📤 Reboot command sent to ${hubId} via HTTP`);
+        console.log(`📤 Reboot sent to ${hubId} via HTTP`);
       } catch (httpError) {
-        console.log(`⚠️ HTTP reboot failed for ${hubId}:`, httpError.message);
+        console.log(`⚠️ HTTP reboot failed:`, httpError.message);
       }
     }
 
     res.json({ 
       success: true, 
-      message: 'Reboot command sent via MQTT'
+      message: 'Reboot command sent'
     });
   } catch (error) {
     console.error('Error rebooting hub:', error);

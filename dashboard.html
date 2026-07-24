@@ -82,7 +82,7 @@
             border: 1px solid rgba(255,255,255,0.06);
             border-radius: 12px;
             padding: 12px 0;
-            min-width: 200px;
+            min-width: 280px;
             display: none;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
             z-index: 100;
@@ -125,6 +125,32 @@
         }
         .user-dropdown .dropdown-item.danger { color: #f87171; }
         .user-dropdown .dropdown-item.danger:hover { background: rgba(248,113,113,0.1); }
+        .user-dropdown .dropdown-item .label {
+            color: #6b7280;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .user-dropdown .dropdown-item select {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 6px;
+            color: #e5e7eb;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        .user-dropdown .dropdown-item select:focus {
+            outline: none;
+            border-color: #4ade80;
+        }
+        .user-dropdown .dropdown-item .note {
+            font-size: 10px;
+            color: #4b5563;
+            margin-left: 8px;
+        }
         
         /* SEARCH BAR */
         .search-bar {
@@ -155,6 +181,11 @@
         .search-bar .stats {
             font-size: 12px;
             color: #6b7280;
+            white-space: nowrap;
+        }
+        .search-bar .refresh-indicator {
+            font-size: 11px;
+            color: #4b5563;
             white-space: nowrap;
         }
         
@@ -470,6 +501,7 @@
             .device-grid { grid-template-columns: 1fr; }
             .search-bar { flex-direction: column; align-items: stretch; }
             .search-bar .stats { text-align: right; }
+            .user-dropdown { right: -20px; min-width: 260px; }
         }
     </style>
 </head>
@@ -492,12 +524,48 @@
                     <div class="email" id="dropdownEmail">user@example.com</div>
                 </div>
                 <div class="divider"></div>
+                
+                <!-- Refresh Frequency Settings -->
+                <div class="dropdown-item">
+                    <span>🔄 Active UI Refresh</span>
+                    <select id="activeRefreshRate" onchange="saveRefreshSettings()">
+                        <option value="60">1 min</option>
+                        <option value="120">2 min</option>
+                        <option value="300" selected>5 min</option>
+                        <option value="1800">30 min</option>
+                        <option value="3600">1 hr</option>
+                        <option value="10800">3 hr</option>
+                        <option value="21600">6 hr</option>
+                        <option value="43200">12 hr</option>
+                        <option value="86400">24 hr</option>
+                    </select>
+                </div>
+                <div class="dropdown-item">
+                    <span>💤 Inactive UI Refresh</span>
+                    <select id="inactiveRefreshRate" onchange="saveRefreshSettings()">
+                        <option value="60">1 min</option>
+                        <option value="120">2 min</option>
+                        <option value="300">5 min</option>
+                        <option value="1800">30 min</option>
+                        <option value="3600" selected>1 hr</option>
+                        <option value="10800">3 hr</option>
+                        <option value="21600">6 hr</option>
+                        <option value="43200">12 hr</option>
+                        <option value="86400">24 hr</option>
+                    </select>
+                </div>
+                <div class="dropdown-item" style="font-size:11px;color:#4b5563;padding:4px 16px;">
+                    <span>⏱️ Next refresh in: <span id="nextRefreshCountdown">--</span></span>
+                </div>
+                
+                <div class="divider"></div>
+                <button class="dropdown-item" onclick="forceRefreshNow()">🔄 Refresh Now</button>
                 <button class="dropdown-item danger" onclick="logoutUser()">🚪 Sign Out</button>
             </div>
         </div>
     </div>
 
-    <!-- AUTH CARD (Hidden after login) -->
+    <!-- AUTH CARD -->
     <div id="authSection">
         <div class="card auth-card" id="signinCard" style="background:rgba(17,24,39,0.9);padding:32px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);max-width:420px;margin:0 auto;">
             <h2 style="font-size:20px;text-align:center;">🌿 Welcome to FarmIOT</h2>
@@ -539,9 +607,10 @@
         <div class="search-bar">
             <input type="text" id="searchInput" placeholder="🔍 Search devices by name or ID..." oninput="filterDevices()">
             <button class="btn btn-primary btn-sm" onclick="scanForHubs()">🔍 Scan</button>
-            <button class="btn btn-secondary btn-sm" onclick="loadDevices()">🔄 Refresh</button>
+            <button class="btn btn-secondary btn-sm" onclick="forceRefreshNow()">🔄 Refresh</button>
             <span id="bleStatus" class="ble-status disconnected">⚪ Offline</span>
             <span class="stats" id="deviceCount"></span>
+            <span class="refresh-indicator" id="refreshIndicator">⏱️ Refresh in: --</span>
         </div>
 
         <!-- Device Grid -->
@@ -593,6 +662,35 @@
     let autoRefreshInterval = null;
     let isFirstLoad = true;
     let allDevices = [];
+    let isUIActive = true;
+    let refreshCountdown = 0;
+    let countdownInterval = null;
+
+    // Refresh frequency settings (in seconds)
+    const REFRESH_OPTIONS = {
+        active: {
+            '60': '1 min',
+            '120': '2 min',
+            '300': '5 min',
+            '1800': '30 min',
+            '3600': '1 hr',
+            '10800': '3 hr',
+            '21600': '6 hr',
+            '43200': '12 hr',
+            '86400': '24 hr'
+        },
+        inactive: {
+            '60': '1 min',
+            '120': '2 min',
+            '300': '5 min',
+            '1800': '30 min',
+            '3600': '1 hr',
+            '10800': '3 hr',
+            '21600': '6 hr',
+            '43200': '12 hr',
+            '86400': '24 hr'
+        }
+    };
 
     const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
     const BLE_CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
@@ -620,6 +718,168 @@
         if (token) headers['Authorization'] = `Bearer ${token}`;
         const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
         return response.json();
+    }
+
+    // ===== REFRESH SETTINGS =====
+    function getRefreshSettings() {
+        return {
+            active: parseInt(localStorage.getItem('farmiot_active_refresh') || '300'),
+            inactive: parseInt(localStorage.getItem('farmiot_inactive_refresh') || '3600')
+        };
+    }
+
+    function saveRefreshSettings() {
+        const active = parseInt(document.getElementById('activeRefreshRate').value);
+        const inactive = parseInt(document.getElementById('inactiveRefreshRate').value);
+        localStorage.setItem('farmiot_active_refresh', active);
+        localStorage.setItem('farmiot_inactive_refresh', inactive);
+        showToast('✅ Refresh settings saved', 'success');
+        restartRefreshTimer();
+    }
+
+    function loadRefreshSettings() {
+        const settings = getRefreshSettings();
+        document.getElementById('activeRefreshRate').value = settings.active;
+        document.getElementById('inactiveRefreshRate').value = settings.inactive;
+    }
+
+    // ===== REFRESH SETTINGS (From DB) =====
+    async function loadRefreshSettingsFromDB() {
+        try {
+            const response = await fetch(`${API_BASE}/api/settings`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error('Failed to load settings');
+            const settings = await response.json();
+            
+            document.getElementById('activeRefreshRate').value = settings.active_refresh_interval || 300;
+            document.getElementById('inactiveRefreshRate').value = settings.inactive_refresh_interval || 3600;
+            
+            // Store in localStorage for quick access
+            localStorage.setItem('farmiot_active_refresh', settings.active_refresh_interval || 300);
+            localStorage.setItem('farmiot_inactive_refresh', settings.inactive_refresh_interval || 3600);
+            
+            return settings;
+        } catch (error) {
+            console.error('Error loading settings:', error);
+            // Use defaults
+            return { active_refresh_interval: 300, inactive_refresh_interval: 3600 };
+        }
+    }
+
+    async function saveRefreshSettingsToDB() {
+        const active = parseInt(document.getElementById('activeRefreshRate').value);
+        const inactive = parseInt(document.getElementById('inactiveRefreshRate').value);
+        
+        try {
+            const response = await fetch(`${API_BASE}/api/settings`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    active_refresh_interval: active,
+                    inactive_refresh_interval: inactive
+                })
+            });
+            
+            if (!response.ok) throw new Error('Failed to save settings');
+            const result = await response.json();
+            
+            localStorage.setItem('farmiot_active_refresh', active);
+            localStorage.setItem('farmiot_inactive_refresh', inactive);
+            
+            showToast('✅ Settings saved to account', 'success');
+            restartRefreshTimer();
+            return result;
+        } catch (error) {
+            showToast('❌ Failed to save settings: ' + error.message, 'error');
+        }
+    }
+
+    // Replace the saveRefreshSettings function
+    function saveRefreshSettings() {
+        saveRefreshSettingsToDB();
+    }
+
+    // Update showUser to load settings from DB
+    function showUser(userData) {
+        document.getElementById('signinCard').style.display = 'none';
+        document.getElementById('dashboardContent').classList.remove('hidden');
+        document.getElementById('avatarText').style.display = 'none';
+        const img = document.getElementById('avatarImg');
+        img.style.display = 'block';
+        img.src = userData.picture || '';
+        document.getElementById('dropdownName').textContent = userData.name || 'User';
+        document.getElementById('dropdownEmail').textContent = userData.email;
+        
+        // Load settings from DB
+        loadRefreshSettingsFromDB().then(() => {
+            startCountdown();
+        });
+    }
+
+    function getCurrentRefreshInterval() {
+        const settings = getRefreshSettings();
+        return isUIActive ? settings.active : settings.inactive;
+    }
+
+    function getRefreshLabel(seconds) {
+        const map = {
+            60: '1 min',
+            120: '2 min',
+            300: '5 min',
+            1800: '30 min',
+            3600: '1 hr',
+            10800: '3 hr',
+            21600: '6 hr',
+            43200: '12 hr',
+            86400: '24 hr'
+        };
+        return map[seconds] || seconds + 's';
+    }
+
+    // ===== COUNTDOWN TIMER =====
+    function startCountdown() {
+        if (countdownInterval) clearInterval(countdownInterval);
+        refreshCountdown = getCurrentRefreshInterval();
+        updateCountdownDisplay();
+        
+        countdownInterval = setInterval(() => {
+            refreshCountdown--;
+            if (refreshCountdown <= 0) {
+                refreshCountdown = getCurrentRefreshInterval();
+                // Auto-refresh when countdown reaches 0
+                if (token && user) {
+                    console.log('🔄 Auto-refresh triggered');
+                    loadDevices();
+                }
+            }
+            updateCountdownDisplay();
+        }, 1000);
+    }
+
+    function updateCountdownDisplay() {
+        const seconds = refreshCountdown;
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        const display = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+        document.getElementById('nextRefreshCountdown').textContent = display;
+        document.getElementById('refreshIndicator').textContent = `⏱️ Refresh in: ${display}`;
+    }
+
+    function restartRefreshTimer() {
+        if (countdownInterval) clearInterval(countdownInterval);
+        startCountdown();
+    }
+
+    // ===== FORCE REFRESH =====
+    async function forceRefreshNow() {
+        showToast('🔄 Refreshing...', 'warning');
+        refreshCountdown = getCurrentRefreshInterval();
+        await loadDevices();
+        showToast('✅ Devices refreshed', 'success');
     }
 
     // ===== AUTH =====
@@ -707,6 +967,7 @@
         img.src = userData.picture || '';
         document.getElementById('dropdownName').textContent = userData.name || 'User';
         document.getElementById('dropdownEmail').textContent = userData.email;
+        loadRefreshSettings();
     }
 
     function logoutUser() {
@@ -721,7 +982,7 @@
         if (currentBleDevice?.gatt) try { currentBleDevice.gatt.disconnect(); } catch(e) {}
         isConnected = false;
         updateBleStatus('disconnected');
-        if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
+        if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
     }
 
     function toggleDropdown() {
@@ -739,14 +1000,45 @@
         if (token && user) { showUser(user); loadDashboard(); }
     }
 
+    // ===== UI ACTIVE/INACTIVE DETECTION =====
+    function setupActivityDetection() {
+        // Detect when tab becomes visible/hidden
+        document.addEventListener('visibilitychange', () => {
+            isUIActive = !document.hidden;
+            console.log(`📱 UI ${isUIActive ? 'ACTIVE' : 'INACTIVE'}`);
+            restartRefreshTimer();
+            if (isUIActive) {
+                // Refresh immediately when user returns
+                forceRefreshNow();
+            }
+        });
+
+        // Detect user activity (mouse/keyboard)
+        let activityTimeout;
+        const resetActivity = () => {
+            isUIActive = true;
+            clearTimeout(activityTimeout);
+            activityTimeout = setTimeout(() => {
+                isUIActive = false;
+                console.log('📱 UI INACTIVE (no user interaction)');
+                restartRefreshTimer();
+            }, 300000); // 5 minutes of inactivity
+        };
+
+        document.addEventListener('mousemove', resetActivity);
+        document.addEventListener('keydown', resetActivity);
+        document.addEventListener('click', resetActivity);
+        document.addEventListener('scroll', resetActivity);
+        resetActivity();
+    }
+
     // ===== DASHBOARD =====
     async function loadDashboard() {
+        setupActivityDetection();
         await loadDevices();
         autoReconnectBle();
-        if (autoRefreshInterval) { clearInterval(autoRefreshInterval); }
-        autoRefreshInterval = setInterval(() => {
-            if (token && user) loadDevices();
-        }, 30000); // Refresh every 30 seconds
+        loadRefreshSettings();
+        startCountdown();
     }
 
     // ===== FILTER DEVICES =====
@@ -790,7 +1082,6 @@
 
             let html = '';
 
-            // Claimed devices
             if (claimed.length > 0) {
                 claimed.forEach(hub => {
                     const status = hub.status || 'offline';
@@ -835,7 +1126,6 @@
                 });
             }
 
-            // Unclaimed discovered hubs
             if (unclaimed.length > 0) {
                 html += `<div style="grid-column:1/-1;padding:8px 0 4px;font-size:12px;color:#6b7280;border-top:1px solid rgba(255,255,255,0.06);">🔍 Discovered (Click to Claim)</div>`;
                 unclaimed.forEach(hub => {
