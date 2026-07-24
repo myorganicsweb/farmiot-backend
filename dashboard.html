@@ -12,28 +12,28 @@
             color: #e5e7eb;
             font-family: 'Segoe UI', Arial, sans-serif;
             min-height: 100vh;
-            padding: 20px;
+            padding: 16px;
         }
-        .container { max-width: 960px; margin: 0 auto; }
+        .container { max-width: 1200px; margin: 0 auto; }
         
-        /* HEADER */
+        /* ===== HEADER ===== */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px 0;
+            padding: 12px 0 16px;
             border-bottom: 1px solid rgba(255,255,255,0.06);
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px;
         }
         .header-left {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
         }
         .header h1 {
-            font-size: 24px;
+            font-size: 22px;
             background: linear-gradient(135deg, #4ade80, #22d3ee);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -41,82 +41,142 @@
             align-items: center;
             gap: 8px;
         }
-        .header .subtitle {
-            color: #6b7280;
-            font-size: 13px;
-            margin-left: 4px;
-            -webkit-text-fill-color: #6b7280;
-        }
-        .user-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #9ca3af;
-            font-size: 14px;
-            background: rgba(255,255,255,0.05);
-            padding: 6px 14px 6px 10px;
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .user-badge img {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-        }
-        
-        /* CARDS */
-        .card {
-            background: rgba(17, 24, 39, 0.9);
-            backdrop-filter: blur(10px);
-            padding: 24px;
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.06);
-            margin-bottom: 16px;
-            transition: all 0.3s;
-        }
-        .card:hover {
-            border-color: rgba(255,255,255,0.1);
-        }
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .card-header h2 {
-            font-size: 16px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .card-header .device-count {
+        .header h1 .subtitle {
             font-size: 12px;
             color: #6b7280;
+            -webkit-text-fill-color: #6b7280;
             font-weight: 400;
         }
         
-        /* BUTTONS */
-        .btn {
-            padding: 8px 16px;
-            border: none;
+        /* ===== USER PROFILE DROPDOWN ===== */
+        .user-profile {
+            position: relative;
+            cursor: pointer;
+        }
+        .user-profile .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(74,222,128,0.15);
+            border: 2px solid rgba(74,222,128,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .user-profile .avatar:hover {
+            border-color: #4ade80;
+        }
+        .user-profile .avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .user-dropdown {
+            position: absolute;
+            top: 44px;
+            right: 0;
+            background: #1a1f2e;
+            border: 1px solid rgba(255,255,255,0.06);
             border-radius: 12px;
+            padding: 12px 0;
+            min-width: 200px;
+            display: none;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            z-index: 100;
+        }
+        .user-dropdown.active { display: block; }
+        .user-dropdown .user-info {
+            padding: 0 16px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .user-dropdown .user-info .name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .user-dropdown .user-info .email {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .user-dropdown .divider {
+            height: 1px;
+            background: rgba(255,255,255,0.06);
+            margin: 6px 12px;
+        }
+        .user-dropdown .dropdown-item {
+            padding: 8px 16px;
             font-size: 13px;
+            color: #e5e7eb;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+        }
+        .user-dropdown .dropdown-item:hover {
+            background: rgba(255,255,255,0.04);
+        }
+        .user-dropdown .dropdown-item.danger { color: #f87171; }
+        .user-dropdown .dropdown-item.danger:hover { background: rgba(248,113,113,0.1); }
+        
+        /* ===== SEARCH BAR ===== */
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .search-bar input {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            color: #e5e7eb;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+        .search-bar input:focus {
+            outline: none;
+            border-color: #4ade80;
+            box-shadow: 0 0 0 3px rgba(74,222,128,0.08);
+        }
+        .search-bar input::placeholder { color: #4b5563; }
+        .search-bar .stats {
+            font-size: 12px;
+            color: #6b7280;
+            white-space: nowrap;
+        }
+        
+        /* ===== BUTTONS ===== */
+        .btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             font-family: inherit;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
         .btn-primary {
             background: linear-gradient(135deg, #4ade80, #22d3ee);
             color: #0a0e17;
         }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(74,222,128,0.25); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(74,222,128,0.2); }
         .btn-secondary {
             background: rgba(255,255,255,0.06);
             color: #9ca3af;
@@ -128,136 +188,114 @@
             color: #4ade80;
             border: 1px solid rgba(74,222,128,0.15);
         }
-        .btn-success:hover { background: rgba(74,222,128,0.25); transform: translateY(-2px); }
+        .btn-success:hover { background: rgba(74,222,128,0.25); }
         .btn-danger {
             background: rgba(248,113,113,0.1);
             color: #f87171;
             border: 1px solid rgba(248,113,113,0.15);
         }
-        .btn-danger:hover { background: rgba(248,113,113,0.2); transform: translateY(-2px); }
-        .btn-sm {
-            padding: 5px 12px;
-            font-size: 12px;
-            border-radius: 8px;
-        }
+        .btn-danger:hover { background: rgba(248,113,113,0.2); }
+        .btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 6px; }
         
-        /* BADGES */
+        /* ===== BADGES ===== */
         .badge {
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            padding: 3px 12px;
-            border-radius: 12px;
-            font-size: 11px;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 10px;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
-        .badge.online {
-            background: rgba(74,222,128,0.15);
-            color: #4ade80;
-            border: 1px solid rgba(74,222,128,0.15);
-        }
-        .badge.offline {
-            background: rgba(248,113,113,0.15);
-            color: #f87171;
-            border: 1px solid rgba(248,113,113,0.15);
-        }
-        .badge.pairing {
-            background: rgba(251,191,36,0.15);
-            color: #fbbf24;
-            border: 1px solid rgba(251,191,36,0.15);
-        }
+        .badge.online { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.15); }
+        .badge.offline { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.15); }
+        .badge.pairing { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.15); }
         .badge .dot {
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
             border-radius: 50%;
             display: inline-block;
         }
         .badge.online .dot { background: #4ade80; animation: pulse 2s infinite; }
         .badge.pairing .dot { background: #fbbf24; animation: pulse 1.5s infinite; }
         .badge.offline .dot { background: #f87171; }
-        
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.5; transform: scale(0.8); }
         }
         
-        /* DEVICE CARD */
+        /* ===== DEVICE CARDS (GRID) ===== */
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 14px;
+        }
         .device-card {
             background: rgba(17, 24, 39, 0.9);
             backdrop-filter: blur(10px);
-            padding: 16px 20px;
+            padding: 16px 18px;
             border-radius: 16px;
             border: 1px solid rgba(255,255,255,0.06);
-            margin-bottom: 10px;
             transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
+            position: relative;
         }
         .device-card:hover {
-            border-color: rgba(255,255,255,0.1);
-            transform: translateY(-1px);
+            border-color: rgba(255,255,255,0.12);
+            transform: translateY(-2px);
         }
-        .device-card .device-info {
+        .device-card .card-top {
             display: flex;
-            align-items: center;
-            gap: 14px;
-            flex-wrap: wrap;
-            flex: 1;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
         }
         .device-card .device-icon {
-            font-size: 28px;
-            width: 42px;
-            height: 42px;
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: rgba(255,255,255,0.03);
             border-radius: 10px;
         }
-        .device-card .device-details {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
         .device-card .device-name {
             font-size: 15px;
             font-weight: 600;
+            margin-bottom: 2px;
         }
-        .device-card .device-meta {
+        .device-card .device-id {
+            font-size: 10px;
+            color: #4b5563;
+            font-family: monospace;
+            margin-bottom: 6px;
+        }
+        .device-card .device-status {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
-            font-size: 11px;
-            color: #6b7280;
-        }
-        .device-card .device-meta .ip {
-            font-family: monospace;
-            background: rgba(255,255,255,0.04);
-            padding: 1px 8px;
-            border-radius: 4px;
+            margin-bottom: 8px;
         }
         .device-card .device-soil {
             display: flex;
             align-items: center;
-            gap: 10px;
-            min-width: 100px;
+            gap: 8px;
+            margin-bottom: 10px;
         }
         .device-card .device-soil .value {
             font-size: 20px;
             font-weight: 700;
             color: #fbbf24;
-            min-width: 40px;
         }
         .device-card .device-soil .unit {
             font-size: 12px;
             color: #6b7280;
         }
         .device-card .device-soil .mini-bar {
-            width: 50px;
+            flex: 1;
             height: 4px;
             background: rgba(255,255,255,0.06);
             border-radius: 4px;
@@ -270,17 +308,32 @@
             transition: width 0.8s ease;
             width: 45%;
         }
+        .device-card .device-details {
+            font-size: 11px;
+            color: #6b7280;
+            margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+        }
+        .device-card .device-details .detail {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
         .device-card .device-actions {
             display: flex;
             gap: 4px;
             flex-wrap: wrap;
+            border-top: 1px solid rgba(255,255,255,0.04);
+            padding-top: 10px;
         }
         
-        /* DISCOVERED HUB */
-        .discovered-hub {
-            border: 2px solid rgba(251,191,36,0.3);
-            background: rgba(251,191,36,0.05);
-            padding: 14px 18px;
+        /* ===== DISCOVERED HUB CARD ===== */
+        .discovered-card {
+            border: 2px solid rgba(251,191,36,0.2);
+            background: rgba(251,191,36,0.03);
+            padding: 14px 16px;
             border-radius: 16px;
             display: flex;
             justify-content: space-between;
@@ -289,31 +342,41 @@
             gap: 10px;
             margin-bottom: 10px;
         }
-        .discovered-hub .info {
+        .discovered-card .info {
             display: flex;
             align-items: center;
             gap: 12px;
             flex-wrap: wrap;
         }
-        .discovered-hub .info .icon {
-            font-size: 24px;
-        }
+        .discovered-card .info .icon { font-size: 22px; }
         
-        /* BLE STATUS */
+        /* ===== BLE STATUS ===== */
         .ble-status {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 11px;
+            gap: 4px;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 10px;
             font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
         .ble-status.connected { background: rgba(74,222,128,0.15); color: #4ade80; }
         .ble-status.disconnected { background: rgba(248,113,113,0.15); color: #f87171; }
         .ble-status.scanning { background: rgba(251,191,36,0.15); color: #fbbf24; }
         
-        /* MODAL */
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6b7280;
+        }
+        .empty-state .icon { font-size: 40px; margin-bottom: 10px; }
+        .empty-state .title { font-size: 16px; font-weight: 600; color: #e5e7eb; }
+        .empty-state .sub { font-size: 13px; }
+        
+        /* ===== MODAL ===== */
         .modal {
             display: none;
             position: fixed;
@@ -327,73 +390,52 @@
         .modal.active { display: flex; }
         .modal-content {
             background: #1a1f2e;
-            border-radius: 24px;
-            padding: 32px;
-            max-width: 480px;
+            border-radius: 20px;
+            padding: 28px;
+            max-width: 440px;
             width: 90%;
             border: 1px solid rgba(255,255,255,0.06);
             max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
-        .modal-content h2 {
-            font-size: 20px;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .modal-content .sub {
-            color: #6b7280;
-            font-size: 13px;
-            margin-bottom: 20px;
-        }
-        
-        /* FORM */
-        .form-group { margin-bottom: 14px; }
+        .modal-content h2 { font-size: 18px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+        .modal-content .sub { color: #6b7280; font-size: 13px; margin-bottom: 16px; }
+        .form-group { margin-bottom: 12px; }
         .form-group label {
             display: block;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
             color: #9ca3af;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .form-group input {
             width: 100%;
-            padding: 10px 14px;
+            padding: 8px 12px;
             background: rgba(255,255,255,0.04);
             border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 10px;
+            border-radius: 8px;
             color: #e5e7eb;
-            font-size: 14px;
+            font-size: 13px;
             font-family: inherit;
-            transition: all 0.3s;
         }
-        .form-group input:focus {
-            outline: none;
-            border-color: #4ade80;
-            box-shadow: 0 0 0 3px rgba(74,222,128,0.1);
-        }
-        .form-hint {
-            font-size: 11px;
-            color: #6b7280;
-            margin-top: 4px;
-        }
+        .form-group input:focus { outline: none; border-color: #4ade80; }
+        .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+        .modal-actions .btn { flex: 1; justify-content: center; }
         
-        /* TOAST */
+        /* ===== TOAST ===== */
         .toast {
             position: fixed;
-            bottom: 24px;
-            right: 24px;
-            padding: 12px 20px;
-            border-radius: 12px;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 16px;
+            border-radius: 10px;
             background: rgba(17,24,39,0.95);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.08);
             color: #e5e7eb;
-            font-size: 14px;
+            font-size: 13px;
             transform: translateY(100px);
             opacity: 0;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -401,7 +443,7 @@
             max-width: 90%;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.success { border-left: 3px solid #4ade80; }
@@ -409,37 +451,25 @@
         .toast.warning { border-left: 3px solid #fbbf24; }
         
         .hidden { display: none !important; }
-        .text-center { text-align: center; }
-        .text-muted { color: #6b7280; }
         .loading { text-align: center; padding: 20px; color: #6b7280; }
         .spinner {
             display: inline-block;
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             border: 2px solid rgba(255,255,255,0.1);
             border-top-color: #4ade80;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
-            margin-right: 8px;
+            margin-right: 6px;
             vertical-align: middle;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #6b7280;
-        }
-        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
-        .empty-state .title { font-size: 18px; font-weight: 600; color: #e5e7eb; margin-bottom: 4px; }
-        .empty-state .sub { font-size: 13px; }
         
         @media (max-width: 600px) {
             .header { flex-direction: column; align-items: flex-start; }
-            .device-card { flex-direction: column; align-items: stretch; }
-            .device-card .device-actions { justify-content: flex-start; }
-            .device-card .device-soil { justify-content: flex-start; }
-            .discovered-hub { flex-direction: column; align-items: stretch; }
-            .modal-content { padding: 20px; }
+            .device-grid { grid-template-columns: 1fr; }
+            .search-bar { flex-direction: column; align-items: stretch; }
+            .search-bar .stats { text-align: right; }
         }
     </style>
 </head>
@@ -451,26 +481,37 @@
         <div class="header-left">
             <h1>🌿 FarmIOT <span class="subtitle">Smart Agriculture</span></h1>
         </div>
-        <div class="user-badge" id="userBadge">
-            <span>👤</span> <span id="userNameDisplay">Sign In</span>
+        <div class="user-profile" id="userProfile">
+            <div class="avatar" id="avatarBtn" onclick="toggleDropdown()">
+                <span id="avatarText">👤</span>
+                <img id="avatarImg" style="display:none;" alt="Profile">
+            </div>
+            <div class="user-dropdown" id="userDropdown">
+                <div class="user-info">
+                    <div class="name" id="dropdownName">User</div>
+                    <div class="email" id="dropdownEmail">user@example.com</div>
+                </div>
+                <div class="divider"></div>
+                <button class="dropdown-item danger" onclick="logoutUser()">🚪 Sign Out</button>
+            </div>
         </div>
     </div>
 
-    <!-- AUTH -->
+    <!-- AUTH CARD (Hidden after login) -->
     <div id="authSection">
-        <div class="card auth-card" id="signinCard">
-            <h2 style="font-size:22px;text-align:center;">🌿 Welcome to FarmIOT</h2>
-            <p style="text-align:center;color:#6b7280;margin-bottom:20px;">Sign in to manage your smart farm devices</p>
+        <div class="card auth-card" id="signinCard" style="background:rgba(17,24,39,0.9);padding:32px;border-radius:20px;border:1px solid rgba(255,255,255,0.06);max-width:420px;margin:0 auto;">
+            <h2 style="font-size:20px;text-align:center;">🌿 Welcome to FarmIOT</h2>
+            <p style="text-align:center;color:#6b7280;font-size:14px;margin-bottom:20px;">Sign in to manage your smart farm devices</p>
             <div id="googleBtn" style="display:flex;justify-content:center;"></div>
-            <div class="divider" style="display:flex;align-items:center;margin:16px 0;color:#374151;font-size:12px;">
+            <div style="display:flex;align-items:center;margin:14px 0;color:#374151;font-size:12px;">
                 <span style="flex:1;border-bottom:1px solid rgba(255,255,255,0.06);"></span>
                 <span style="padding:0 12px;">or</span>
                 <span style="flex:1;border-bottom:1px solid rgba(255,255,255,0.06);"></span>
             </div>
             <div style="text-align:left;">
-                <div style="display:flex;gap:4px;background:rgba(255,255,255,0.03);border-radius:8px;padding:3px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.04);">
-                    <button class="active" id="loginTab" onclick="setAuthMode('login')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Sign In</button>
-                    <button id="registerTab" onclick="setAuthMode('register')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Register</button>
+                <div style="display:flex;gap:4px;background:rgba(255,255,255,0.03);border-radius:8px;padding:3px;margin-bottom:14px;border:1px solid rgba(255,255,255,0.04);">
+                    <button class="active" id="loginTab" onclick="setAuthMode('login')" style="flex:1;padding:6px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Sign In</button>
+                    <button id="registerTab" onclick="setAuthMode('register')" style="flex:1;padding:6px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:#6b7280;font-family:inherit;">Register</button>
                 </div>
                 <form id="authForm" onsubmit="handleAuthSubmit(event)">
                     <div class="form-group">
@@ -485,35 +526,27 @@
                         <label>🔒 Confirm Password</label>
                         <input type="password" id="confirmPassword" placeholder="Confirm your password" minlength="6">
                     </div>
-                    <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;padding:12px;justify-content:center;">Sign In</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;padding:10px;justify-content:center;">Sign In</button>
                 </form>
-                <div id="authStatus" style="margin-top:12px;padding:10px;border-radius:8px;font-size:13px;display:none;"></div>
+                <div id="authStatus" style="margin-top:10px;padding:8px;border-radius:8px;font-size:13px;display:none;"></div>
             </div>
-        </div>
-        <div class="card user-card hidden" id="userCard" style="text-align:center;padding:30px;">
-            <img id="userPic" src="" alt="Profile" style="width:80px;height:80px;border-radius:50%;margin-bottom:12px;">
-            <div class="name" id="userName" style="font-size:20px;font-weight:600;">User</div>
-            <div class="email" id="userEmail" style="color:#6b7280;margin:4px 0 16px;">user@example.com</div>
-            <button class="btn btn-danger" id="logoutBtn">🚪 Sign Out</button>
         </div>
     </div>
 
     <!-- DASHBOARD -->
     <div id="dashboardContent" class="hidden">
-        
-        <!-- DEVICES SECTION -->
-        <div class="card">
-            <div class="card-header">
-                <h2>📱 My Devices <span class="device-count" id="deviceCount"></span></h2>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                    <button class="btn btn-primary btn-sm" onclick="scanForHubs()">🔍 Scan</button>
-                    <button class="btn btn-secondary btn-sm" onclick="loadDevices()">🔄 Refresh</button>
-                    <span id="bleStatus" class="ble-status disconnected">⚪ Offline</span>
-                </div>
-            </div>
-            <div id="deviceList">
-                <div class="loading"><div class="spinner"></div>Loading devices...</div>
-            </div>
+        <!-- Search & Controls -->
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="🔍 Search devices by name or ID..." oninput="filterDevices()">
+            <button class="btn btn-primary btn-sm" onclick="scanForHubs()">🔍 Scan</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadDevices()">🔄 Refresh</button>
+            <span id="bleStatus" class="ble-status disconnected">⚪ Offline</span>
+            <span class="stats" id="deviceCount"></span>
+        </div>
+
+        <!-- Device Grid -->
+        <div id="deviceGrid" class="device-grid">
+            <div class="loading"><div class="spinner"></div>Loading devices...</div>
         </div>
     </div>
 </div>
@@ -526,25 +559,21 @@
             Configuring: <strong id="configHubId">—</strong>
             <span id="configHubStatus" style="color:#6b7280;font-size:12px;display:block;margin-top:4px;"></span>
         </div>
-        
         <div class="form-group">
-            <label>📶 WiFi Network</label>
-            <input type="text" id="configSSID" placeholder="Enter your WiFi SSID" required>
-            <div class="form-hint">Type your WiFi network name (e.g., MyHome_5G)</div>
+            <label>📶 WiFi SSID</label>
+            <input type="text" id="configSSID" placeholder="Enter WiFi SSID" required>
         </div>
         <div class="form-group">
             <label>🔑 WiFi Password</label>
-            <input type="password" id="configPassword" placeholder="Enter your WiFi password" required>
-            <div class="form-hint">🔒 Sent directly to ESP32 via Bluetooth — not stored in cloud</div>
+            <input type="password" id="configPassword" placeholder="Enter WiFi password" required>
         </div>
         <div class="form-group">
             <label>🏷️ Device Name</label>
-            <input type="text" id="configDeviceName" placeholder="My Hub" value="farmiot-hub">
+            <input type="text" id="configDeviceName" placeholder="My Hub">
         </div>
-        
-        <div class="modal-actions" style="display:flex;gap:10px;margin-top:18px;">
-            <button class="btn btn-secondary" onclick="closeModal('configModal')" style="flex:1;">Cancel</button>
-            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()" style="flex:2;">💾 Configure</button>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
+            <button class="btn btn-primary" id="configSaveBtn" onclick="saveConfig()">💾 Save</button>
         </div>
     </div>
 </div>
@@ -563,6 +592,7 @@
     let isConnected = false;
     let autoRefreshInterval = null;
     let isFirstLoad = true;
+    let allDevices = [];
 
     const BLE_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
     const BLE_CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
@@ -669,184 +699,205 @@
     }
 
     function showUser(userData) {
-        document.getElementById('signinCard').classList.add('hidden');
-        document.getElementById('userCard').classList.remove('hidden');
-        document.getElementById('userPic').src = userData.picture || '';
-        document.getElementById('userName').textContent = userData.name || userData.email;
-        document.getElementById('userEmail').textContent = userData.email;
-        document.getElementById('userNameDisplay').textContent = userData.name || 'User';
-        document.getElementById('logoutBtn').onclick = () => {
-            localStorage.removeItem('token'); localStorage.removeItem('user');
-            token = null; user = null;
-            document.getElementById('signinCard').classList.remove('hidden');
-            document.getElementById('userCard').classList.add('hidden');
-            document.getElementById('dashboardContent').classList.add('hidden');
-            document.getElementById('userNameDisplay').textContent = 'Sign In';
-            showToast('✅ Signed out');
-            if (currentBleDevice?.gatt) try { currentBleDevice.gatt.disconnect(); } catch(e) {}
-            isConnected = false;
-            updateBleStatus('disconnected');
-            if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
-        };
+        document.getElementById('signinCard').style.display = 'none';
+        document.getElementById('dashboardContent').classList.remove('hidden');
+        document.getElementById('avatarText').style.display = 'none';
+        const img = document.getElementById('avatarImg');
+        img.style.display = 'block';
+        img.src = userData.picture || '';
+        document.getElementById('dropdownName').textContent = userData.name || 'User';
+        document.getElementById('dropdownEmail').textContent = userData.email;
+        // Remove signout from dropdown
     }
 
-    function checkSession() {
-        if (token && user) { 
-            showUser(user); 
-            loadDashboard(); 
+    function logoutUser() {
+        localStorage.removeItem('token'); localStorage.removeItem('user');
+        token = null; user = null;
+        document.getElementById('signinCard').style.display = 'block';
+        document.getElementById('dashboardContent').classList.add('hidden');
+        document.getElementById('avatarText').style.display = 'block';
+        document.getElementById('avatarImg').style.display = 'none';
+        document.getElementById('userDropdown').classList.remove('active');
+        showToast('✅ Signed out');
+        if (currentBleDevice?.gatt) try { currentBleDevice.gatt.disconnect(); } catch(e) {}
+        isConnected = false;
+        updateBleStatus('disconnected');
+        if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
+    }
+
+    function toggleDropdown() {
+        document.getElementById('userDropdown').classList.toggle('active');
+    }
+
+    // Close dropdown on click outside
+    document.addEventListener('click', (e) => {
+        const profile = document.getElementById('userProfile');
+        if (!profile.contains(e.target)) {
+            document.getElementById('userDropdown').classList.remove('active');
         }
+    });
+
+    function checkSession() {
+        if (token && user) { showUser(user); loadDashboard(); }
     }
 
     // ===== DASHBOARD =====
     async function loadDashboard() {
-        document.getElementById('dashboardContent').classList.remove('hidden');
         await loadDevices();
         autoReconnectBle();
-        
-        // Start auto-refresh every 10 seconds
         if (autoRefreshInterval) { clearInterval(autoRefreshInterval); }
         autoRefreshInterval = setInterval(() => {
-            if (token && user) {
-                loadDevices();
-            }
-        }, 10000);
+            if (token && user) loadDevices();
+        }, 15000);
+    }
+
+    // ===== FILTER DEVICES =====
+    function filterDevices() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const cards = document.querySelectorAll('.device-card');
+        cards.forEach(card => {
+            const name = card.dataset.name?.toLowerCase() || '';
+            const id = card.dataset.id?.toLowerCase() || '';
+            const match = name.includes(query) || id.includes(query);
+            card.style.display = match ? '' : 'none';
+        });
+        // Update visible count
+        const visible = document.querySelectorAll('.device-card:not([style*="display: none"])').length;
+        document.getElementById('deviceCount').textContent = `(${visible} devices shown)`;
+    }
+
+    // ===== LOAD DEVICES =====
+    async function loadDevices() {
+        const grid = document.getElementById('deviceGrid');
+        const countEl = document.getElementById('deviceCount');
         
-        // Also refresh when page becomes visible again
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && token && user) {
-                loadDevices();
-            }
-        });
-    }
+        if (isFirstLoad) {
+            grid.innerHTML = '<div class="loading"><div class="spinner"></div>Loading devices...</div>';
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE}/api/hubs`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error('Failed to load devices');
+            const hubs = await response.json();
+            allDevices = hubs;
 
-    // ===== LOAD DEVICES (Standalone Cards) =====
-   async function loadDevices() {
-    const container = document.getElementById('deviceList');
-    const countEl = document.getElementById('deviceCount');
-    
-    if (isFirstLoad) {
-        container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading devices...</div>';
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE}/api/hubs`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error('Failed to load devices');
-        const hubs = await response.json();
+            const claimed = hubs.filter(h => h.user_id === user?.id || h.user_id === user?.email);
+            const unclaimed = hubs.filter(h => h.user_id === null && h.status === 'online');
 
-        // Separate claimed and unclaimed hubs
-        const claimed = hubs.filter(h => h.user_id === user?.id || h.user_id === user?.email);
-        const unclaimed = hubs.filter(h => h.user_id === null && h.status === 'online');
+            const total = claimed.length + unclaimed.length;
+            const online = hubs.filter(h => h.status === 'online').length;
+            countEl.textContent = `${total} devices · ${online} online`;
 
-        const totalDevices = claimed.length + unclaimed.length;
-        const onlineCount = hubs.filter(h => h.status === 'online').length;
-        countEl.textContent = `(${totalDevices} devices · ${onlineCount} online)`;
+            let html = '';
 
-        let html = '';
-
-        // Show claimed devices
-        if (claimed.length > 0) {
-            html += claimed.map(hub => {
-                const status = hub.status || 'offline';
-                const statusClass = status === 'online' ? 'online' : status === 'pairing' ? 'pairing' : 'offline';
-                const deviceIcon = status === 'online' ? '🌿' : '📡';
-                const soilValue = hub.soil_moisture || '--';
-                
-                return `
-                    <div class="device-card">
-                        <div class="device-info">
-                            <div class="device-icon">${deviceIcon}</div>
-                            <div class="device-details">
-                                <div class="device-name">${hub.device_name || hub.hub_id}</div>
-                                <div class="device-meta">
+            // Claimed devices
+            if (claimed.length > 0) {
+                claimed.forEach(hub => {
+                    const status = hub.status || 'offline';
+                    const statusClass = status === 'online' ? 'online' : status === 'pairing' ? 'pairing' : 'offline';
+                    const icon = status === 'online' ? '🌿' : '📡';
+                    const soil = hub.soil_moisture || '--';
+                    const ip = hub.ip_address || 'No IP';
+                    const id = hub.hub_id;
+                    const name = hub.device_name || hub.hub_id;
+                    
+                    html += `
+                        <div class="device-card" data-name="${name.toLowerCase()}" data-id="${id.toLowerCase()}">
+                            <div class="card-top">
+                                <div class="device-icon">${icon}</div>
+                                <div>
                                     <span class="badge ${statusClass}"><span class="dot"></span> ${status}</span>
-                                    ${hub.ip_address ? `<span class="ip">📡 ${hub.ip_address}</span>` : ''}
-                                    <span>🆔 ${hub.hub_id}</span>
                                 </div>
                             </div>
-                        </div>
-                        <div class="device-soil">
-                            <span class="value">${soilValue}</span>
-                            <span class="unit">%</span>
-                            <div class="mini-bar">
-                                <div class="fill" style="width:${Math.min(soilValue, 100)}%;"></div>
+                            <div class="device-name">${name}</div>
+                            <div class="device-id">🆔 ${id}</div>
+                            <div class="device-status">
+                                <span class="detail">📡 ${ip}</span>
+                            </div>
+                            <div class="device-soil">
+                                <span class="value">${soil}</span>
+                                <span class="unit">%</span>
+                                <div class="mini-bar">
+                                    <div class="fill" style="width:${Math.min(soil, 100)}%;"></div>
+                                </div>
+                            </div>
+                            <div class="device-details">
+                                <span class="detail">📶 ${hub.last_seen ? new Date(hub.last_seen).toLocaleTimeString() : 'Never'}</span>
+                            </div>
+                            <div class="device-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="openConfig('${id}')" title="Configure">⚙️</button>
+                                <button class="btn btn-secondary btn-sm" onclick="rebootHub('${id}')" title="Reboot">🔄</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteHub('${id}')" title="Delete">🗑️</button>
                             </div>
                         </div>
-                        <div class="device-actions">
-                            <button class="btn btn-secondary btn-sm" onclick="rebootHub('${hub.hub_id}')">🔄 Reboot</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteHub('${hub.hub_id}')" title="Delete">🗑️</button>
+                    `;
+                });
+            }
+
+            // Unclaimed discovered hubs
+            if (unclaimed.length > 0) {
+                html += `<div style="grid-column:1/-1;padding:8px 0 4px;font-size:12px;color:#6b7280;border-top:1px solid rgba(255,255,255,0.06);">🔍 Discovered (Click to Claim)</div>`;
+                unclaimed.forEach(hub => {
+                    html += `
+                        <div class="discovered-card" style="grid-column:1/-1;">
+                            <div class="info">
+                                <span class="icon">📡</span>
+                                <div>
+                                    <div style="font-weight:600;">${hub.device_name || hub.hub_id}</div>
+                                    <div style="font-size:11px;color:#6b7280;">${hub.ip_address || 'No IP'} · <span class="badge online"><span class="dot"></span> online</span></div>
+                                </div>
+                            </div>
+                            <button class="btn btn-success btn-sm" onclick="claimHub('${hub.hub_id}')">📥 Claim</button>
                         </div>
+                    `;
+                });
+            }
+
+            if (!html) {
+                html = `
+                    <div class="empty-state" style="grid-column:1/-1;">
+                        <div class="icon">🌿</div>
+                        <div class="title">No devices yet</div>
+                        <div class="sub">Set up your ESP32 hub and it will appear here automatically.</div>
                     </div>
                 `;
-            }).join('');
-        }
+            }
 
-        // Show unclaimed online hubs (discoverable)
-        if (unclaimed.length > 0) {
-            html += `<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);">
-                        <div style="font-size:12px;color:#6b7280;margin-bottom:8px;">🔍 Discovered Hubs (Click to Claim)</div>
-                     </div>`;
-            html += unclaimed.map(hub => `
-                <div class="discovered-hub">
-                    <div class="info">
-                        <span class="icon">📡</span>
-                        <div>
-                            <div style="font-weight:600;">${hub.device_name || hub.hub_id}</div>
-                            <div style="font-size:12px;color:#6b7280;">${hub.ip_address || 'No IP'} · Online</div>
-                        </div>
-                        <span class="badge online"><span class="dot"></span> ONLINE</span>
-                    </div>
-                    <button class="btn btn-success btn-sm" onclick="claimHub('${hub.hub_id}')">📥 Claim</button>
-                </div>
-            `).join('');
-        }
+            grid.innerHTML = html;
+            isFirstLoad = false;
 
-        if (!html) {
-            html = `
-                <div class="empty-state">
-                    <div class="icon">🌿</div>
-                    <div class="title">No devices yet</div>
-                    <div class="sub">Set up your ESP32 hub and it will appear here automatically.</div>
+        } catch (error) {
+            grid.innerHTML = `
+                <div style="grid-column:1/-1;text-align:center;padding:20px;color:#f87171;">
+                    ❌ ${error.message || 'Failed to load devices'}
+                    <br><br>
+                    <button class="btn btn-secondary btn-sm" onclick="loadDevices()">🔄 Retry</button>
                 </div>
             `;
         }
-
-        container.innerHTML = html;
-        isFirstLoad = false;
-
-    } catch (error) {
-        container.innerHTML = `
-            <div style="text-align:center;padding:20px;color:#f87171;">
-                ❌ ${error.message || 'Failed to load devices'}
-                <br><br>
-                <button class="btn btn-secondary btn-sm" onclick="loadDevices()">🔄 Retry</button>
-            </div>
-        `;
     }
-}
 
-// ==========================================
-// CLAIM HUB (From Discovered list)
-// ==========================================
-async function claimHub(hubId) {
-    showToast('📥 Claiming hub...', 'warning');
-    try {
-        const result = await apiRequest('/api/hubs/claim', {
-            method: 'POST',
-            body: JSON.stringify({ hub_id: hubId })
-        });
-        
-        if (result.success) {
-            showToast('✅ Hub claimed successfully!', 'success');
-            loadDevices();
-        } else {
-            showToast('❌ ' + (result.error || 'Failed to claim hub'), 'error');
+    // ===== CLAIM HUB =====
+    async function claimHub(hubId) {
+        showToast('📥 Claiming hub...', 'warning');
+        try {
+            const result = await apiRequest('/api/hubs/claim', {
+                method: 'POST',
+                body: JSON.stringify({ hub_id: hubId })
+            });
+            if (result.success) {
+                showToast('✅ Hub claimed!', 'success');
+                loadDevices();
+            } else {
+                showToast('❌ ' + (result.error || 'Failed'), 'error');
+            }
+        } catch (error) {
+            showToast('❌ Error: ' + error.message, 'error');
         }
-    } catch (error) {
-        showToast('❌ Error: ' + error.message, 'error');
     }
-}
+
     // ===== BLE FUNCTIONS =====
     async function autoReconnectBle() {
         try {
@@ -879,39 +930,12 @@ async function claimHub(hubId) {
             const server = await device.gatt.connect();
             const service = await server.getPrimaryService(BLE_SERVICE_UUID);
             const characteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
-
             currentBleDevice = device;
             currentBleCharacteristic = characteristic;
-
-            const value = await characteristic.readValue();
-            const decoder = new TextDecoder('utf-8');
-            const info = JSON.parse(decoder.decode(value));
-
-            currentConfigHubId = info.id || info.device_id || 'FarmIOT_Hub_001';
             isConnected = true;
-            localStorage.setItem('ble_device_id', device.id || device.name);
             updateBleStatus('connected', device.name || 'Connected');
-
-            if (info.status === 'online') {
-                showToast('✅ Device is already online!', 'success');
-                await claimHubInCloud(currentConfigHubId);
-                setTimeout(() => {
-                    if (currentBleDevice?.gatt) {
-                        currentBleDevice.gatt.disconnect();
-                        isConnected = false;
-                        updateBleStatus('disconnected');
-                    }
-                }, 2000);
-            } else {
-                // Show discovered hub immediately
-                await loadDevices();
-                // The discovered hub will appear in the list via loadDevices()
-            }
-            
-            await loadDevices();
             return true;
         } catch (error) {
-            console.error('BLE connect error:', error);
             isConnected = false;
             updateBleStatus('disconnected');
             return false;
@@ -921,193 +945,65 @@ async function claimHub(hubId) {
     async function scanForHubs() {
         updateBleStatus('scanning', 'Scanning...');
         showToast('🔍 Scanning for BLE hubs...', 'warning');
-
         try {
             if (!navigator.bluetooth) {
                 showToast('❌ Web Bluetooth not supported. Use Chrome/Edge.', 'error');
                 updateBleStatus('disconnected');
                 return;
             }
-
-            const paired = await navigator.bluetooth.getDevices();
-            for (const d of paired) {
-                try {
-                    const s = await d.gatt.connect();
-                    const services = await s.getPrimaryServices();
-                    for (const svc of services) {
-                        if (svc.uuid === BLE_SERVICE_UUID) {
-                            await connectBleDevice(d);
-                            return;
-                        }
-                    }
-                    await d.gatt.disconnect();
-                } catch (e) {}
-            }
-
             const device = await navigator.bluetooth.requestDevice({
                 filters: [{ services: [BLE_SERVICE_UUID] }],
                 optionalServices: [BLE_SERVICE_UUID]
             });
-
-            if (!device) {
-                showToast('❌ No devices found', 'error');
-                updateBleStatus('disconnected');
-                return;
-            }
-
+            if (!device) { showToast('❌ No devices found', 'error'); updateBleStatus('disconnected'); return; }
             await connectBleDevice(device);
-
+            showToast('✅ Connected to ' + (device.name || 'device'), 'success');
+            // After BLE connect, check if we need to show config
+            currentConfigHubId = device.name || 'FarmIOT_Hub_001';
+            document.getElementById('configHubId').textContent = currentConfigHubId;
+            document.getElementById('configHubStatus').textContent = '📡 Connected via Bluetooth';
+            document.getElementById('configSSID').value = '';
+            document.getElementById('configPassword').value = '';
+            document.getElementById('configDeviceName').value = currentConfigHubId;
+            openModal('configModal');
         } catch (error) {
             updateBleStatus('disconnected');
             showToast('❌ Scan failed: ' + error.message, 'error');
         }
     }
 
-    // ===== CLAIM & CONFIGURE =====
-    async function claimBleHub() {
-        if (!currentBleCharacteristic) {
-            showToast('❌ No BLE device found. Please scan first.', 'error');
-            return;
-        }
-        document.getElementById('configHubId').textContent = currentConfigHubId || 'Unknown';
-        document.getElementById('configHubStatus').textContent = '📡 Connected via Bluetooth';
-        document.getElementById('configSSID').value = '';
-        document.getElementById('configPassword').value = '';
-        document.getElementById('configDeviceName').value = currentConfigHubId || 'farmiot-hub';
-        openModal('configModal');
-    }
-
+    // ===== CONFIG =====
     async function saveConfig() {
         const ssid = document.getElementById('configSSID').value.trim();
         const password = document.getElementById('configPassword').value.trim();
         if (!ssid || !password) {
-            showToast('❌ WiFi SSID and Password are required', 'error');
+            showToast('❌ WiFi SSID and Password required', 'error');
             return;
         }
 
         const btn = document.getElementById('configSaveBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Configuring...';
-        document.getElementById('configHubStatus').textContent = '📤 Sending WiFi config...';
+        btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending...';
+        document.getElementById('configHubStatus').textContent = '📤 Sending...';
 
         try {
             const config = { ssid, password };
             const encoder = new TextEncoder();
             await currentBleCharacteristic.writeValue(encoder.encode(JSON.stringify(config)));
-
-            document.getElementById('configHubStatus').textContent = '⏳ ESP32 connecting to WiFi...';
-            showToast('📤 Config sent. ESP32 is connecting...', 'warning');
-
-            await currentBleCharacteristic.startNotifications();
-            let received = false;
-
-            const handler = (event) => {
-                const value = event.target.value;
-                const decoder = new TextDecoder('utf-8');
-                const response = decoder.decode(value);
-                try {
-                    const result = JSON.parse(response);
-                    if (result.status === 'online') {
-                        received = true;
-                        showToast('✅ WiFi Connected! Device is online.', 'success');
-                        document.getElementById('configHubStatus').textContent = '✅ Online!';
-                        claimHubInCloud(currentConfigHubId);
-                        setTimeout(() => {
-                            closeModal('configModal');
-                            loadDevices();
-                            if (currentBleDevice?.gatt) {
-                                currentBleDevice.gatt.disconnect();
-                                isConnected = false;
-                                updateBleStatus('disconnected');
-                            }
-                        }, 2000);
-                    } else if (result.status === 'failed') {
-                        received = true;
-                        showToast('❌ WiFi failed. Check credentials.', 'error');
-                        document.getElementById('configHubStatus').textContent = '❌ Connection failed';
-                    }
-                    currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
-                    currentBleCharacteristic.stopNotifications();
-                } catch (e) {}
-            };
-
-            currentBleCharacteristic.addEventListener('characteristicvaluechanged', handler);
-
-            let pollInterval = setInterval(async () => {
-                try {
-                    const val = await currentBleCharacteristic.readValue();
-                    const decoder = new TextDecoder('utf-8');
-                    const response = decoder.decode(val);
-                    const result = JSON.parse(response);
-                    if (result.status === 'online') {
-                        clearInterval(pollInterval);
-                        received = true;
-                        showToast('✅ WiFi Connected! Device is online.', 'success');
-                        document.getElementById('configHubStatus').textContent = '✅ Online!';
-                        claimHubInCloud(currentConfigHubId);
-                        setTimeout(() => {
-                            closeModal('configModal');
-                            loadDevices();
-                            if (currentBleDevice?.gatt) {
-                                currentBleDevice.gatt.disconnect();
-                                isConnected = false;
-                                updateBleStatus('disconnected');
-                            }
-                        }, 2000);
-                        try {
-                            currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
-                            currentBleCharacteristic.stopNotifications();
-                        } catch (e) {}
-                    } else if (result.status === 'failed') {
-                        clearInterval(pollInterval);
-                        received = true;
-                        showToast('❌ WiFi failed. Check credentials.', 'error');
-                        document.getElementById('configHubStatus').textContent = '❌ Connection failed';
-                    }
-                } catch (e) {}
-            }, 2000);
-
+            showToast('✅ Config sent! ESP32 is connecting...', 'success');
+            document.getElementById('configHubStatus').textContent = '✅ Sent!';
             setTimeout(() => {
-                clearInterval(pollInterval);
-                if (!received) {
-                    showToast('⏳ No status received. Check ESP32 serial monitor.', 'warning');
-                    document.getElementById('configHubStatus').textContent = '⏳ Timeout - check ESP32';
-                    btn.disabled = false;
-                    btn.innerHTML = '💾 Retry';
-                    try {
-                        currentBleCharacteristic.removeEventListener('characteristicvaluechanged', handler);
-                        currentBleCharacteristic.stopNotifications();
-                    } catch (e) {}
-                }
-            }, 30000);
-
-        } catch (error) {
-            showToast('❌ Failed to send config: ' + error.message, 'error');
-            btn.disabled = false;
-            btn.innerHTML = '💾 Configure';
-        }
-    }
-
-    async function claimHubInCloud(hubId) {
-        try {
-            const result = await apiRequest('/api/hubs/add', {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    hub_id: hubId, 
-                    ip_address: null, 
-                    name: hubId 
-                })
-            });
-            if (result.success) {
-                console.log('✅ Hub claimed in cloud');
+                closeModal('configModal');
                 loadDevices();
-            }
-        } catch (e) {
-            console.error('Cloud claim error:', e);
+                if (currentBleDevice?.gatt) { currentBleDevice.gatt.disconnect(); }
+                isConnected = false;
+                updateBleStatus('disconnected');
+            }, 2000);
+        } catch (error) {
+            showToast('❌ Failed: ' + error.message, 'error');
         }
+        btn.disabled = false; btn.innerHTML = '💾 Save';
     }
 
-    // ===== HUB MANAGEMENT =====
     async function openConfig(hubId) {
         currentConfigHubId = hubId;
         document.getElementById('configHubId').textContent = hubId;
@@ -1123,11 +1019,11 @@ async function claimHub(hubId) {
                 document.getElementById('configDeviceName').value = data.config.device_name || hubId;
             }
         } catch (e) {}
-
         document.getElementById('configHubStatus').textContent = 'Ready';
         openModal('configModal');
     }
 
+    // ===== HUB MANAGEMENT =====
     async function rebootHub(hubId) {
         if (!confirm(`Reboot ${hubId}?`)) return;
         showToast('🔄 Rebooting...', 'warning');
@@ -1137,7 +1033,7 @@ async function claimHub(hubId) {
                 showToast('✅ Reboot command sent', 'success');
                 setTimeout(loadDevices, 3000);
             } else {
-                showToast('❌ ' + (result.error || 'Failed to reboot'), 'error');
+                showToast('❌ ' + (result.error || 'Failed'), 'error');
             }
         } catch (error) {
             showToast('❌ Error: ' + error.message, 'error');
@@ -1153,7 +1049,7 @@ async function claimHub(hubId) {
                 showToast('✅ Hub deleted', 'success');
                 loadDevices();
             } else {
-                showToast('❌ ' + (result.error || 'Failed to delete'), 'error');
+                showToast('❌ ' + (result.error || 'Failed'), 'error');
             }
         } catch (error) {
             showToast('❌ Error: ' + error.message, 'error');
@@ -1163,11 +1059,8 @@ async function claimHub(hubId) {
     // ===== MODAL =====
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
     document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.classList.remove('active');
-        });
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
     });
 
     // ===== INIT =====
