@@ -272,11 +272,7 @@ router.post('/settings', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// HUBS
-// ==========================================
-
-// ==========================================
-// GET ALL HUBS
+// GET ALL HUBS - Include has_config flag
 // ==========================================
 router.get('/hubs', authenticate, async (req, res) => {
   try {
@@ -291,9 +287,20 @@ router.get('/hubs', authenticate, async (req, res) => {
 
     if (error) throw error;
 
+    // Check if each hub has config
     for (const hub of hubs || []) {
       if (!hub.hub_id) continue;
       
+      // Check if hub has config
+      const { data: config, error: configError } = await supabase
+        .from('hub_config')
+        .select('ssid')
+        .eq('hub_id', hub.hub_id)
+        .single();
+      
+      hub.has_config = !configError && config && config.ssid;
+      
+      // Poll for status
       let online = false;
       let statusData = null;
       
@@ -339,6 +346,16 @@ router.get('/hubs', authenticate, async (req, res) => {
       .order('created_at', { ascending: false });
 
     if (updateError) throw updateError;
+
+    // Add has_config flag again after update
+    for (const hub of updated || []) {
+      const { data: config } = await supabase
+        .from('hub_config')
+        .select('ssid')
+        .eq('hub_id', hub.hub_id)
+        .single();
+      hub.has_config = !!(config && config.ssid);
+    }
 
     res.json(updated || []);
   } catch (error) {

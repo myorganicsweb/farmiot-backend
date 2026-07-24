@@ -407,35 +407,134 @@ function onHubSelect() {
     var select = document.getElementById('hubSelect');
     var hubId = select.value;
     
+    var ssidField = document.getElementById('configSSID');
+    var passwordField = document.getElementById('configPassword');
+    
     if (!hubId) {
-        document.getElementById('configSSID').value = '';
-        document.getElementById('configPassword').value = '';
-        document.getElementById('configPassword').placeholder = 'Enter WiFi password';
+        ssidField.value = '';
+        passwordField.value = '';
+        passwordField.placeholder = 'Enter WiFi password';
         return;
     }
+    
+    showToast('📡 Fetching hub WiFi config...', 'warning');
     
     // Fetch hub config to get WiFi credentials
     fetch(API_BASE + '/api/hubs/' + hubId + '/config', {
         headers: { 'Authorization': 'Bearer ' + token }
     })
     .then(function(response) {
-        if (response.ok) return response.json();
-        throw new Error('Failed to get hub config');
+        if (!response.ok) {
+            throw new Error('Failed to get hub config: ' + response.status);
+        }
+        return response.json();
     })
     .then(function(data) {
-        if (data.config) {
-            document.getElementById('configSSID').value = data.config.ssid || '';
+        console.log('Hub config received:', data);
+        
+        if (data.config && data.config.ssid) {
+            // Auto-fill SSID
+            ssidField.value = data.config.ssid || '';
+            
             // Password is not stored in cloud for security
-            // User needs to enter it manually, but we show a hint
-            document.getElementById('configPassword').placeholder = 'Enter WiFi password (same as hub)';
-            document.getElementById('configPassword').value = '';
+            // Clear password field and show placeholder hint
+            passwordField.value = '';
+            passwordField.placeholder = 'Enter WiFi password (same as hub)';
+            passwordField.style.borderColor = '#4ade80';
+            
             showToast('✅ WiFi SSID auto-filled from hub. Enter password to continue.', 'success');
+        } else {
+            ssidField.value = '';
+            passwordField.value = '';
+            passwordField.placeholder = 'Enter WiFi password';
+            showToast('⚠️ No WiFi config found for this hub. Enter credentials manually.', 'warning');
         }
     })
     .catch(function(error) {
         console.error('Error fetching hub config:', error);
-        showToast('⚠️ Could not fetch hub config. Enter credentials manually.', 'warning');
+        ssidField.value = '';
+        passwordField.value = '';
+        passwordField.placeholder = 'Enter WiFi password';
+        showToast('⚠️ Could not fetch hub config. Enter credentials manually.', 'error');
     });
+}
+
+// ==========================================
+// LOAD HUBS FOR DROPDOWN - Enhanced
+// ==========================================
+async function loadHubsForDropdown() {
+    try {
+        var response = await fetch(API_BASE + '/api/hubs', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!response.ok) throw new Error('Failed to load hubs');
+        var hubs = await response.json();
+        
+        var select = document.getElementById('hubSelect');
+        select.innerHTML = '<option value="">-- Select a hub --</option>';
+        hubs.forEach(function(hub) {
+            var hasConfig = hub.has_config ? ' ✅' : '';
+            select.innerHTML += '<option value="' + hub.hub_id + '">' + 
+                (hub.device_name || hub.hub_id) + 
+                ' (' + (hub.ip_address || 'offline') + ')' +
+                hasConfig +
+                '</option>';
+        });
+        
+        availableHubs = hubs;
+        
+        // Store hub configs locally for quick access
+        window.hubConfigs = {};
+        for (var i = 0; i < hubs.length; i++) {
+            try {
+                var configRes = await fetch(API_BASE + '/api/hubs/' + hubs[i].hub_id + '/config', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (configRes.ok) {
+                    var configData = await configRes.json();
+                    window.hubConfigs[hubs[i].hub_id] = configData.config || {};
+                }
+            } catch (e) {}
+        }
+        
+        return hubs;
+    } catch (error) {
+        console.error('Error loading hubs:', error);
+        return [];
+    }
+}
+
+// ==========================================
+// HUB SELECT - Quick version using cached configs
+// ==========================================
+function onHubSelectCached() {
+    var select = document.getElementById('hubSelect');
+    var hubId = select.value;
+    
+    var ssidField = document.getElementById('configSSID');
+    var passwordField = document.getElementById('configPassword');
+    
+    if (!hubId) {
+        ssidField.value = '';
+        passwordField.value = '';
+        passwordField.placeholder = 'Enter WiFi password';
+        return;
+    }
+    
+    // Try to use cached config first
+    if (window.hubConfigs && window.hubConfigs[hubId]) {
+        var config = window.hubConfigs[hubId];
+        if (config.ssid) {
+            ssidField.value = config.ssid;
+            passwordField.value = '';
+            passwordField.placeholder = 'Enter WiFi password (same as hub)';
+            showToast('✅ WiFi SSID auto-filled from hub', 'success');
+            return;
+        }
+    }
+    
+    // If not cached, fetch
+    onHubSelect();
 }
 
 // ===== LOAD DEVICES =====

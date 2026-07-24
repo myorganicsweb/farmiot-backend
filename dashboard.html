@@ -645,10 +645,10 @@
         <!-- Link to Hub -->
         <div class="form-group" id="hubSelectGroup">
             <label>🔗 Link to Hub</label>
-            <select id="hubSelect" onchange="onHubSelect()">
-                <option value="">Select a hub...</option>
+            <select id="hubSelect" onchange="onHubSelectCached()">
+                <option value="">-- Select a hub --</option>
             </select>
-            <div class="form-hint">💡 WiFi credentials will auto-populate from the selected hub</div>
+            <div class="form-hint">💡 WiFi SSID will auto-populate from the selected hub</div>
         </div>
         
         <!-- WiFi Credentials -->
