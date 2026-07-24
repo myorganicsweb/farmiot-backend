@@ -414,40 +414,49 @@ function onHubSelect() {
         ssidField.value = '';
         passwordField.value = '';
         passwordField.placeholder = 'Enter WiFi password';
+        document.getElementById('configHubStatus').textContent = 'Select a hub...';
         return;
     }
     
+    document.getElementById('configHubStatus').textContent = '🔍 Fetching hub config...';
     showToast('📡 Fetching hub WiFi config...', 'warning');
     
-    // Fetch hub config to get WiFi credentials
+    // Fetch hub config
     fetch(API_BASE + '/api/hubs/' + hubId + '/config', {
         headers: { 'Authorization': 'Bearer ' + token }
     })
     .then(function(response) {
         if (!response.ok) {
-            throw new Error('Failed to get hub config: ' + response.status);
+            throw new Error('HTTP ' + response.status);
         }
         return response.json();
     })
     .then(function(data) {
-        console.log('Hub config received:', data);
+        console.log('Hub config response:', data);
         
-        if (data.config && data.config.ssid) {
+        var config = data.config || {};
+        var ssid = config.ssid || '';
+        
+        // Check if SSID exists
+        if (ssid && ssid.length > 0) {
             // Auto-fill SSID
-            ssidField.value = data.config.ssid || '';
-            
-            // Password is not stored in cloud for security
-            // Clear password field and show placeholder hint
+            ssidField.value = ssid;
             passwordField.value = '';
             passwordField.placeholder = 'Enter WiFi password (same as hub)';
             passwordField.style.borderColor = '#4ade80';
-            
-            showToast('✅ WiFi SSID auto-filled from hub. Enter password to continue.', 'success');
+            document.getElementById('configHubStatus').textContent = '✅ SSID auto-filled: ' + ssid;
+            showToast('✅ WiFi SSID auto-filled from hub: ' + ssid, 'success');
         } else {
+            // No SSID - hub needs to be configured first
             ssidField.value = '';
             passwordField.value = '';
+            passwordField.placeholder = 'Hub has no WiFi config';
+            document.getElementById('configHubStatus').textContent = '⚠️ Hub has no WiFi config';
+            showToast('⚠️ This hub has no WiFi configuration. Please configure the hub first.', 'warning');
+            
+            // Enable manual entry
             passwordField.placeholder = 'Enter WiFi password';
-            showToast('⚠️ No WiFi config found for this hub. Enter credentials manually.', 'warning');
+            ssidField.focus();
         }
     })
     .catch(function(error) {
@@ -455,7 +464,8 @@ function onHubSelect() {
         ssidField.value = '';
         passwordField.value = '';
         passwordField.placeholder = 'Enter WiFi password';
-        showToast('⚠️ Could not fetch hub config. Enter credentials manually.', 'error');
+        document.getElementById('configHubStatus').textContent = '❌ Failed to fetch config';
+        showToast('❌ Could not fetch hub config. Enter manually.', 'error');
     });
 }
 
