@@ -403,7 +403,7 @@
             background: #1a1f2e;
             border-radius: 20px;
             padding: 28px;
-            max-width: 440px;
+            max-width: 480px;
             width: 90%;
             border: 1px solid rgba(255,255,255,0.06);
             max-height: 90vh;
@@ -421,7 +421,7 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .form-group input {
+        .form-group input, .form-group select {
             width: 100%;
             padding: 8px 12px;
             background: rgba(255,255,255,0.04);
@@ -431,7 +431,13 @@
             font-size: 13px;
             font-family: inherit;
         }
-        .form-group input:focus { outline: none; border-color: #4ade80; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #4ade80; }
+        .form-group select option { background: #1a1f2e; color: #e5e7eb; }
+        .form-hint {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
         .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
         .modal-actions .btn { flex: 1; justify-content: center; }
         
@@ -629,6 +635,17 @@
             Configuring: <strong id="configHubId">—</strong>
             <span id="configHubStatus" style="color:#6b7280;font-size:12px;display:block;margin-top:4px;"></span>
         </div>
+        
+        <!-- Link to Hub -->
+        <div class="form-group" id="hubSelectGroup">
+            <label>🔗 Link to Hub</label>
+            <select id="hubSelect" onchange="onHubSelect()">
+                <option value="">Select a hub...</option>
+            </select>
+            <div class="form-hint">💡 WiFi credentials will auto-populate from the selected hub</div>
+        </div>
+        
+        <!-- WiFi Credentials -->
         <div class="form-group">
             <label>📶 WiFi SSID</label>
             <input type="text" id="configSSID" placeholder="Enter WiFi SSID" required>
@@ -636,16 +653,11 @@
         <div class="form-group">
             <label>🔑 WiFi Password</label>
             <input type="password" id="configPassword" placeholder="Enter WiFi password" required>
+            <div class="form-hint">✏️ Credentials auto-filled from hub, editable if needed</div>
         </div>
         <div class="form-group">
             <label>🏷️ Device Name</label>
             <input type="text" id="configDeviceName" placeholder="My Device">
-        </div>
-        <div class="form-group" id="hubSelectGroup">
-            <label>🔗 Link to Hub</label>
-            <select id="hubSelect" style="width:100%;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:8px;color:#e5e7eb;font-size:13px;font-family:inherit;">
-                <option value="">Select a hub...</option>
-            </select>
         </div>
         <div class="modal-actions">
             <button class="btn btn-secondary" onclick="closeModal('configModal')">Cancel</button>
