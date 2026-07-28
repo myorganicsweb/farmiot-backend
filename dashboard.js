@@ -382,13 +382,11 @@ async function loadHubsForDropdown() {
         var hubs = await response.json();
         
         var select = document.getElementById('hubSelect');
-        select.innerHTML = '<option value="">Select a hub...</option>';
+        select.innerHTML = '<option value="">-- Select a hub --</option>';
         hubs.forEach(function(hub) {
-            var sensorCount = hub.linked_sensors || 0;
             select.innerHTML += '<option value="' + hub.hub_id + '">' + 
                 (hub.device_name || hub.hub_id) + 
                 ' (' + (hub.ip_address || 'offline') + ')' +
-                (sensorCount > 0 ? ' 🔗' + sensorCount : '') +
                 '</option>';
         });
         
@@ -407,144 +405,29 @@ function onHubSelect() {
     var select = document.getElementById('hubSelect');
     var hubId = select.value;
     
-    var ssidField = document.getElementById('configSSID');
-    var passwordField = document.getElementById('configPassword');
-    
     if (!hubId) {
-        ssidField.value = '';
-        passwordField.value = '';
-        passwordField.placeholder = 'Enter WiFi password';
-        document.getElementById('configHubStatus').textContent = 'Select a hub...';
+        document.getElementById('configSSID').value = '';
+        document.getElementById('configPassword').value = '';
         return;
     }
     
-    document.getElementById('configHubStatus').textContent = '🔍 Fetching hub config...';
-    showToast('📡 Fetching hub WiFi config...', 'warning');
-    
-    // Fetch hub config
     fetch(API_BASE + '/api/hubs/' + hubId + '/config', {
         headers: { 'Authorization': 'Bearer ' + token }
     })
     .then(function(response) {
-        if (!response.ok) {
-            throw new Error('HTTP ' + response.status);
-        }
-        return response.json();
+        if (response.ok) return response.json();
+        throw new Error('Failed to get hub config');
     })
     .then(function(data) {
-        console.log('Hub config response:', data);
-        
-        var config = data.config || {};
-        var ssid = config.ssid || '';
-        
-        // Check if SSID exists
-        if (ssid && ssid.length > 0) {
-            // Auto-fill SSID
-            ssidField.value = ssid;
-            passwordField.value = '';
-            passwordField.placeholder = 'Enter WiFi password (same as hub)';
-            passwordField.style.borderColor = '#4ade80';
-            document.getElementById('configHubStatus').textContent = '✅ SSID auto-filled: ' + ssid;
-            showToast('✅ WiFi SSID auto-filled from hub: ' + ssid, 'success');
-        } else {
-            // No SSID - hub needs to be configured first
-            ssidField.value = '';
-            passwordField.value = '';
-            passwordField.placeholder = 'Hub has no WiFi config';
-            document.getElementById('configHubStatus').textContent = '⚠️ Hub has no WiFi config';
-            showToast('⚠️ This hub has no WiFi configuration. Please configure the hub first.', 'warning');
-            
-            // Enable manual entry
-            passwordField.placeholder = 'Enter WiFi password';
-            ssidField.focus();
+        if (data.config && data.config.ssid) {
+            document.getElementById('configSSID').value = data.config.ssid || '';
+            document.getElementById('configPassword').placeholder = 'Enter WiFi password (same as hub)';
+            showToast('✅ WiFi SSID auto-filled from hub', 'success');
         }
     })
     .catch(function(error) {
         console.error('Error fetching hub config:', error);
-        ssidField.value = '';
-        passwordField.value = '';
-        passwordField.placeholder = 'Enter WiFi password';
-        document.getElementById('configHubStatus').textContent = '❌ Failed to fetch config';
-        showToast('❌ Could not fetch hub config. Enter manually.', 'error');
     });
-}
-
-// ==========================================
-// LOAD HUBS FOR DROPDOWN - Enhanced
-// ==========================================
-async function loadHubsForDropdown() {
-    try {
-        var response = await fetch(API_BASE + '/api/hubs', {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
-        if (!response.ok) throw new Error('Failed to load hubs');
-        var hubs = await response.json();
-        
-        var select = document.getElementById('hubSelect');
-        select.innerHTML = '<option value="">-- Select a hub --</option>';
-        hubs.forEach(function(hub) {
-            var hasConfig = hub.has_config ? ' ✅' : '';
-            select.innerHTML += '<option value="' + hub.hub_id + '">' + 
-                (hub.device_name || hub.hub_id) + 
-                ' (' + (hub.ip_address || 'offline') + ')' +
-                hasConfig +
-                '</option>';
-        });
-        
-        availableHubs = hubs;
-        
-        // Store hub configs locally for quick access
-        window.hubConfigs = {};
-        for (var i = 0; i < hubs.length; i++) {
-            try {
-                var configRes = await fetch(API_BASE + '/api/hubs/' + hubs[i].hub_id + '/config', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-                if (configRes.ok) {
-                    var configData = await configRes.json();
-                    window.hubConfigs[hubs[i].hub_id] = configData.config || {};
-                }
-            } catch (e) {}
-        }
-        
-        return hubs;
-    } catch (error) {
-        console.error('Error loading hubs:', error);
-        return [];
-    }
-}
-
-// ==========================================
-// HUB SELECT - Quick version using cached configs
-// ==========================================
-function onHubSelectCached() {
-    var select = document.getElementById('hubSelect');
-    var hubId = select.value;
-    
-    var ssidField = document.getElementById('configSSID');
-    var passwordField = document.getElementById('configPassword');
-    
-    if (!hubId) {
-        ssidField.value = '';
-        passwordField.value = '';
-        passwordField.placeholder = 'Enter WiFi password';
-        return;
-    }
-    
-    // Try to use cached config first
-    if (window.hubConfigs && window.hubConfigs[hubId]) {
-        var config = window.hubConfigs[hubId];
-        if (config.ssid) {
-            ssidField.value = config.ssid;
-            passwordField.value = '';
-            passwordField.placeholder = 'Enter WiFi password (same as hub)';
-            showToast('✅ WiFi SSID auto-filled from hub', 'success');
-            return;
-        }
-    }
-    
-    // If not cached, fetch
-    onHubSelect();
 }
 
 // ===== LOAD DEVICES =====
@@ -571,10 +454,6 @@ async function loadDevices() {
         
         (hubs || []).forEach(function(hub) {
             hub._type = 'hub';
-            // Count linked sensors
-            hub.linked_sensors = (sensors || []).filter(function(s) { 
-                return s.hub_id === hub.hub_id; 
-            }).length;
             allDevices.push(hub);
         });
         
@@ -605,14 +484,16 @@ async function loadDevices() {
                 var name = device.device_name || device.hub_id || id;
                 var hubLink = device.hub_id || 'Not linked';
                 var isLinked = device.hub_id && device.hub_id.length > 0;
-                var linkedCount = device.linked_sensors || 0;
+                
+                // Check if this device is currently connected via BLE
+                var bleConnected = isConnected && (id === currentConfigDeviceId || id === currentBleDevice?.name);
                 
                 html += '<div class="device-card" data-name="' + name.toLowerCase() + '" data-id="' + id.toLowerCase() + '">';
                 html += '<div class="card-top"><div class="device-icon">' + icon + '</div>';
                 html += '<div><span class="badge ' + statusClass + '"><span class="dot"></span> ' + status + '</span>';
                 html += '<span class="device-type-badge ' + typeClass + '">' + typeLabel + '</span>';
-                if (isHub && linkedCount > 0) {
-                    html += '<span class="linked-sensors-count">🔗 ' + linkedCount + ' sensors</span>';
+                if (bleConnected) {
+                    html += '<span class="ble-status-badge connected"><span class="dot"></span> BLE</span>';
                 }
                 html += '</div></div>';
                 html += '<div class="device-name">' + name + '</div>';
@@ -637,6 +518,11 @@ async function loadDevices() {
                     if (!isLinked) {
                         html += '<button class="btn btn-warning btn-sm" onclick="linkSensor(\'' + id + '\')" title="Link to Hub">🔗</button>';
                     }
+                }
+                
+                // BLE Connect/Config button on card
+                if (status === 'pairing' || !isLinked) {
+                    html += '<button class="btn btn-ble btn-sm" onclick="connectBLE(\'' + id + '\')" title="Connect via BLE">📶 BLE</button>';
                 }
                 
                 html += '<button class="btn btn-danger btn-sm" onclick="deleteDevice(\'' + id + '\', \'' + device._type + '\')" title="Delete">🗑️</button>';
@@ -684,6 +570,70 @@ async function deleteDevice(deviceId, type) {
 }
 
 // ==========================================
+// BLE CONNECT FROM CARD - No need to scan again
+// ==========================================
+async function connectBLE(deviceId) {
+    showToast('📶 Connecting to ' + deviceId + ' via BLE...', 'warning');
+    
+    try {
+        if (!navigator.bluetooth) {
+            showToast('❌ Web Bluetooth not supported. Use Chrome/Edge.', 'error');
+            return;
+        }
+        
+        // Try to find the device in already paired devices
+        var pairedDevices = await navigator.bluetooth.getDevices();
+        var found = null;
+        
+        for (var i = 0; i < pairedDevices.length; i++) {
+            var d = pairedDevices[i];
+            if (d.name && d.name.includes(deviceId) || d.id === deviceId) {
+                found = d;
+                break;
+            }
+        }
+        
+        // If not found, scan for it
+        if (!found) {
+            showToast('🔍 Scanning for ' + deviceId + '...', 'warning');
+            found = await navigator.bluetooth.requestDevice({
+                filters: [{ name: deviceId }],
+                optionalServices: [BLE_SERVICE_UUID_HUB, BLE_SERVICE_UUID_SENSOR]
+            });
+        }
+        
+        if (!found) {
+            showToast('❌ Device not found. Try scanning.', 'error');
+            return;
+        }
+        
+        await connectBleDevice(found);
+        
+        if (isConnected) {
+            showToast('✅ Connected to ' + deviceId + ' via BLE!', 'success');
+            currentConfigDeviceId = deviceId;
+            
+            // Open config modal
+            document.getElementById('configHubId').textContent = deviceId;
+            document.getElementById('configHubStatus').textContent = '📡 Connected via BLE';
+            document.getElementById('configSSID').value = '';
+            document.getElementById('configPassword').value = '';
+            document.getElementById('configDeviceName').value = deviceId;
+            document.getElementById('hubSelectGroup').style.display = 'block';
+            document.getElementById('configSaveBtn').textContent = '💾 Configure';
+            
+            // Load hubs for dropdown
+            await loadHubsForDropdown();
+            
+            openModal('configModal');
+        }
+        
+    } catch (error) {
+        showToast('❌ BLE connection failed: ' + error.message, 'error');
+    }
+}
+
+// ==========================================
 // SENSOR FUNCTIONS
 // ==========================================
 
@@ -708,7 +658,6 @@ async function linkSensor(sensorId) {
         document.getElementById('configDeviceName').value = sensorId;
         document.getElementById('configSaveBtn').textContent = '🔗 Link & Configure';
         
-        // Reset dropdown - NO AUTO-SELECT
         document.getElementById('hubSelect').value = '';
         
         openModal('configModal');
@@ -750,24 +699,25 @@ async function saveDeviceConfig() {
         var encoder = new TextEncoder();
         
         if (currentDeviceType === 'sensor' && hubId) {
-            // First, link to hub
             var linkConfig = {
                 command: 'link',
                 hub_id: hubId
             };
             
-            await currentBleCharacteristic.writeValue(encoder.encode(JSON.stringify(linkConfig)));
-            await delay(500);
+            if (currentBleCharacteristic) {
+                await currentBleCharacteristic.writeValue(encoder.encode(JSON.stringify(linkConfig)));
+                await delay(500);
+            }
             
-            // Then send WiFi config
             var wifiConfig = {
                 command: 'configure_wifi',
                 ssid: ssid,
                 password: password
             };
-            await currentBleCharacteristic.writeValue(encoder.encode(JSON.stringify(wifiConfig)));
+            if (currentBleCharacteristic) {
+                await currentBleCharacteristic.writeValue(encoder.encode(JSON.stringify(wifiConfig)));
+            }
             
-            // Register in cloud
             await apiRequest('/api/sensors/link', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -777,12 +727,19 @@ async function saveDeviceConfig() {
                 })
             });
         } else if (currentDeviceType === 'hub') {
-            // Configure hub
             var config = {
                 ssid: ssid,
                 password: password,
                 device_name: name
             };
+            
+            if (currentBleCharacteristic) {
+                await currentBleCharacteristic.writeValue(encoder.encode(JSON.stringify({
+                    ssid: ssid,
+                    password: password
+                })));
+            }
+            
             await apiRequest('/api/hubs/' + deviceId + '/configure', {
                 method: 'POST',
                 body: JSON.stringify(config)
@@ -862,7 +819,6 @@ async function scanForDevices() {
         
         if (deviceType === 'sensor') {
             await loadHubsForDropdown();
-            // NO AUTO-SELECT - user must manually select a hub
             document.getElementById('hubSelect').value = '';
         }
         
@@ -938,50 +894,6 @@ async function connectBleDevice(device) {
     }
 }
 
-// ==========================================
-// CONFIGURE HUB VIA BLE (When WiFi is down)
-// ==========================================
-async function configureHubViaBLE(hubId, ssid, password, name) {
-    showToast('📤 Sending WiFi config via BLE...', 'warning');
-    
-    try {
-        // If BLE is not connected, try to connect
-        if (!isConnected || !currentBleCharacteristic) {
-            await scanForHubs();
-            if (!isConnected) {
-                showToast('❌ Could not connect to hub via BLE', 'error');
-                return;
-            }
-        }
-        
-        var config = {
-            ssid: ssid,
-            password: password,
-            device_name: name || hubId
-        };
-        
-        var encoder = new TextEncoder();
-        await currentBleCharacteristic.writeValue(encoder.encode(JSON.stringify(config)));
-        
-        showToast('✅ WiFi config sent! Hub is connecting...', 'success');
-        document.getElementById('configHubStatus').textContent = '✅ Sent!';
-        
-        // Wait for response
-        setTimeout(function() {
-            closeModal('configModal');
-            loadDevices();
-            if (currentBleDevice && currentBleDevice.gatt) {
-                currentBleDevice.gatt.disconnect();
-            }
-            isConnected = false;
-            updateBleStatus('disconnected', '');
-        }, 3000);
-        
-    } catch (error) {
-        showToast('❌ Failed: ' + error.message, 'error');
-    }
-}
-
 // ===== OPEN CONFIG =====
 async function openConfig(deviceId, type) {
     currentConfigDeviceId = deviceId;
@@ -997,7 +909,6 @@ async function openConfig(deviceId, type) {
     
     if (type === 'sensor') {
         await loadHubsForDropdown();
-        // NO AUTO-SELECT - user must manually select
         document.getElementById('hubSelect').value = '';
     }
     
