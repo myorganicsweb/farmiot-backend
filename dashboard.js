@@ -431,6 +431,9 @@ function onHubSelect() {
 }
 
 // ===== LOAD DEVICES =====
+// ==========================================
+// LOAD DEVICES - With BLE Button on All Cards
+// ==========================================
 async function loadDevices() {
     var grid = document.getElementById('deviceGrid');
     var countEl = document.getElementById('deviceCount');
@@ -485,14 +488,12 @@ async function loadDevices() {
                 var hubLink = device.hub_id || 'Not linked';
                 var isLinked = device.hub_id && device.hub_id.length > 0;
                 
-                // Check if this device is currently connected via BLE
-                var bleConnected = isConnected && (id === currentConfigDeviceId || id === currentBleDevice?.name);
-                
                 html += '<div class="device-card" data-name="' + name.toLowerCase() + '" data-id="' + id.toLowerCase() + '">';
                 html += '<div class="card-top"><div class="device-icon">' + icon + '</div>';
                 html += '<div><span class="badge ' + statusClass + '"><span class="dot"></span> ' + status + '</span>';
                 html += '<span class="device-type-badge ' + typeClass + '">' + typeLabel + '</span>';
-                if (bleConnected) {
+                // Always show BLE status badge if device is in DB
+                if (isConnected) {
                     html += '<span class="ble-status-badge connected"><span class="dot"></span> BLE</span>';
                 }
                 html += '</div></div>';
@@ -510,6 +511,11 @@ async function loadDevices() {
                 html += '<div class="device-actions">';
                 html += '<button class="btn btn-secondary btn-sm" onclick="refreshDevice(\'' + id + '\')" title="Refresh status">🔄</button>';
                 
+                // ==========================================
+                // BLE CONNECT BUTTON - ALWAYS VISIBLE
+                // ==========================================
+                html += '<button class="btn btn-ble btn-sm" onclick="connectBLE(\'' + id + '\')" title="Connect via BLE">📶 BLE</button>';
+                
                 if (isHub) {
                     html += '<button class="btn btn-secondary btn-sm" onclick="openConfig(\'' + id + '\', \'hub\')" title="Configure">⚙️</button>';
                     html += '<button class="btn btn-secondary btn-sm" onclick="rebootHub(\'' + id + '\')" title="Reboot">🔁</button>';
@@ -518,11 +524,6 @@ async function loadDevices() {
                     if (!isLinked) {
                         html += '<button class="btn btn-warning btn-sm" onclick="linkSensor(\'' + id + '\')" title="Link to Hub">🔗</button>';
                     }
-                }
-                
-                // BLE Connect/Config button on card
-                if (status === 'pairing' || !isLinked) {
-                    html += '<button class="btn btn-ble btn-sm" onclick="connectBLE(\'' + id + '\')" title="Connect via BLE">📶 BLE</button>';
                 }
                 
                 html += '<button class="btn btn-danger btn-sm" onclick="deleteDevice(\'' + id + '\', \'' + device._type + '\')" title="Delete">🗑️</button>';
@@ -537,6 +538,105 @@ async function loadDevices() {
 
     } catch (error) {
         grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#f87171;">❌ ' + (error.message || 'Failed to load devices') + '<br><br><button class="btn btn-secondary btn-sm" onclick="loadDevices()">🔄 Retry</button></div>';
+    }
+}
+
+// ==========================================
+// CONNECT BLE FROM CARD - Improved
+// ==========================================
+async function connectBLE(deviceId) {
+    showToast('📶 Looking for ' + deviceId + ' via BLE...', 'warning');
+    
+    try {
+        if (!navigator.bluetooth) {
+            showToast('❌ Web Bluetooth not supported. Use Chrome/Edge.', 'error');
+            return;
+        }
+        
+        // First, check if already connected
+        if (isConnected && currentBleDevice) {
+            showToast('✅ Already connected to ' + currentBleDevice.name, 'success');
+            // Open config directly
+            document.getElementById('configHubId').textContent = deviceId;
+            document.getElementById('configHubStatus').textContent = '📡 Already connected via BLE';
+            document.getElementById('configSSID').value = '';
+            document.getElementById('configPassword').value = '';
+            document.getElementById('configDeviceName').value = deviceId;
+            document.getElementById('hubSelectGroup').style.display = 'block';
+            document.getElementById('configSaveBtn').textContent = '💾 Configure';
+            await loadHubsForDropdown();
+            openModal('configModal');
+            return;
+        }
+        
+        // Try to find in paired devices first
+        var pairedDevices = await navigator.bluetooth.getDevices();
+        var found = null;
+        
+        for (var i = 0; i < pairedDevices.length; i++) {
+            var d = pairedDevices[i];
+            if (d.name && (d.name.includes(deviceId) || d.id === deviceId)) {
+                found = d;
+                break;
+            }
+        }
+        
+        // If not found, scan for it
+        if (!found) {
+            showToast('🔍 Scanning for ' + deviceId + '...', 'warning');
+            found = await navigator.bluetooth.requestDevice({
+                filters: [
+                    { name: deviceId },
+                    { name: 'FarmIOT_Hub' },
+                    { name: 'FarmIOT_Sensor' },
+                    { namePrefix: 'FarmIOT' }
+                ],
+                optionalServices: [BLE_SERVICE_UUID_HUB, BLE_SERVICE_UUID_SENSOR]
+            });
+        }
+        
+        if (!found) {
+            showToast('❌ Device not found. Make sure it\'s in pairing mode.', 'error');
+            return;
+        }
+        
+        await connectBleDevice(found);
+        
+        if (isConnected) {
+            showToast('✅ Connected to ' + deviceId + ' via BLE!', 'success');
+            currentConfigDeviceId = deviceId;
+            
+            // Determine device type
+            var services = await found.gatt.getPrimaryServices();
+            var deviceType = 'hub';
+            for (var j = 0; j < services.length; j++) {
+                if (services[j].uuid === BLE_SERVICE_UUID_SENSOR) {
+                    deviceType = 'sensor';
+                    break;
+                }
+            }
+            currentDeviceType = deviceType;
+            
+            // Open config modal
+            document.getElementById('configHubId').textContent = deviceId;
+            document.getElementById('configHubStatus').textContent = '📡 Connected via BLE - ' + deviceType.toUpperCase();
+            document.getElementById('configSSID').value = '';
+            document.getElementById('configPassword').value = '';
+            document.getElementById('configDeviceName').value = deviceId;
+            document.getElementById('hubSelectGroup').style.display = deviceType === 'sensor' ? 'block' : 'none';
+            document.getElementById('configSaveBtn').textContent = deviceType === 'sensor' ? '🔗 Link & Configure' : '💾 Configure';
+            
+            if (deviceType === 'sensor') {
+                await loadHubsForDropdown();
+            }
+            
+            openModal('configModal');
+            loadDevices(); // Refresh to show BLE badge
+        }
+        
+    } catch (error) {
+        console.error('BLE connection error:', error);
+        showToast('❌ BLE connection failed: ' + error.message, 'error');
     }
 }
 
