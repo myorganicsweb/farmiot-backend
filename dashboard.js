@@ -938,6 +938,50 @@ async function connectBleDevice(device) {
     }
 }
 
+// ==========================================
+// CONFIGURE HUB VIA BLE (When WiFi is down)
+// ==========================================
+async function configureHubViaBLE(hubId, ssid, password, name) {
+    showToast('📤 Sending WiFi config via BLE...', 'warning');
+    
+    try {
+        // If BLE is not connected, try to connect
+        if (!isConnected || !currentBleCharacteristic) {
+            await scanForHubs();
+            if (!isConnected) {
+                showToast('❌ Could not connect to hub via BLE', 'error');
+                return;
+            }
+        }
+        
+        var config = {
+            ssid: ssid,
+            password: password,
+            device_name: name || hubId
+        };
+        
+        var encoder = new TextEncoder();
+        await currentBleCharacteristic.writeValue(encoder.encode(JSON.stringify(config)));
+        
+        showToast('✅ WiFi config sent! Hub is connecting...', 'success');
+        document.getElementById('configHubStatus').textContent = '✅ Sent!';
+        
+        // Wait for response
+        setTimeout(function() {
+            closeModal('configModal');
+            loadDevices();
+            if (currentBleDevice && currentBleDevice.gatt) {
+                currentBleDevice.gatt.disconnect();
+            }
+            isConnected = false;
+            updateBleStatus('disconnected', '');
+        }, 3000);
+        
+    } catch (error) {
+        showToast('❌ Failed: ' + error.message, 'error');
+    }
+}
+
 // ===== OPEN CONFIG =====
 async function openConfig(deviceId, type) {
     currentConfigDeviceId = deviceId;
